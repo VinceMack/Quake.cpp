@@ -393,12 +393,7 @@ void CL_ParseUpdate(int bits)
             forcelink = true; // hack to make null model players work
         }
 
-#ifdef GLQUAKE
-        if (num > 0 && num <= cl.maxclients) {
-            R_TranslatePlayerSkin(num - 1);
-        }
 
-#endif
     }
 
     if (bits & U_FRAME) {
@@ -423,29 +418,11 @@ void CL_ParseUpdate(int bits)
         ent->colormap = cl.scores[i - 1].translations;
     }
 
-#ifdef GLQUAKE
-    if (bits & U_SKIN) {
-        skin = MSG_ReadByte();
-    } else {
-        skin = ent->baseline.skin;
-    }
-
-    if (skin != ent->skinnum) {
-        ent->skinnum = skin;
-        if (num > 0 && num <= cl.maxclients) {
-            R_TranslatePlayerSkin(num - 1);
-        }
-    }
-
-#else
-
     if (bits & U_SKIN) {
         ent->skinnum = MSG_ReadByte();
     } else {
         ent->skinnum = ent->baseline.skin;
     }
-
-#endif
 
     if (bits & U_EFFECTS) {
         ent->effects = MSG_ReadByte();
@@ -662,9 +639,7 @@ void CL_NewTranslation(int slot)
     memcpy(dest, vid.colormap, sizeof(cl.scores[slot].translations));
     top = cl.scores[slot].colors & 0xf0;
     bottom = (cl.scores[slot].colors & 15) << 4;
-#ifdef GLQUAKE
-    R_TranslatePlayerSkin(slot);
-#endif
+
 
     for (i = 0; i < VID_GRADES; i++, dest += 256, source += 256) {
         if (top < 128) { // the artists made some backwards ranges.  sigh.
