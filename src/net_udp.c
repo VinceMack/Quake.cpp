@@ -21,26 +21,25 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <sys/param.h>
-#include <sys/ioctl.h>
-#include <errno.h>
-#include <arpa/inet.h>
-#include <unistd.h>
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
-#ifdef __sun__
-#include <sys/filio.h>
+#define ioctl ioctlsocket
+#define close closesocket
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK WSAEWOULDBLOCK
 #endif
-
-#ifdef NeXT
-#include <libc.h>
+#ifndef ECONNREFUSED
+#define ECONNREFUSED WSAECONNREFUSED
 #endif
-
-// extern int gethostname (char *, int);  // Commented out - conflicts with system headers
-// extern int close (int);  // Commented out - conflicts with system headers
+#undef errno
+#define errno WSAGetLastError()
+typedef int socklen_t;
+#ifndef MAXHOSTNAMELEN
+#define MAXHOSTNAMELEN 256
+#endif
+#endif
 
 extern cvar_t hostname;
 

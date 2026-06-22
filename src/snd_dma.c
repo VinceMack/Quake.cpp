@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#ifdef _WIN32
+#if 0
 #include "winquake.h"
 #endif
 
@@ -565,7 +565,7 @@ void S_ClearBuffer(void)
 {
     int clear;
 
-#ifdef _WIN32
+#if 0
     if (!sound_started || !shm || (!shm->buffer && !pDSBuf))
 #else
     if (!sound_started || !shm || !shm->buffer)
@@ -580,7 +580,7 @@ void S_ClearBuffer(void)
         clear = 0;
     }
 
-#ifdef _WIN32
+#if 0
     if (pDSBuf) {
         DWORD dwSize;
         DWORD* pData;
@@ -848,7 +848,7 @@ void GetSoundtime(void)
 
 void S_ExtraUpdate(void)
 {
-#ifdef _WIN32
+#if 0
     IN_Accumulate();
 #endif
 

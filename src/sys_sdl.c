@@ -1,22 +1,18 @@
-#include <unistd.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <limits.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
-#ifndef __WIN32__
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <sys/mman.h>
+#include <time.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <direct.h>
 #endif
 
 #include <SDL.h>
@@ -266,10 +262,8 @@ int Sys_FileTime(char* path)
 
 void Sys_mkdir(char* path)
 {
-#ifdef __WIN32__
-    mkdir(path);
-#else
-    mkdir(path, 0777);
+#ifdef _WIN32
+    _mkdir(path);
 #endif
 }
 
@@ -289,33 +283,11 @@ void Sys_DebugLog(char* file, char* fmt, ...)
 
 double Sys_FloatTime(void)
 {
-#ifdef __WIN32__
-
     static int starttime = 0;
-
     if (!starttime) {
         starttime = clock();
     }
-
-    return (clock() - starttime) * 1.0 / 1024;
-
-#else
-
-    struct timeval tp;
-    struct timezone tzp;
-    static int secbase;
-
-    gettimeofday(&tp, &tzp);
-
-    if (!secbase) {
-        secbase = tp.tv_sec;
-
-        return tp.tv_usec / 1000000.0;
-    }
-
-    return (tp.tv_sec - secbase) + tp.tv_usec / 1000000.0;
-
-#endif
+    return (clock() - starttime) * 1.0 / CLOCKS_PER_SEC;
 }
 
 // =======================================================================
@@ -435,17 +407,12 @@ Sys_MakeCodeWriteable
 */
 void Sys_MakeCodeWriteable(unsigned long startaddr, unsigned long length)
 {
-    int r;
-    unsigned long addr;
-    int psize = getpagesize();
-
     fprintf(stderr, "writable code %lx-%lx\n", startaddr, startaddr + length);
 
-    addr = startaddr & ~(psize - 1);
-
-    r = mprotect((char*)addr, length + startaddr - addr, 7);
-
-    if (r < 0) {
+#ifdef _WIN32
+    DWORD oldProtect;
+    if (!VirtualProtect((LPVOID)startaddr, length, PAGE_EXECUTE_READWRITE, &oldProtect)) {
         Sys_Error("Protection change failed\n");
     }
+#endif
 }

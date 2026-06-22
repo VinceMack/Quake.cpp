@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#ifdef _WIN32
+#if 0
 #include "winquake.h"
 #else
 #define DWORD unsigned long
@@ -66,7 +66,7 @@ void S_TransferStereo16(int endtime)
     int lpos;
     int lpaintedtime;
     DWORD* pbuf;
-#ifdef _WIN32
+#if 0
     int reps;
     DWORD dwSize, dwSize2;
     DWORD* pbuf2;
@@ -78,7 +78,7 @@ void S_TransferStereo16(int endtime)
     snd_p = (int*)paintbuffer;
     lpaintedtime = paintedtime;
 
-#ifdef _WIN32
+#if 0
     if (pDSBuf) {
         reps = 0;
 
@@ -101,7 +101,7 @@ void S_TransferStereo16(int endtime)
                 return;
             }
         }
-    } else
+    }
 #endif
     {
         pbuf = (DWORD*)shm->buffer;
@@ -127,11 +127,10 @@ void S_TransferStereo16(int endtime)
         lpaintedtime += (snd_linear_count >> 1);
     }
 
-#ifdef _WIN32
+#if 0
     if (pDSBuf) {
         pDSBuf->lpVtbl->Unlock(pDSBuf, pbuf, dwSize, NULL, 0);
     }
-
 #endif
 }
 
@@ -145,7 +144,7 @@ void S_TransferPaintBuffer(int endtime)
     int val;
     int snd_vol;
     DWORD* pbuf;
-#ifdef _WIN32
+#if 0
     int reps;
     DWORD dwSize, dwSize2;
     DWORD* pbuf2;
@@ -165,7 +164,7 @@ void S_TransferPaintBuffer(int endtime)
     step = 3 - shm->channels;
     snd_vol = volume.value * 256;
 
-#ifdef _WIN32
+#if 0
     if (pDSBuf) {
         reps = 0;
 
@@ -188,7 +187,7 @@ void S_TransferPaintBuffer(int endtime)
                 return;
             }
         }
-    } else
+    }
 #endif
     {
         pbuf = (DWORD*)shm->buffer;
@@ -224,22 +223,23 @@ void S_TransferPaintBuffer(int endtime)
         }
     }
 
-#ifdef _WIN32
+#if 0
     if (pDSBuf) {
-        DWORD dwNewpos, dwWrite;
-        int il = paintedtime;
-        int ir = endtime - paintedtime;
+        DWORD* pbuf;
+        DWORD dwSize;
 
-        ir += il;
+        // we don't want anyone doing anything with the sound buffer while we're clearing it
+        S_BlockSound();
 
-        pDSBuf->lpVtbl->Unlock(pDSBuf, pbuf, dwSize, NULL, 0);
+        if (pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, NULL,
+                NULL, 0)
+            == DS_OK) {
+            Q_memset(pbuf, 0, dwSize);
+            pDSBuf->lpVtbl->Unlock(pDSBuf, pbuf, dwSize, NULL, 0);
+        }
 
-        pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &dwNewpos, &dwWrite);
-
-        //		if ((dwNewpos >= il) && (dwNewpos <= ir))
-        //			Con_Printf("%d-%d p %d c\n", il, ir, dwNewpos);
+        S_UnblockSound();
     }
-
 #endif
 }
 

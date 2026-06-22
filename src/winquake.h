@@ -25,18 +25,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define WM_MOUSEWHEEL 0x020A
 
 #ifndef SERVERONLY
-#include <ddraw.h>
-#include <dsound.h>
-#ifndef GLQUAKE
-#include <mgraph.h>
-#endif
+// DirectX headers removed for clean SDL build
 #endif
 
 extern HINSTANCE global_hInstance;
 extern int global_nCmdShow;
 
-#ifndef SERVERONLY
-
+#if 0
 extern LPDIRECTDRAW lpDD;
 extern qboolean DDActive;
 extern LPDIRECTDRAWSURFACE lpPrimary;
