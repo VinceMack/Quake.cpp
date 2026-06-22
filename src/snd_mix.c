@@ -21,11 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#if 0
-#include "winquake.h"
-#else
-#define DWORD unsigned long
-#endif
 
 #define PAINTBUFFER_SIZE 512
 portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
@@ -65,46 +60,15 @@ void S_TransferStereo16(int endtime)
 {
     int lpos;
     int lpaintedtime;
-    DWORD* pbuf;
-#if 0
-    int reps;
-    DWORD dwSize, dwSize2;
-    DWORD* pbuf2;
-    HRESULT hresult;
-#endif
+    unsigned char* pbuf;
 
     snd_vol = volume.value * 256;
 
     snd_p = (int*)paintbuffer;
     lpaintedtime = paintedtime;
 
-#if 0
-    if (pDSBuf) {
-        reps = 0;
-
-        while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf,
-                    &dwSize, &pbuf2, &dwSize2, 0))
-            != DS_OK) {
-            if (hresult != DSERR_BUFFERLOST) {
-                Con_Printf("S_TransferStereo16: DS::Lock Sound Buffer Failed\n");
-                S_Shutdown();
-                S_Startup();
-
-                return;
-            }
-
-            if (++reps > 10000) {
-                Con_Printf("S_TransferStereo16: DS: couldn't restore buffer\n");
-                S_Shutdown();
-                S_Startup();
-
-                return;
-            }
-        }
-    }
-#endif
     {
-        pbuf = (DWORD*)shm->buffer;
+        pbuf = (unsigned char*)shm->buffer;
     }
 
     while (lpaintedtime < endtime) {
@@ -127,11 +91,6 @@ void S_TransferStereo16(int endtime)
         lpaintedtime += (snd_linear_count >> 1);
     }
 
-#if 0
-    if (pDSBuf) {
-        pDSBuf->lpVtbl->Unlock(pDSBuf, pbuf, dwSize, NULL, 0);
-    }
-#endif
 }
 
 void S_TransferPaintBuffer(int endtime)
@@ -143,13 +102,7 @@ void S_TransferPaintBuffer(int endtime)
     int step;
     int val;
     int snd_vol;
-    DWORD* pbuf;
-#if 0
-    int reps;
-    DWORD dwSize, dwSize2;
-    DWORD* pbuf2;
-    HRESULT hresult;
-#endif
+    unsigned char* pbuf;
 
     if (shm->samplebits == 16 && shm->channels == 2) {
         S_TransferStereo16(endtime);
@@ -164,33 +117,8 @@ void S_TransferPaintBuffer(int endtime)
     step = 3 - shm->channels;
     snd_vol = volume.value * 256;
 
-#if 0
-    if (pDSBuf) {
-        reps = 0;
-
-        while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf,
-                    &dwSize, &pbuf2, &dwSize2, 0))
-            != DS_OK) {
-            if (hresult != DSERR_BUFFERLOST) {
-                Con_Printf("S_TransferPaintBuffer: DS::Lock Sound Buffer Failed\n");
-                S_Shutdown();
-                S_Startup();
-
-                return;
-            }
-
-            if (++reps > 10000) {
-                Con_Printf("S_TransferPaintBuffer: DS: couldn't restore buffer\n");
-                S_Shutdown();
-                S_Startup();
-
-                return;
-            }
-        }
-    }
-#endif
     {
-        pbuf = (DWORD*)shm->buffer;
+        pbuf = (unsigned char*)shm->buffer;
     }
 
     if (shm->samplebits == 16) {
@@ -223,24 +151,6 @@ void S_TransferPaintBuffer(int endtime)
         }
     }
 
-#if 0
-    if (pDSBuf) {
-        DWORD* pbuf;
-        DWORD dwSize;
-
-        // we don't want anyone doing anything with the sound buffer while we're clearing it
-        S_BlockSound();
-
-        if (pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, NULL,
-                NULL, 0)
-            == DS_OK) {
-            Q_memset(pbuf, 0, dwSize);
-            pDSBuf->lpVtbl->Unlock(pDSBuf, pbuf, dwSize, NULL, 0);
-        }
-
-        S_UnblockSound();
-    }
-#endif
 }
 
 /*
