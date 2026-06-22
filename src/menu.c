@@ -1700,16 +1700,8 @@ char* quitMessage[] = {
 
 void M_Menu_Quit_f(void)
 {
-    if (m_state == m_quit) {
-        return;
-    }
-
-    wasInMenus = (key_dest == key_menu);
-    key_dest = key_menu;
-    m_quit_prevstate = m_state;
-    m_state = m_quit;
-    m_entersound = true;
-    msgNumber = rand() & 7;
+    key_dest = key_console;
+    Host_Quit_f();
 }
 
 void M_Quit_Key(int key)
