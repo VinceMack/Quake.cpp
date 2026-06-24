@@ -1,4 +1,4 @@
-// d_fill.c -- clears a specified rectangle to the specified color
+// d_fill.cpp -- clears a specified rectangle to the specified color
 
 #include "quakedef.h"
 

@@ -1,4 +1,4 @@
-// r_vars.c: global refresh variables
+// r_vars.cpp: global refresh variables
 
 #include "quakedef.h"
 

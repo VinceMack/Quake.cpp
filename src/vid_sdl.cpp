@@ -1,10 +1,10 @@
-// vid_sdl.c -- SDL video driver
+// vid_sdl.cpp -- SDL video driver
 
 #include "SDL.h"
 #include "quakedef.h"
 #include "d_local.h"
 
-// viddef_t    vid;                // global video state - already defined in screen.c
+// viddef_t    vid;                // global video state - already defined in screen.cpp
 unsigned short d_8to16table[256];
 
 #include "winquake.h"
@@ -33,8 +33,8 @@ static float mouse_x, mouse_y;
 static int mouse_oldbuttonstate = 0;
 
 // No support for option menus
-// void (*vid_menudrawfn)(void);  // already defined in menu.c
-// void (*vid_menukeyfn)(int key); // already defined in menu.c
+// void (*vid_menudrawfn)(void);  // already defined in menu.cpp
+// void (*vid_menukeyfn)(int key); // already defined in menu.cpp
 
 void VID_SetPalette(unsigned char* palette)
 {

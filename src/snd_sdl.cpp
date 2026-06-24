@@ -1,4 +1,4 @@
-// snd_sdl.c -- SDL audio output driver
+// snd_sdl.cpp -- SDL audio output driver
 
 #include <stdio.h>
 #include <SDL.h>

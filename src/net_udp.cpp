@@ -1,4 +1,4 @@
-// net_udp.c -- UDP network socket driver
+// net_udp.cpp -- UDP network socket driver
 
 #include "quakedef.h"
 

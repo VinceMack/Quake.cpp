@@ -1,4 +1,4 @@
-// d_edge.c -- software edge rendering (mipmapping and texture stepping)
+// d_edge.cpp -- software edge rendering (mipmapping and texture stepping)
 
 #include "quakedef.h"
 #include "d_local.h"

@@ -1,4 +1,4 @@
-// sys_sdl.c -- SDL system interface (file I/O, timing, main loop)
+// sys_sdl.cpp -- SDL system interface (file I/O, timing, main loop)
 
 #include <signal.h>
 #include <stdlib.h>

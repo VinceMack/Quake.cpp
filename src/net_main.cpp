@@ -1,4 +1,4 @@
-// net_main.c -- network initialization and socket management
+// net_main.cpp -- network initialization and socket management
 
 #include "quakedef.h"
 #include "net_vcr.h"

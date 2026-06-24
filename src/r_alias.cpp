@@ -1,4 +1,4 @@
-// r_alias.c: routines for setting up to draw alias models
+// r_alias.cpp: routines for setting up to draw alias models
 
 #include "quakedef.h"
 #include "r_local.h"

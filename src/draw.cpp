@@ -1,4 +1,4 @@
-// draw.c -- this is the only file outside the refresh that touches the
+// draw.cpp -- this is the only file outside the refresh that touches the
 // vid buffer
 
 #include "quakedef.h"

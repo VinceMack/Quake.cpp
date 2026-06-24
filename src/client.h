@@ -305,7 +305,7 @@ float CL_KeyState(kbutton_t* key);
 char* Key_KeynumToString(int keynum);
 
 //
-// cl_demo.c
+// cl_demo.cpp
 //
 void CL_StopPlayback(void);
 int CL_GetMessage(void);
@@ -316,7 +316,7 @@ void CL_PlayDemo_f(void);
 void CL_TimeDemo_f(void);
 
 //
-// cl_parse.c
+// cl_parse.cpp
 //
 void CL_ParseServerMessage(void);
 void CL_NewTranslation(int slot);

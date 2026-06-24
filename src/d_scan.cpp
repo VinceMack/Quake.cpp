@@ -1,4 +1,4 @@
-// d_scan.c -- portable C scan-level rasterization code
+// d_scan.cpp -- portable C scan-level rasterization code
 
 #include "quakedef.h"
 #include "r_local.h"

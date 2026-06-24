@@ -1,4 +1,4 @@
-// r_misc.c -- miscellaneous refresh utility functions
+// r_misc.cpp -- miscellaneous refresh utility functions
 
 #include "quakedef.h"
 #include "r_local.h"

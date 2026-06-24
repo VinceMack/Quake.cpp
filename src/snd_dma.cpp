@@ -1,4 +1,4 @@
-// snd_dma.c -- main control for any streaming sound output device
+// snd_dma.cpp -- main control for any streaming sound output device
 
 #include "quakedef.h"
 

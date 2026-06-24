@@ -1,4 +1,4 @@
-// menu.c -- menu system (main menu, options, multiplayer, etc)
+// menu.cpp -- menu system (main menu, options, multiplayer, etc)
 
 #include "quakedef.h"
 

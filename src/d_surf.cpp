@@ -1,4 +1,4 @@
-// d_surf.c: rasterization driver surface heap manager
+// d_surf.cpp: rasterization driver surface heap manager
 
 #include "quakedef.h"
 #include "d_local.h"

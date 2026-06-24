@@ -1,4 +1,4 @@
-// r_sky.c -- sky rendering
+// r_sky.cpp -- sky rendering
 
 #include "quakedef.h"
 #include "r_local.h"

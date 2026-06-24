@@ -1,4 +1,4 @@
-// chase.c -- chase camera code
+// chase.cpp -- chase camera code
 
 #include "quakedef.h"
 

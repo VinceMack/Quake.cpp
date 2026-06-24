@@ -1,4 +1,4 @@
-// cvar.c -- dynamic variable tracking
+// cvar.cpp -- dynamic variable tracking
 
 #include "quakedef.h"
 

@@ -1,4 +1,4 @@
-// nonintel.c -- non-Intel processor compatibility functions
+// nonintel.cpp -- non-Intel processor compatibility functions
 
 #include "quakedef.h"
 #include "r_local.h"

@@ -1,4 +1,4 @@
-// host_cmd.c -- console command implementations for host management
+// host_cmd.cpp -- console command implementations for host management
 
 #include "quakedef.h"
 

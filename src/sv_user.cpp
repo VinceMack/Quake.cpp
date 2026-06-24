@@ -1,4 +1,4 @@
-// sv_user.c -- server code for moving users
+// sv_user.cpp -- server code for moving users
 
 #include "quakedef.h"
 

@@ -1,4 +1,4 @@
-// model.c -- model loading and caching
+// model.cpp -- model loading and caching
 
 // models are the only shared resource between a client and server running
 // on the same machine.

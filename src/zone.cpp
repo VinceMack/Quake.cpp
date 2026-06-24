@@ -1,4 +1,4 @@
-// zone.c -- memory allocation (hunk and cache) management
+// zone.cpp -- memory allocation (hunk and cache) management
 
 #include "quakedef.h"
 

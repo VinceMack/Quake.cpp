@@ -1,4 +1,4 @@
-// cl_parse.c  -- parse a message received from the server
+// cl_parse.cpp  -- parse a message received from the server
 
 #include "quakedef.h"
 

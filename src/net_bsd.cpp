@@ -1,4 +1,4 @@
-// net_bsd.c -- network driver registration table
+// net_bsd.cpp -- network driver registration table
 
 #include "quakedef.h"
 

@@ -1,4 +1,4 @@
-// r_sprite.c -- sprite rendering setup and transformation
+// r_sprite.cpp -- sprite rendering setup and transformation
 
 #include "quakedef.h"
 #include "r_local.h"

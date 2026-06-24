@@ -1,4 +1,4 @@
-// r_light.c -- dynamic light and light animation
+// r_light.cpp -- dynamic light and light animation
 
 #include "quakedef.h"
 #include "r_local.h"

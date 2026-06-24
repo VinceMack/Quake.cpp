@@ -1,4 +1,4 @@
-// console.c -- console text display and input
+// console.cpp -- console text display and input
 
 #ifdef NeXT
 #include <libc.h>

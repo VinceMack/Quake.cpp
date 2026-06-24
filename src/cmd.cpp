@@ -1,4 +1,4 @@
-// cmd.c -- Quake script command processing module
+// cmd.cpp -- Quake script command processing module
 
 #include "quakedef.h"
 

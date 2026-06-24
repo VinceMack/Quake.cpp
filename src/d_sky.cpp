@@ -1,4 +1,4 @@
-// d_sky.c -- software sky texture coordinate calculation
+// d_sky.cpp -- software sky texture coordinate calculation
 
 #include "quakedef.h"
 #include "r_local.h"

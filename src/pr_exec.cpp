@@ -1,4 +1,4 @@
-// pr_exec.c -- QuakeC virtual machine execution engine
+// pr_exec.cpp -- QuakeC virtual machine execution engine
 
 #include "quakedef.h"
 

@@ -1,4 +1,4 @@
-// net_loop.c -- loopback network driver for local game
+// net_loop.cpp -- loopback network driver for local game
 
 #include "quakedef.h"
 #include "net_loop.h"

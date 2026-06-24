@@ -1,4 +1,4 @@
-// sbar.c -- status bar code
+// sbar.cpp -- status bar code
 
 #include "quakedef.h"
 

@@ -1,4 +1,4 @@
-// cl_tent.c -- client side temporary entities
+// cl_tent.cpp -- client side temporary entities
 
 #include "quakedef.h"
 

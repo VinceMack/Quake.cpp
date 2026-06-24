@@ -1,4 +1,4 @@
-// r_bsp.c -- BSP tree traversal and polygon generation
+// r_bsp.cpp -- BSP tree traversal and polygon generation
 
 #include "quakedef.h"
 #include "r_local.h"

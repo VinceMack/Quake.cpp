@@ -1,4 +1,4 @@
-// pr_cmds.c -- built-in QuakeC function implementations
+// pr_cmds.cpp -- built-in QuakeC function implementations
 
 #include "quakedef.h"
 

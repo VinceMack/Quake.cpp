@@ -1,4 +1,4 @@
-// host.c -- coordinates spawning and killing of local servers
+// host.cpp -- coordinates spawning and killing of local servers
 
 #include "quakedef.h"
 #include "r_local.h"

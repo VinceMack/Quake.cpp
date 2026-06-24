@@ -1,4 +1,4 @@
-// view.c -- player eye positioning
+// view.cpp -- player eye positioning
 
 #include "quakedef.h"
 #include "r_local.h"

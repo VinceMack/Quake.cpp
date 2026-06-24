@@ -1,4 +1,4 @@
-// sv_phys.c -- server-side physics and collision detection
+// sv_phys.cpp -- server-side physics and collision detection
 
 #include "quakedef.h"
 

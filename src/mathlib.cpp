@@ -1,4 +1,4 @@
-// mathlib.c -- math primitives
+// mathlib.cpp -- math primitives
 
 #include <math.h>
 #include "quakedef.h"
@@ -431,7 +431,7 @@ int GreatestCommonDivisor(int i1, int i2)
     }
 }
 
-// TODO: move to nonintel.c
+// TODO: move to nonintel.cpp
 
 /*
 ===================

@@ -1,4 +1,4 @@
-// sv_move.c -- monster movement
+// sv_move.cpp -- monster movement
 
 #include "quakedef.h"
 

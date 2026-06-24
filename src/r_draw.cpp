@@ -1,4 +1,4 @@
-// r_draw.c -- span drawing and surface cache management
+// r_draw.cpp -- span drawing and surface cache management
 
 #include "quakedef.h"
 #include "r_local.h"

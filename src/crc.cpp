@@ -1,4 +1,4 @@
-// crc.c -- CRC-16 checksum computation
+// crc.cpp -- CRC-16 checksum computation
 
 #include "quakedef.h"
 #include "crc.h"

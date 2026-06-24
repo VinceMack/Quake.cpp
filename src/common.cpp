@@ -1,4 +1,4 @@
-// common.c -- misc functions used in client and server
+// common.cpp -- misc functions used in client and server
 
 #include "quakedef.h"
 

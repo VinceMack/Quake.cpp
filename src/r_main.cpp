@@ -1,4 +1,4 @@
-// r_main.c -- main refresh rendering loop
+// r_main.cpp -- main refresh rendering loop
 
 #include "quakedef.h"
 #include "r_local.h"
@@ -893,7 +893,7 @@ void R_RenderView_(void)
     // make FDIV fast. This reduces timing precision after we've been running for a
     // while, so we don't do it globally.  This also sets chop mode, and we do it
     // here so that setup stuff like the refresh area calculations match what's
-    // done in screen.c
+    // done in screen.cpp
     Sys_LowFPPrecision();
 
     if (!cl_entities[0].model || !cl.worldmodel) {

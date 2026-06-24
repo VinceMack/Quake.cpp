@@ -1,4 +1,4 @@
-// r_efrag.c -- entity fragment list management
+// r_efrag.cpp -- entity fragment list management
 
 #include "quakedef.h"
 #include "r_local.h"

@@ -1,4 +1,4 @@
-// cl_demo.c -- demo playback and recording
+// cl_demo.cpp -- demo playback and recording
 
 #include "quakedef.h"
 

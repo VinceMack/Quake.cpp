@@ -1,4 +1,4 @@
-// d_vars.c -- software rasterizer global variables
+// d_vars.cpp -- software rasterizer global variables
 
 #include "quakedef.h"
 

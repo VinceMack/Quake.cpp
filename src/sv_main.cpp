@@ -1,4 +1,4 @@
-// sv_main.c -- server main program
+// sv_main.cpp -- server main program
 
 #include "quakedef.h"
 

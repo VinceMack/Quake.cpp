@@ -1,4 +1,4 @@
-// wad.c -- WAD archive loading and lump management
+// wad.cpp -- WAD archive loading and lump management
 
 #include "quakedef.h"
 

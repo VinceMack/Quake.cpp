@@ -1,4 +1,4 @@
-// pr_edict.c -- entity dictionary and progs data management
+// pr_edict.cpp -- entity dictionary and progs data management
 
 #include "quakedef.h"
 
@@ -1052,7 +1052,7 @@ void PR_LoadProgs(void)
         pr_statements[i].op = LittleShort(pr_statements[i].op);
         pr_statements[i].a = LittleShort(pr_statements[i].a);
         pr_statements[i].b = LittleShort(pr_statements[i].b);
-        pr_statements[i].c = LittleShort(pr_statements[i].c);
+        pr_statements[i].cpp = LittleShort(pr_statements[i].cpp);
     }
 
     for (i = 0; i < progs->numfunctions; i++) {

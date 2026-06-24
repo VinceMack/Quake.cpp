@@ -1,4 +1,4 @@
-// r_edge.c -- edge list generation for scanline rendering
+// r_edge.cpp -- edge list generation for scanline rendering
 
 #include <limits.h>
 
@@ -621,7 +621,7 @@ void R_ScanEdges(void)
     edge_aftertail.next = &edge_sentinel;
     edge_aftertail.prev = &edge_tail;
 
-    // FIXME: do we need this now that we clamp x in r_draw.c?
+    // FIXME: do we need this now that we clamp x in r_draw.cpp?
     edge_sentinel.u = UINT_MAX; // make sure nothing sorts past this
     edge_sentinel.prev = &edge_aftertail;
 

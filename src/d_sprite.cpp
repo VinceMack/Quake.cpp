@@ -1,4 +1,4 @@
-// d_sprite.c: software top-level rasterization driver module for drawing
+// d_sprite.cpp: software top-level rasterization driver module for drawing
 // sprites
 
 #include "quakedef.h"

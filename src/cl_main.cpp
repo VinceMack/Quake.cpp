@@ -1,4 +1,4 @@
-// cl_main.c  -- client main loop
+// cl_main.cpp  -- client main loop
 
 #include "quakedef.h"
 

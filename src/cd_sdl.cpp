@@ -1,4 +1,4 @@
-// cd_sdl.c -- CD audio stubs for SDL 2 compatibility
+// cd_sdl.cpp -- CD audio stubs for SDL 2 compatibility
 
 #include <SDL.h>
 

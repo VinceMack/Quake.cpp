@@ -1,4 +1,4 @@
-// keys.c -- keyboard input handling and key binding
+// keys.cpp -- keyboard input handling and key binding
 
 #include "quakedef.h"
 

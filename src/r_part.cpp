@@ -1,4 +1,4 @@
-// r_part.c -- particle system rendering
+// r_part.cpp -- particle system rendering
 
 #include "quakedef.h"
 #include "r_local.h"

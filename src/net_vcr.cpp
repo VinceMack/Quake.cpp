@@ -1,4 +1,4 @@
-// net_vcr.c -- VCR demo recording and playback
+// net_vcr.cpp -- VCR demo recording and playback
 
 #include "quakedef.h"
 #include "net_vcr.h"

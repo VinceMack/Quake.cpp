@@ -1,4 +1,4 @@
-// net_dgrm.c -- datagram network driver (reliable/unreliable messages)
+// net_dgrm.cpp -- datagram network driver (reliable/unreliable messages)
 
 // This is enables a simple IP banning mechanism
 #define BAN_TEST
