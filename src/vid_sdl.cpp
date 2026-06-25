@@ -146,7 +146,7 @@ void VID_Init(unsigned char* palette)
     chunk = vid.width * vid.height * sizeof(*d_pzbuffer);
     cachesize = D_SurfaceCacheForRes(vid.width, vid.height);
     chunk += cachesize;
-    d_pzbuffer = Hunk_HighAllocName(chunk, "video");
+    d_pzbuffer = (short *) Hunk_HighAllocName(chunk, "video");
     if (d_pzbuffer == NULL) {
         Sys_Error("Not enough memory for video mode\n");
     }

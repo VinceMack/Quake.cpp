@@ -134,7 +134,7 @@ void R_InitTextures(void)
     byte* dest;
 
     // create a simple checkerboard texture for the default
-    r_notexture_mip = Hunk_AllocName(
+    r_notexture_mip = (texture_s *) Hunk_AllocName(
         sizeof(texture_t) + 16 * 16 + 8 * 8 + 4 * 4 + 2 * 2, "notexture");
 
     r_notexture_mip->width = r_notexture_mip->height = 16;
@@ -236,7 +236,7 @@ void R_NewMap(void)
     }
 
     if (r_cnumsurfs > NUMSTACKSURFACES) {
-        surfaces = Hunk_AllocName(r_cnumsurfs * sizeof(surf_t), "surfaces");
+        surfaces = (surf_t *) Hunk_AllocName(r_cnumsurfs * sizeof(surf_t), "surfaces");
         surface_p = surfaces;
         surf_max = &surfaces[r_cnumsurfs];
         r_surfsonstack = false;
@@ -259,7 +259,7 @@ void R_NewMap(void)
     if (r_numallocatededges <= NUMSTACKEDGES) {
         auxedges = NULL;
     } else {
-        auxedges = Hunk_AllocName(r_numallocatededges * sizeof(edge_t), "edges");
+        auxedges = (edge_t *) Hunk_AllocName(r_numallocatededges * sizeof(edge_t), "edges");
     }
 
     r_dowarpold = false;

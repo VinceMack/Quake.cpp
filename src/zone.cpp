@@ -1,6 +1,26 @@
-// zone.cpp -- memory allocation (hunk and cache) management
+/*
+Copyright (C) 1996-1997 Id Software, Inc.
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+*/
+// Z_zone.c
 
 #include "quakedef.h"
+#include <stdlib.h>
 
 #define DYNAMIC_SIZE 0xc000
 
@@ -118,7 +138,7 @@ void Z_Free(void* ptr)
 Z_Malloc
 ========================
 */
-ReturnVoidPtr Z_Malloc(int size)
+void* Z_Malloc(int size)
 {
     Z_CheckHeap(); // Debug check
 
@@ -132,55 +152,66 @@ ReturnVoidPtr Z_Malloc(int size)
     return buffer;
 }
 
-ReturnVoidPtr Z_Realloc(void* ptr, int new_size)
+void* Z_Realloc(void* ptr, int new_size)
 {
-    // Handle null pointer like malloc
+    // Handle null pointer like a standard malloc
     if (!ptr) {
         return Z_Malloc(new_size);
     }
 
-    // Validate block
-    const memblock_t* block = (memblock_t*)((byte*)ptr - sizeof(memblock_t));
+    // Validate the existing block
+    memblock_t* block = (memblock_t*)((byte*)ptr - sizeof(memblock_t));
     if (block->id != ZONEID) {
         Sys_Error("Z_Realloc: pointer missing ZONEID");
     }
-
     if (block->tag == 0) {
         Sys_Error("Z_Realloc: pointer already freed");
     }
 
-    // Compute usable size of old block
-    int usable_old_size = block->size
-        - sizeof(memblock_t) // subtract header
-        - 4;                 // subtract trash tester space
+    // Compute usable size of the old block
+    int usable_old_size = block->size - sizeof(memblock_t) - 4;
 
-    const void* old_ptr = ptr;
-
-    // Free old block and allocate new
-    Z_Free(ptr);
-    ptr = Z_TagMalloc(new_size, 1);
-
-    if (!ptr) {
-        Sys_Error("Z_Realloc: failed to allocate %d bytes", new_size);
+    // OPTIMIZATION: If the old block is already big enough, just return it!
+    if (usable_old_size >= new_size) {
+        return ptr;
     }
 
-    // Copy old data into new block
-    if (ptr != old_ptr) {
-        int copy_size = (usable_old_size < new_size)
-            ? usable_old_size
-            : new_size;
-        memmove(ptr, old_ptr, copy_size);
+    // Attempt to allocate the new block safely alongside the old one
+    void* new_ptr = Z_TagMalloc(new_size, 1);
+
+    if (!new_ptr) {
+        // ZONE OOM FALLBACK: The Zone is too fragmented to hold both blocks at once.
+        // We must free the old block first to merge memory space, but we need to 
+        // save the data first so it isn't corrupted! We use standard system malloc for the backup.
+        void* backup = malloc(usable_old_size);
+        if (!backup) {
+            Sys_Error("Z_Realloc: System out of memory during backup");
+        }
+        
+        Q_memcpy(backup, ptr, usable_old_size); // Save data
+        Z_Free(ptr);                            // Free old block to open up Zone space
+        
+        new_ptr = Z_TagMalloc(new_size, 1);     // Try allocating again!
+        if (!new_ptr) {
+            Sys_Error("Z_Realloc: failed to allocate %d bytes even after freeing old block", new_size);
+        }
+        
+        Q_memcpy(new_ptr, backup, usable_old_size); // Restore data
+        free(backup);                               // Free system memory
+    } 
+    else {
+        // Standard safe path: the Zone had enough room for both blocks
+        Q_memcpy(new_ptr, ptr, usable_old_size);
+        Z_Free(ptr);
     }
 
-    // Zero-fill any extra space
-    if (usable_old_size < new_size) {
-        memset((char*)ptr + usable_old_size, 0, new_size - usable_old_size);
-    }
+    // Zero-fill the newly expanded space
+    Q_memset((char*)new_ptr + usable_old_size, 0, new_size - usable_old_size);
 
-    return ptr;
+    return new_ptr;
 }
 
-ReturnVoidPtr Z_TagMalloc(int size, int tag)
+void* Z_TagMalloc(int size, int tag)
 {
     int extra;
     memblock_t *start, *rover, *new_block, *base;
@@ -238,6 +269,39 @@ ReturnVoidPtr Z_TagMalloc(int size, int tag)
     *(int*)((byte*)base + base->size - 4) = ZONEID;
 
     return (void*)((byte*)base + sizeof(memblock_t));
+}
+
+/*
+========================
+Z_Print
+========================
+*/
+void Z_Print(memzone_t* zone)
+{
+    memblock_t* block;
+
+    Con_Printf("zone size: %i  location: %p\n", mainzone->size, mainzone);
+
+    for (block = zone->blocklist.next;; block = block->next) {
+        Con_Printf("block:%p    size:%7i    tag:%3i\n", block, block->size,
+            block->tag);
+
+        if (block->next == &zone->blocklist) {
+            break; // all blocks have been hit
+        }
+
+        if ((byte*)block + block->size != (byte*)block->next) {
+            Con_Printf("ERROR: block size does not touch the next block\n");
+        }
+
+        if (block->next->prev != block) {
+            Con_Printf("ERROR: next block doesn't have proper back link\n");
+        }
+
+        if (!block->tag && !block->next->tag) {
+            Con_Printf("ERROR: two consecutive free blocks\n");
+        }
+    }
 }
 
 /*
@@ -314,11 +378,101 @@ void Hunk_Check(void)
 }
 
 /*
+==============
+Hunk_Print
+
+If "all" is specified, every single allocation is printed.
+Otherwise, allocations with the same name will be totaled up before printing.
+==============
+*/
+void Hunk_Print(qboolean all)
+{
+    hunk_t *h, *next, *endlow, *starthigh, *endhigh;
+    int count, sum;
+    int totalblocks;
+    char name[9];
+
+    name[8] = 0;
+    count = 0;
+    sum = 0;
+    totalblocks = 0;
+
+    h = (hunk_t*)hunk_base;
+    endlow = (hunk_t*)(hunk_base + hunk_low_used);
+    starthigh = (hunk_t*)(hunk_base + hunk_size - hunk_high_used);
+    endhigh = (hunk_t*)(hunk_base + hunk_size);
+
+    Con_Printf("          :%8i total hunk size\n", hunk_size);
+    Con_Printf("-------------------------\n");
+
+    while (1) {
+        //
+        // skip to the high hunk if done with low hunk
+        //
+        if (h == endlow) {
+            Con_Printf("-------------------------\n");
+            Con_Printf("          :%8i REMAINING\n",
+                hunk_size - hunk_low_used - hunk_high_used);
+            Con_Printf("-------------------------\n");
+            h = starthigh;
+        }
+
+        //
+        // if totally done, break
+        //
+        if (h == endhigh) {
+            break;
+        }
+
+        //
+        // run consistancy checks
+        //
+        if (h->sentinal != HUNK_SENTINAL) {
+            Sys_Error("Hunk_Check: trahsed sentinal");
+        }
+
+        if (h->size < 16 || h->size + (byte*)h - hunk_base > hunk_size) {
+            Sys_Error("Hunk_Check: bad size");
+        }
+
+        next = (hunk_t*)((byte*)h + h->size);
+        count++;
+        totalblocks++;
+        sum += h->size;
+
+        //
+        // print the single block
+        //
+        memcpy(name, h->name, 8);
+        if (all) {
+            Con_Printf("%8p :%8i %8s\n", h, h->size, name);
+        }
+
+        //
+        // print the total
+        //
+        if (next == endlow || next == endhigh || strncmp(h->name, next->name, 8)) {
+            if (!all) {
+                Con_Printf("          :%8i %8s (TOTAL)\n", sum, name);
+            }
+
+            count = 0;
+            sum = 0;
+        }
+
+        h = next;
+    }
+
+    Con_Printf("-------------------------\n");
+    Con_Printf("%8i total blocks\n", totalblocks);
+}
+
+/*
 ===================
 Hunk_AllocName
 ===================
 */
-ReturnVoidPtr Hunk_AllocName(int size, char* name)
+void* Hunk_AllocName(int size, char* name)
 {
     hunk_t* h;
 
@@ -355,7 +509,7 @@ ReturnVoidPtr Hunk_AllocName(int size, char* name)
 Hunk_Alloc
 ===================
 */
-ReturnVoidPtr Hunk_Alloc(int size)
+void* Hunk_Alloc(int size)
 {
     return Hunk_AllocName(size, "unknown");
 }
@@ -405,7 +559,7 @@ void Hunk_FreeToHighMark(int mark)
 Hunk_HighAllocName
 ===================
 */
-ReturnVoidPtr Hunk_HighAllocName(int size, char* name)
+void* Hunk_HighAllocName(int size, char* name)
 {
     hunk_t* h;
 
@@ -450,7 +604,7 @@ Hunk_TempAlloc
 Return space from the top of the hunk
 =================
 */
-ReturnVoidPtr Hunk_TempAlloc(int size)
+void* Hunk_TempAlloc(int size)
 {
     void* buf;
 
@@ -497,18 +651,18 @@ Cache_Move
 */
 void Cache_Move(cache_system_t* c)
 {
-    cache_system_t* new_sys;
+    cache_system_t* new_cs;
 
     // we are clearing up space at the bottom, so only allocate it late
-    new_sys = (cache_system_t*)(void*)Cache_TryAlloc(c->size, true);
-    if (new_sys) {
-        // copy from old to new
-        //
-        Q_memcpy(new_sys + 1, c + 1, c->size - sizeof(cache_system_t));
-        new_sys->user = c->user;
-        Q_memcpy(new_sys->name, c->name, sizeof(new_sys->name));
+    new_cs = Cache_TryAlloc(c->size, true);
+    if (new_cs) {
+        //		Con_Printf ("cache_move ok\n");
+
+        Q_memcpy(new_cs + 1, c + 1, c->size - sizeof(cache_system_t));
+        new_cs->user = c->user;
+        Q_memcpy(new_cs->name, c->name, sizeof(new_cs->name));
         Cache_Free(c->user);
-        new_sys->user->data = (void*)(new_sys + 1);
+        new_cs->user->data = (void*)(new_cs + 1);
     } else {
         //		Con_Printf ("cache_move failed\n");
 
@@ -632,9 +786,9 @@ cache_system_t* Cache_TryAlloc(int size, qboolean nobottom)
     new_cs = (cache_system_t*)(hunk_base + hunk_low_used);
     cs = cache_head.next;
 
-    while (1) {
-        if (cs == &cache_head || (byte*)cs > (byte*)new_cs) { // clear up to the end
-            if ((byte*)cs - (byte*)new_cs >= size) {
+    do {
+        if (!nobottom || cs != cache_head.next) {
+            if ((byte*)cs - (byte*)new_cs >= size) { // found space
                 memset(new_cs, 0, sizeof(*new_cs));
                 new_cs->size = size;
 
@@ -653,9 +807,7 @@ cache_system_t* Cache_TryAlloc(int size, qboolean nobottom)
         new_cs = (cache_system_t*)((byte*)cs + cs->size);
         cs = cs->next;
 
-        if (cs == &cache_head)
-            break;
-    }
+    } while (cs != &cache_head);
 
     // try to allocate one at the very end
     if (hunk_base + hunk_size - hunk_high_used - (byte*)new_cs >= size) {
@@ -691,6 +843,21 @@ void Cache_Flush(void)
 
 /*
 ============
+Cache_Print
+
+============
+*/
+void Cache_Print(void)
+{
+    cache_system_t* cd;
+
+    for (cd = cache_head.next; cd != &cache_head; cd = cd->next) {
+        Con_Printf("%8i : %s\n", cd->size, cd->name);
+    }
+}
+
+/*
+============
 Cache_Report
 
 ============
@@ -700,6 +867,16 @@ void Cache_Report(void)
     Con_DPrintf(
         "%4.1f megabyte data cache\n",
         (hunk_size - hunk_high_used - hunk_low_used) / (float)(1024 * 1024));
+}
+
+/*
+============
+Cache_Compact
+
+============
+*/
+void Cache_Compact(void)
+{
 }
 
 /*
@@ -747,7 +924,7 @@ void Cache_Free(cache_user_t* c)
 Cache_Check
 ==============
 */
-ReturnVoidPtr Cache_Check(cache_user_t* c)
+void* Cache_Check(cache_user_t* c)
 {
     cache_system_t* cs;
 
@@ -769,7 +946,7 @@ ReturnVoidPtr Cache_Check(cache_user_t* c)
 Cache_Alloc
 ==============
 */
-ReturnVoidPtr Cache_Alloc(cache_user_t* c, int size, char* name)
+void* Cache_Alloc(cache_user_t* c, int size, char* name)
 {
     cache_system_t* cs;
 
@@ -817,7 +994,7 @@ void Memory_Init(void* buf, int size)
     int p;
     int zonesize = DYNAMIC_SIZE;
 
-    hunk_base = (byte*)buf;
+    hunk_base = (byte*)buf; // C++ Fix: Explicitly cast void* to byte*
     hunk_size = size;
     hunk_low_used = 0;
     hunk_high_used = 0;
@@ -832,6 +1009,7 @@ void Memory_Init(void* buf, int size)
         }
     }
 
-    mainzone = Hunk_AllocName(zonesize, "zone");
+    // C++ Fix: Explicitly cast void* returned from Hunk_AllocName
+    mainzone = (memzone_t*)Hunk_AllocName(zonesize, "zone");
     Z_ClearZone(mainzone, zonesize);
 }
