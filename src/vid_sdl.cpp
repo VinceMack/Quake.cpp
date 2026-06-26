@@ -4,7 +4,6 @@
 #include "quakedef.h"
 #include "d_local.h"
 
-// viddef_t    vid;                // global video state - already defined in screen.cpp
 unsigned short d_8to16table[256];
 
 #include "winquake.h"
@@ -15,10 +14,7 @@ void VID_HandlePause()
 {
 }
 
-// The original defaults
-//#define    BASEWIDTH    320
-//#define    BASEHEIGHT   200
-// Much better for high resolution displays
+// Resolution defaults
 #define BASEWIDTH (320 * 2)
 #define BASEHEIGHT (200 * 2)
 
@@ -26,15 +22,13 @@ int VGA_width, VGA_height, VGA_rowbytes, VGA_bufferrowbytes = 0;
 byte* VGA_pagebase;
 
 static SDL_Window* window = NULL;
+static SDL_Renderer* renderer = NULL;
+static SDL_Texture* texture = NULL;
 static SDL_Surface* screen = NULL;
 
 static qboolean mouse_avail;
 static float mouse_x, mouse_y;
 static int mouse_oldbuttonstate = 0;
-
-// No support for option menus
-// void (*vid_menudrawfn)(void);  // already defined in menu.cpp
-// void (*vid_menukeyfn)(int key); // already defined in menu.cpp
 
 void VID_SetPalette(unsigned char* palette)
 {
@@ -47,7 +41,9 @@ void VID_SetPalette(unsigned char* palette)
         colors[i].b = *palette++;
         colors[i].a = 255;
     }
-    SDL_SetPaletteColors(screen->format->palette, colors, 0, 256);
+    if (screen && screen->format && screen->format->palette) {
+        SDL_SetPaletteColors(screen->format->palette, colors, 0, 256);
+    }
 }
 
 void VID_ShiftPalette(unsigned char* palette)
@@ -87,49 +83,54 @@ void VID_Init(unsigned char* palette)
     // Set video width, height and flags
     flags = 0;
     if (COM_CheckParm("-fullscreen")) {
-        flags |= SDL_WINDOW_FULLSCREEN;
+        // Modern borderless desktop fullscreen
+        flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
 
-    // Create window
+    // Create window (centered on the screen)
     window = SDL_CreateWindow("sdlquake",
-        SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         vid.width, vid.height, flags);
 
     if (!window) {
         Sys_Error("VID: Couldn't create window: %s\n", SDL_GetError());
     }
 
-    // Get the window surface
-    screen = SDL_GetWindowSurface(window);
-    if (!screen) {
-        Sys_Error("VID: Couldn't get window surface: %s\n", SDL_GetError());
+    // Create hardware-accelerated renderer
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!renderer) {
+        // Fallback to software-based renderer if hardware acceleration is unavailable
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+    }
+    if (!renderer) {
+        Sys_Error("VID: Couldn't create renderer: %s\n", SDL_GetError());
     }
 
-    // Check if we got an 8-bit surface (palette mode)
-    if (screen->format->BitsPerPixel != 8) {
-        // SDL2 doesn't always give us 8-bit surfaces directly
-        // We need to create our own 8-bit surface
-        SDL_Surface* new_screen = SDL_CreateRGBSurface(0, vid.width, vid.height, 8, 0, 0, 0, 0);
-        if (!new_screen) {
-            Sys_Error("VID: Couldn't create 8-bit surface: %s\n", SDL_GetError());
-        }
+    // Enforce aspect ratio and logical scaling boundaries (adds automatic pillarboxing/letterboxing)
+    SDL_RenderSetLogicalSize(renderer, vid.width, vid.height);
 
-        // Set up a palette for the 8-bit surface
-        SDL_Palette* pal = SDL_AllocPalette(256);
-        if (!pal) {
-            Sys_Error("VID: Couldn't allocate palette: %s\n", SDL_GetError());
-        }
+    // Always create our own 8-bit software surface
+    screen = SDL_CreateRGBSurface(0, vid.width, vid.height, 8, 0, 0, 0, 0);
+    if (!screen) {
+        Sys_Error("VID: Couldn't create 8-bit surface: %s\n", SDL_GetError());
+    }
 
-        SDL_SetSurfaceBlendMode(new_screen, SDL_BLENDMODE_NONE);
-        SDL_SetSurfacePalette(new_screen, pal);
+    // Set up a palette for the 8-bit surface
+    SDL_Palette* pal = SDL_AllocPalette(256);
+    if (!pal) {
+        Sys_Error("VID: Couldn't allocate palette: %s\n", SDL_GetError());
+    }
+    SDL_SetSurfacePalette(screen, pal);
 
-        // Replace screen with our 8-bit surface
-        screen = new_screen;
+    // Create 32-bit streaming texture to present on the GPU
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, vid.width, vid.height);
+    if (!texture) {
+        Sys_Error("VID: Couldn't create texture: %s\n", SDL_GetError());
     }
 
     VID_SetPalette(palette);
 
-    // now know everything we need to know about the buffer
+    // Now know everything we need to know about the buffer
     VGA_width = vid.conwidth = vid.width;
     VGA_height = vid.conheight = vid.height;
     vid.aspect = ((float)vid.height / (float)vid.width) * (320.0 / 240.0);
@@ -142,7 +143,7 @@ void VID_Init(unsigned char* palette)
     vid.conrowbytes = vid.rowbytes;
     vid.direct = 0;
 
-    // allocate z buffer and surface cache
+    // Allocate z buffer and surface cache
     chunk = vid.width * vid.height * sizeof(*d_pzbuffer);
     cachesize = D_SurfaceCacheForRes(vid.width, vid.height);
     chunk += cachesize;
@@ -151,16 +152,28 @@ void VID_Init(unsigned char* palette)
         Sys_Error("Not enough memory for video mode\n");
     }
 
-    // initialize the cache memory
+    // Initialize the cache memory
     cache = (byte*)d_pzbuffer + vid.width * vid.height * sizeof(*d_pzbuffer);
     D_InitCaches(cache, cachesize);
 
-    // initialize the mouse
+    // Initialize the mouse
     SDL_ShowCursor(0);
 }
 
 void VID_Shutdown(void)
 {
+    if (texture) {
+        SDL_DestroyTexture(texture);
+        texture = NULL;
+    }
+    if (renderer) {
+        SDL_DestroyRenderer(renderer);
+        renderer = NULL;
+    }
+    if (screen) {
+        SDL_FreeSurface(screen);
+        screen = NULL;
+    }
     if (window) {
         SDL_DestroyWindow(window);
         window = NULL;
@@ -169,42 +182,45 @@ void VID_Shutdown(void)
     SDL_Quit();
 }
 
+// Convert 8-bit software surface to 32-bit ARGB texture and present to the GPU
+void VID_Present(void)
+{
+    Uint32* pixels;
+    int pitch;
+
+    if (!texture || !screen) {
+        return;
+    }
+
+    if (SDL_LockTexture(texture, NULL, (void**)&pixels, &pitch) == 0) {
+        SDL_Palette* pal = screen->format->palette;
+        int width = vid.width;
+        int height = vid.height;
+        int rowbytes = vid.rowbytes;
+        byte* src = (byte*)screen->pixels;
+        int dest_pitch_pixels = pitch / 4;
+
+        for (int y = 0; y < height; y++) {
+            byte* src_row = src + y * rowbytes;
+            Uint32* dest_row = pixels + y * dest_pitch_pixels;
+            for (int x = 0; x < width; x++) {
+                byte color_idx = src_row[x];
+                SDL_Color col = pal->colors[color_idx];
+                dest_row[x] = (255 << 24) | (col.r << 16) | (col.g << 8) | col.b;
+            }
+        }
+        SDL_UnlockTexture(texture);
+    }
+
+    SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, texture, NULL, NULL);
+    SDL_RenderPresent(renderer);
+}
+
 void VID_Update(vrect_t* rects)
 {
-    SDL_Rect* sdlrects;
-    int n, i;
-    vrect_t* rect;
-
-    // Two-pass system, since Quake doesn't do it the SDL way...
-
-    // First, count the number of rectangles
-    n = 0;
-    for (rect = rects; rect; rect = rect->pnext) {
-        ++n;
-    }
-
-    // Second, copy them to SDL rectangles and update
-    if (!(sdlrects = (SDL_Rect*)alloca(n * sizeof(*sdlrects)))) {
-        Sys_Error("Out of memory");
-    }
-
-    i = 0;
-    for (rect = rects; rect; rect = rect->pnext) {
-        sdlrects[i].x = rect->x;
-        sdlrects[i].y = rect->y;
-        sdlrects[i].w = rect->width;
-        sdlrects[i].h = rect->height;
-        ++i;
-    }
-
-    // If we're using our own 8-bit surface, we need to blit it to the window
-    SDL_Surface* window_surface = SDL_GetWindowSurface(window);
-    if (screen != window_surface) {
-        SDL_BlitSurface(screen, NULL, window_surface, NULL);
-        SDL_UpdateWindowSurfaceRects(window, sdlrects, n);
-    } else {
-        SDL_UpdateWindowSurfaceRects(window, sdlrects, n);
-    }
+    (void)rects; // Silence warning C4100
+    VID_Present();
 }
 
 /*
@@ -239,28 +255,8 @@ D_EndDirectRect
 */
 void D_EndDirectRect(int x, int y, int width, int height)
 {
-    SDL_Rect rect;
-
-    if (!screen || !window) {
-        return;
-    }
-
-    if (x < 0) {
-        x = screen->w + x - 1;
-    }
-
-    rect.x = x;
-    rect.y = y;
-    rect.w = width;
-    rect.h = height;
-
-    // If we're using our own 8-bit surface, we need to blit it to the window
-    SDL_Surface* window_surface = SDL_GetWindowSurface(window);
-    if (screen != window_surface) {
-        SDL_BlitSurface(screen, &rect, window_surface, &rect);
-    }
-
-    SDL_UpdateWindowSurfaceRects(window, &rect, 1);
+    (void)x; (void)y; (void)width; (void)height; // Silence warning C4100
+    VID_Present();
 }
 
 /*
@@ -268,7 +264,6 @@ void D_EndDirectRect(int x, int y, int width, int height)
 Sys_SendKeyEvents
 ================
 */
-
 void Sys_SendKeyEvents(void)
 {
     SDL_Event event;
@@ -442,35 +437,7 @@ void Sys_SendKeyEvents(void)
                 }
 
                 break;
-            case SDLK_KP_PERIOD:
-                if (modstate & KMOD_NUM) {
-                    sym = SDLK_PERIOD;
-                } else {
-                    sym = K_DEL;
-                }
-
-                break;
-            case SDLK_KP_DIVIDE:
-                sym = SDLK_SLASH;
-                break;
-            case SDLK_KP_MULTIPLY:
-                sym = SDLK_ASTERISK;
-                break;
-            case SDLK_KP_MINUS:
-                sym = SDLK_MINUS;
-                break;
-            case SDLK_KP_PLUS:
-                sym = SDLK_PLUS;
-                break;
-            case SDLK_KP_ENTER:
-                sym = SDLK_RETURN;
-                break;
-            case SDLK_KP_EQUALS:
-                sym = SDLK_EQUALS;
-                break;
             }
-            // If we're not directly handled and still above 255
-            // just force it to 0
             if (sym > 255) {
                 sym = 0;
             }
@@ -528,7 +495,6 @@ void IN_Commands(void)
     }
 
     i = SDL_GetMouseState(NULL, NULL);
-    /* Quake swaps the second and third buttons */
     mouse_buttonstate = (i & ~0x06) | ((i & 0x02) << 1) | ((i & 0x04) >> 1);
     for (i = 0; i < 3; i++) {
         if ((mouse_buttonstate & (1 << i)) && !(mouse_oldbuttonstate & (1 << i))) {
@@ -581,11 +547,6 @@ void IN_Move(usercmd_t* cmd)
     mouse_x = mouse_y = 0.0;
 }
 
-/*
-================
-Sys_ConsoleInput
-================
-*/
 char* Sys_ConsoleInput(void)
 {
     return 0;

@@ -10,8 +10,8 @@
 #define MAXWORKINGVERTS (MAXVERTS + 4) // max points in an intermediate
 //  polygon (while processing)
 // !!! if this is changed, it must be changed in d_ifacea.h too !!!
-#define MAXHEIGHT 1024
-#define MAXWIDTH 1280
+#define MAXHEIGHT 2160
+#define MAXWIDTH 3840
 #define MAXDIMENSION ((MAXHEIGHT > MAXWIDTH) ? MAXHEIGHT : MAXWIDTH)
 
 #define SIN_BUFFER_SIZE (MAXDIMENSION + CYCLE)
@@ -46,7 +46,7 @@ extern entity_t* currententity;
 #define MINEDGES NUMSTACKEDGES
 #define NUMSTACKSURFACES 800
 #define MINSURFACES NUMSTACKSURFACES
-#define MAXSPANS 3000
+#define MAXSPANS 8000 // Increased from 3000 to safely handle larger screens
 
 // !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct espan_s {
@@ -122,8 +122,8 @@ extern int ubasestep, errorterm, erroradjustup, erroradjustdown;
 
 // !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct edge_s {
-    fixed16_t u;
-    fixed16_t u_step;
+    int64_t u;       // Changed from fixed16_t to int64_t
+    int64_t u_step;  // Changed from fixed16_t to int64_t
     struct edge_s *prev, *next;
     unsigned short surfs[2];
     struct edge_s* nextremove;

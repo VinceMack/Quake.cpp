@@ -25,7 +25,7 @@ extern int screenwidth;
 
 int current_iv;
 
-int edge_head_u_shift20, edge_tail_u_shift20;
+int64_t edge_head_u_shift20, edge_tail_u_shift20; // Changed from int to int64_t
 
 static void (*pdrawfunc)(void);
 
@@ -600,7 +600,7 @@ void R_ScanEdges(void)
 
     // clear active edges to just the background edges around the whole screen
     // FIXME: most of this only needs to be set up once
-    edge_head.u = r_refdef.vrect.x << 20;
+    edge_head.u = (int64_t)r_refdef.vrect.x << 20;
     edge_head_u_shift20 = edge_head.u >> 20;
     edge_head.u_step = 0;
     edge_head.prev = NULL;
@@ -608,7 +608,7 @@ void R_ScanEdges(void)
     edge_head.surfs[0] = 0;
     edge_head.surfs[1] = 1;
 
-    edge_tail.u = (r_refdef.vrectright << 20) + 0xFFFFF;
+    edge_tail.u = ((int64_t)r_refdef.vrectright << 20) + 0xFFFFF;
     edge_tail_u_shift20 = edge_tail.u >> 20;
     edge_tail.u_step = 0;
     edge_tail.prev = &edge_head;
