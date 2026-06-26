@@ -125,6 +125,8 @@ typedef struct qsocket_s {
 
 } qsocket_t;
 
+namespace Net {
+
 extern qsocket_t* net_activeSockets;
 extern qsocket_t* net_freeSockets;
 extern int net_numsockets;
@@ -318,3 +320,7 @@ extern qboolean slistSilent;
 extern qboolean slistLocal;
 
 void NET_Slist_f(void);
+
+} // namespace Net
+
+using namespace Net;

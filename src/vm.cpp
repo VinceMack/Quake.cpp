@@ -3,6 +3,8 @@
 
 #include "quakedef.hpp"
 
+namespace VM {
+
 // ============================================================================
 // pr_edict.cpp -- entity dictionary and progs data management
 // ============================================================================
@@ -3335,7 +3337,7 @@ inline void PF_WriteEntity(void)
 
 //=============================================================================
 
-int SV_ModelIndex(char* name);
+int ::SV_ModelIndex(char* name);
 
 void PF_makestatic(void)
 {
@@ -3346,7 +3348,7 @@ void PF_makestatic(void)
 
     MSG_WriteByte(&sv.signon, svc_spawnstatic);
 
-    MSG_WriteByte(&sv.signon, SV_ModelIndex(PR_GetString(ent->v.model)));
+    MSG_WriteByte(&sv.signon, ::SV_ModelIndex(PR_GetString(ent->v.model)));
 
     MSG_WriteByte(&sv.signon, ent->v.frame);
     MSG_WriteByte(&sv.signon, ent->v.colormap);
@@ -3500,3 +3502,5 @@ builtin_t pr_builtin[] = {
 
 builtin_t* pr_builtins = pr_builtin;
 int pr_numbuiltins = sizeof(pr_builtin) / sizeof(pr_builtin[0]);
+
+} // namespace VM

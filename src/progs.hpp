@@ -32,6 +32,8 @@ typedef struct edict_s {
 
 //============================================================================
 
+namespace VM {
+
 extern dprograms_t* progs;
 extern dfunction_t* pr_functions;
 extern char* pr_strings;
@@ -113,3 +115,7 @@ void ED_PrintEdicts(void);
 void ED_PrintNum(int ent);
 
 eval_t* GetEdictFieldValue(edict_t* ed, char* field);
+
+} // namespace VM
+
+using namespace VM;

@@ -3,6 +3,8 @@
 
 #include "quakedef.hpp"
 
+namespace Audio {
+
 // ============================================================================
 // snd_dma.cpp -- main control for any streaming sound output device
 // ============================================================================
@@ -1526,3 +1528,5 @@ void SNDDMA_Shutdown(void)
         snd_inited = 0;
     }
 }
+
+} // namespace Audio

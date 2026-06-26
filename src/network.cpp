@@ -32,6 +32,18 @@ typedef int socklen_t;
 #define VCR_OP_CANSENDMESSAGE 4
 #define VCR_MAX_MESSAGE 4
 
+// Variables shared with menu.cpp (menu state tracking)
+extern int m_return_state;
+extern int m_state;
+extern qboolean m_return_onerror;
+extern char m_return_reason[32];
+
+// VCR recording — accessed from host.cpp and sys_sdl.cpp via extern
+int vcrFile = -1;
+qboolean recording = false;
+
+namespace Net {
+
 // ============================================================================
 // Forward declarations of all driver functions
 // ============================================================================
@@ -811,11 +823,6 @@ static struct {
     unsigned int sequence;
     byte data[MAX_DATAGRAM];
 } packetBuffer;
-
-extern int m_return_state;
-extern int m_state;
-extern qboolean m_return_onerror;
-extern char m_return_reason[32];
 
 int packetsSent = 0;
 int packetsReSent = 0;
@@ -2127,8 +2134,6 @@ qsocket_t* Datagram_Connect(char* host)
 // net_vcr.cpp -- VCR demo recording and playback
 // ============================================================================
 
-extern int vcrFile;
-
 static struct {
     double time;
     int op;
@@ -2336,9 +2341,6 @@ cvar_t config_modem_clear = { "_config_modem_clear", "ATZ", true };
 cvar_t config_modem_init = { "_config_modem_init", "", true };
 cvar_t config_modem_hangup = { "_config_modem_hangup", "AT H", true };
 
-
-int vcrFile = -1;
-qboolean recording = false;
 
 int net_driverlevel;
 
@@ -3173,3 +3175,4 @@ void SchedulePollProcedure(PollProcedure* proc, double timeOffset)
 
 #undef sfunc
 #undef dfunc
+} // namespace Net

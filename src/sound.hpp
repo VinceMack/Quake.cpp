@@ -64,6 +64,8 @@ typedef struct {
     int dataofs; // chunk starts this many bytes from file start
 } wavinfo_t;
 
+namespace Audio {
+
 void S_Init(void);
 void S_Startup(void);
 void S_Shutdown(void);
@@ -146,6 +148,10 @@ wavinfo_t GetWavinfo(char* name, byte* wav, int wavlength);
 
 void SND_InitScaletable(void);
 void SNDDMA_Submit(void);
+
+} // namespace Audio
+
+using namespace Audio;
 
 
 #endif

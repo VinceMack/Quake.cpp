@@ -41,6 +41,8 @@ cvar_t sv_accelerate = { "sv_accelerate", "10" };
 // sv_main.cpp contents
 //============================================================================
 
+namespace VM { extern cvar_t sv_aim; }
+
 /*
 ===============
 SV_Init
@@ -58,7 +60,6 @@ void SV_Init(void)
     Cvar_RegisterVariable(&sv_maxspeed);
     Cvar_RegisterVariable(&sv_accelerate);
     Cvar_RegisterVariable(&sv_idealpitchscale);
-    extern cvar_t sv_aim;
     Cvar_RegisterVariable(&sv_aim);
     Cvar_RegisterVariable(&sv_nostep);
 
@@ -2597,7 +2598,8 @@ facing it.
 
 ======================
 */
-void PF_changeyaw(void);
+
+namespace VM { void PF_changeyaw(void); }
 
 qboolean SV_StepDirection(edict_t* ent, float yaw, float dist)
 {
