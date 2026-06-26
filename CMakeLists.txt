@@ -37,7 +37,6 @@ set(CORE_SRCS
     src/crc.cpp
     src/cvar.cpp
     src/d_edge.cpp
-    src/d_fill.cpp
     src/d_init.cpp
     src/d_modech.cpp
     src/d_part.cpp
@@ -47,7 +46,6 @@ set(CORE_SRCS
     src/d_sprite.cpp
     src/d_surf.cpp
     src/d_vars.cpp
-    src/d_zpoint.cpp
     src/draw.cpp
     src/host.cpp
     src/host_cmd.cpp
