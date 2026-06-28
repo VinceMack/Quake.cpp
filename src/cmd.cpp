@@ -491,7 +491,7 @@ void AddCommand(std::string_view cmd_name, xcommand_t function)
     }
 
     // fail if the command is a variable name
-    if (Cvar::VariableString(cmd_name)[0]) {
+    if (Cvar::FindVar(cmd_name) != nullptr) {
         Con_Printf("Cmd::AddCommand: %.*s already defined as a var\n", static_cast<int>(cmd_name.length()), cmd_name.data());
         return;
     }
