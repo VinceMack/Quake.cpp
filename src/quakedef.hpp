@@ -13,11 +13,11 @@
 
 #define GAMENAME "id1"
 
-#include <math.h>
-#include <string.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstring>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
 #include <setjmp.h>
 #include "core_types.hpp"
 

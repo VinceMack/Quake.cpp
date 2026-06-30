@@ -27,8 +27,10 @@ using namespace Wad;
 using namespace Cvar;
 using namespace Cmd;
 
-
-#include <stdint.h>
+#include <cstdint>
+#include <cstddef>
+#include <endian.h>
+#include <fcntl.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -45,9 +47,17 @@ using namespace Cmd;
 #undef errno
 #define errno WSAGetLastError()
 typedef int socklen_t;
+#else
+#include <unistd.h>
+#include <netdb.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
+
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 256
-#endif
 #endif
 
 // VCR op constants
@@ -638,7 +648,7 @@ int UDP_CheckNewConnections(void)
 
 int UDP_Read(int socket, byte* buf, int len, struct qsockaddr* addr)
 {
-    int addrlen = sizeof(struct qsockaddr);
+    socklen_t addrlen = sizeof(struct qsockaddr);
     int ret;
 
     ret = recvfrom(socket, (char*)buf, len, 0, (struct sockaddr*)addr, &addrlen);
@@ -738,7 +748,7 @@ int UDP_StringToAddr(const char* string, struct qsockaddr* addr)
 
 int UDP_GetSocketAddr(int socket, struct qsockaddr* addr)
 {
-    int addrlen = sizeof(struct qsockaddr);
+    socklen_t addrlen = sizeof(struct qsockaddr);
     unsigned int a;
 
     Q_memset(addr, 0, sizeof(struct qsockaddr));

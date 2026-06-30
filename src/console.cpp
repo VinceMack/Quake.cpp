@@ -1,6 +1,10 @@
 // console.cpp -- console text display and input
 
+#ifdef _MSC_VER
 #include <io.h>
+#else
+#include <unistd.h>
+#endif
 #include <fcntl.h>
 #include "quakedef.hpp"
 
@@ -343,9 +347,9 @@ void Con_DebugLog(const char* file, const char* fmt, ...)
     va_start(argptr, fmt);
     vsprintf(data, fmt, argptr);
     va_end(argptr);
-    fd = _open(file, O_WRONLY | O_CREAT | O_APPEND, 0666);
-    _write(fd, data, (unsigned int)strlen(data));
-    _close(fd);
+    fd = open(file, O_WRONLY | O_CREAT | O_APPEND, 0666);
+    write(fd, data, (unsigned int)strlen(data));
+    close(fd);
 }
 
 /*

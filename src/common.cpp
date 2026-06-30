@@ -1649,6 +1649,8 @@ void COM_InitFilesystem(void)
         }
     }
 
+/* TODO: fix cache dir for UNIX */
+#if 0
     //
     // -cachedir <path>
     // Overrides the system supplied cache directory (NULL or /qcache)
@@ -1666,6 +1668,7 @@ void COM_InitFilesystem(void)
     } else {
         com_cachedir[0] = 0;
     }
+#endif
 
     //
     // start up with GAMENAME by default (id1)

@@ -3362,8 +3362,6 @@ inline void PF_WriteEntity(void)
 
 //=============================================================================
 
-int ::SV_ModelIndex(const char* name);
-
 void PF_makestatic(void)
 {
     edict_t* ent;
