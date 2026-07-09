@@ -157,8 +157,23 @@ extern cvar_t timelimit;
 
 extern cvar_t sv_gravity;
 
-extern server_static_t svs; // persistant server info
-extern server_t sv;         // local server
+class ServerSubsystem {
+public:
+    server_static_t& GetStaticState() { return svs_; }
+    const server_static_t& GetStaticState() const { return svs_; }
+
+    server_t& GetState() { return sv_; }
+    const server_t& GetState() const { return sv_; }
+
+private:
+    server_static_t svs_;
+    server_t sv_;
+};
+
+ServerSubsystem& GetServerSubsystem();
+
+inline server_static_t& svs = GetServerSubsystem().GetStaticState();
+inline server_t& sv = GetServerSubsystem().GetState();
 
 extern edict_t* sv_player;
 

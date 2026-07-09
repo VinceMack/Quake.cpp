@@ -17,7 +17,29 @@ namespace Cvar {
 struct State {
     cvar_t* vars = nullptr;
 };
-inline State state;
+
+class CvarRegistry {
+public:
+    void Register(cvar_t* variable);
+    void Set(std::string_view var_name, std::string_view value);
+    void SetValue(std::string_view var_name, float value);
+    float VariableValue(std::string_view var_name);
+    std::string_view VariableString(std::string_view var_name);
+    std::string_view CompleteVariable(std::string_view partial);
+    qboolean Command(void);
+    void WriteVariables(std::FILE* f);
+    cvar_t* FindVar(std::string_view var_name);
+
+    State& GetState() { return state_; }
+    const State& GetState() const { return state_; }
+
+private:
+    State state_;
+};
+
+CvarRegistry& GetCvarRegistry();
+
+inline State& state = GetCvarRegistry().GetState();
 
 void Register(cvar_t* variable);
 

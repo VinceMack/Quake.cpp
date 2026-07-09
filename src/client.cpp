@@ -46,13 +46,11 @@ cvar_t m_yaw = { "m_yaw", "0.022", true };
 cvar_t m_forward = { "m_forward", "1", true };
 cvar_t m_side = { "m_side", "0.8", true };
 
-client_static_t cls;
-client_state_t cl;
-efrag_t cl_efrags[MAX_EFRAGS];
-entity_t cl_entities[MAX_EDICTS];
-entity_t cl_static_entities[MAX_STATIC_ENTITIES];
-lightstyle_t cl_lightstyle[MAX_LIGHTSTYLES];
-dlight_t cl_dlights[MAX_DLIGHTS];
+ClientSubsystem& GetClientSubsystem()
+{
+    static ClientSubsystem subsystem;
+    return subsystem;
+}
 
 int cl_numvisedicts;
 entity_t* cl_visedicts[MAX_VISEDICTS];
@@ -105,8 +103,7 @@ int bitcounts[16];
 
 // from cl_tent.cpp
 int num_temp_entities;
-entity_t cl_temp_entities[MAX_TEMP_ENTITIES];
-beam_t cl_beams[MAX_BEAMS];
+// cl_temp_entities and cl_beams are encapsulated in ClientSubsystem
 sfx_t* cl_sfx_wizhit;
 sfx_t* cl_sfx_knighthit;
 sfx_t* cl_sfx_tink1;

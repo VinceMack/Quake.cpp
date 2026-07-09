@@ -46,8 +46,11 @@ cvar_t fraglimit = { "fraglimit", "0", false, true };
 cvar_t timelimit = { "timelimit", "0", false, true };
 
 // from sv_main.cpp
-server_t sv;
-server_static_t svs;
+ServerSubsystem& GetServerSubsystem()
+{
+    static ServerSubsystem subsystem;
+    return subsystem;
+}
 char localmodels[MAX_MODELS][5];
 int fatbytes;
 byte fatpvs[MAX_MAP_LEAFS / 8];
