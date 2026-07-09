@@ -104,7 +104,7 @@ extern float xscaleshrink, yscaleshrink;
 
 extern int d_lightstylevalue[256];
 
-extern void TransformVector(vec3_t in, vec3_t out);
+extern void TransformVector(const vec3_t& in, vec3_t& out);
 extern void SetUpForLineScan(fixed8_t startvertu,
     fixed8_t startvertv,
     fixed8_t endvertu,

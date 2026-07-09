@@ -115,7 +115,7 @@ SV_StartParticle
 Make sure the event gets sent to all clients
 ==================
 */
-void SV_StartParticle(vec3_t org, vec3_t dir, int color, int count)
+void SV_StartParticle(const vec3_t& org, const vec3_t& dir, int color, int count)
 {
     int i, v;
 
@@ -1381,7 +1381,7 @@ returns the blocked flags (1 = floor, 2 = step / wall)
 */
 #define STOP_EPSILON 0.1
 
-int ClipVelocity(vec3_t in, vec3_t normal, vec3_t out, float overbounce)
+int ClipVelocity(const vec3_t& in, const vec3_t& normal, vec3_t& out, float overbounce)
 {
     float backoff;
     float change;
@@ -2504,7 +2504,7 @@ possible, no move is done, false is returned, and
 pr_global_struct->trace_normal is set to the normal of the blocking wall
 =============
 */
-qboolean SV_movestep(edict_t* ent, vec3_t move, qboolean relink)
+qboolean SV_movestep(edict_t* ent, const vec3_t& move, qboolean relink)
 {
     float dz;
     vec3_t oldorg, neworg, end;

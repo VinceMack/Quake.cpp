@@ -39,15 +39,15 @@ line of sight checks trace->crosscontent, but bullets don't
 
 typedef struct {
     vec3_t boxmins, boxmaxs; // enclose the test object along entire move
-    float *mins, *maxs;      // size of the moving object
+    const float *mins, *maxs;      // size of the moving object
     vec3_t mins2, maxs2;     // size when clipping against mosnters
-    float *start, *end;
+    const float *start, *end;
     trace_t trace;
     int type;
     edict_t* passedict;
 } moveclip_t;
 
-int SV_HullPointContents(hull_t* hull, int num, vec3_t p);
+int SV_HullPointContents(hull_t* hull, int num, const vec3_t& p);
 
 /*
 ===============================================================================
@@ -127,9 +127,9 @@ testing object's origin to get a point to use with the returned hull.
 ================
 */
 hull_t* SV_HullForEntity(edict_t* ent,
-    vec3_t mins,
-    vec3_t maxs,
-    vec3_t offset)
+    const vec3_t& mins,
+    const vec3_t& maxs,
+    vec3_t& offset)
 {
     model_t* model;
     vec3_t size;
@@ -474,7 +474,7 @@ SV_HullPointContents
 
 ==================
 */
-int SV_HullPointContents(hull_t* hull, int num, vec3_t p)
+int SV_HullPointContents(hull_t* hull, int num, const vec3_t& p)
 {
     float d;
     dclipnode_t* node;
@@ -510,7 +510,7 @@ SV_PointContents
 
 ==================
 */
-int SV_PointContents(vec3_t p)
+int SV_PointContents(const vec3_t& p)
 {
     int cont;
 
@@ -565,8 +565,8 @@ qboolean SV_RecursiveHullCheck(hull_t* hull,
     int num,
     float p1f,
     float p2f,
-    vec3_t p1,
-    vec3_t p2,
+    const vec3_t& p1,
+    const vec3_t& p2,
     trace_t* trace)
 {
     dclipnode_t* node;
@@ -725,10 +725,10 @@ eventually rotation) of the end points
 ==================
 */
 trace_t SV_ClipMoveToEntity(edict_t* ent,
-    vec3_t start,
-    vec3_t mins,
-    vec3_t maxs,
-    vec3_t end)
+    const vec3_t& start,
+    const vec3_t& mins,
+    const vec3_t& maxs,
+    const vec3_t& end)
 {
     trace_t trace;
     vec3_t offset;
@@ -864,12 +864,12 @@ void SV_ClipToLinks(areanode_t* node, moveclip_t* clip)
 SV_MoveBounds
 ==================
 */
-void SV_MoveBounds(vec3_t start,
-    vec3_t mins,
-    vec3_t maxs,
-    vec3_t end,
-    vec3_t boxmins,
-    vec3_t boxmaxs)
+void SV_MoveBounds(const vec3_t& start,
+    const vec3_t& mins,
+    const vec3_t& maxs,
+    const vec3_t& end,
+    vec3_t& boxmins,
+    vec3_t& boxmaxs)
 {
     int i;
 
@@ -889,10 +889,10 @@ void SV_MoveBounds(vec3_t start,
 SV_Move
 ==================
 */
-trace_t SV_Move(vec3_t start,
-    vec3_t mins,
-    vec3_t maxs,
-    vec3_t end,
+trace_t SV_Move(const vec3_t& start,
+    const vec3_t& mins,
+    const vec3_t& maxs,
+    const vec3_t& end,
     int type,
     edict_t* passedict)
 {

@@ -181,7 +181,7 @@ extern edict_t* sv_player;
 
 void SV_Init(void);
 
-void SV_StartParticle(vec3_t org, vec3_t dir, int color, int count);
+void SV_StartParticle(const vec3_t& org, const vec3_t& dir, int color, int count);
 void SV_StartSound(edict_t* entity,
     int channel,
     const char* sample,
@@ -207,7 +207,7 @@ void SV_BroadcastPrintf(const char* fmt, ...);
 void SV_Physics(void);
 
 qboolean SV_CheckBottom(edict_t* ent);
-qboolean SV_movestep(edict_t* ent, vec3_t move, qboolean relink);
+qboolean SV_movestep(edict_t* ent, const vec3_t& move, qboolean relink);
 
 void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg);
 

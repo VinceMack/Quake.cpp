@@ -2198,7 +2198,7 @@ void R_TransformFrustum(void)
 TransformVector
 ================
 */
-void TransformVector(vec3_t in, vec3_t out)
+void TransformVector(const vec3_t& in, vec3_t& out)
 {
     out[0] = DotProduct(in, vright);
     out[1] = DotProduct(in, vup);
@@ -3920,7 +3920,7 @@ static qboolean makeclippededge;
 R_EntityRotate
 ================
 */
-void R_EntityRotate(vec3_t vec)
+void R_EntityRotate(vec3_t& vec)
 {
     vec3_t tvec;
 
@@ -4872,7 +4872,7 @@ float r_avertexnormals[NUMVERTEXNORMALS][3] = {
 
 void R_AliasTransformAndProjectFinalVerts(finalvert_t* fv, stvert_t* pstverts);
 void R_AliasSetUpTransform(int trivial_accept);
-void R_AliasTransformVector(vec3_t in, vec3_t out);
+void R_AliasTransformVector(const float* in, float* out);
 void R_AliasTransformFinalVert(finalvert_t* fv,
     auxvert_t* av,
     trivertx_t* pverts,
@@ -5035,7 +5035,7 @@ qboolean R_AliasCheckBBox(void)
 R_AliasTransformVector
 ================
 */
-void R_AliasTransformVector(vec3_t in, vec3_t out)
+void R_AliasTransformVector(const float* in, float* out)
 {
     out[0] = DotProduct(in, aliastransform[0]) + aliastransform[0][3];
     out[1] = DotProduct(in, aliastransform[1]) + aliastransform[1][3];
