@@ -1,4 +1,4 @@
-// d_iface.h: interface header file for rasterization driver modules
+// rasterizer.hpp: interface header file for rasterization driver modules
 #pragma once
 
 #define WARP_WIDTH 320

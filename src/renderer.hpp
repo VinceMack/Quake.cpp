@@ -1,4 +1,4 @@
-// render.h -- public interface to refresh functions
+// renderer.hpp -- public interface to refresh functions
 #pragma once
 
 #define MAXCLIPPLANES 11

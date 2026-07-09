@@ -1,8 +1,8 @@
-// sound.h -- client sound i/o functions
+// audio.hpp -- client sound i/o functions
 #pragma once
 
-#ifndef __SOUND__
-#define __SOUND__
+#ifndef __AUDIO__
+#define __AUDIO__
 
 #define DEFAULT_SOUND_PACKET_VOLUME 255
 #define DEFAULT_SOUND_PACKET_ATTENUATION 1.0
@@ -151,7 +151,5 @@ void SND_InitScaletable(void);
 void SNDDMA_Submit(void);
 
 } // namespace Audio
-
-
 
 #endif
