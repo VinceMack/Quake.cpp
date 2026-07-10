@@ -57,17 +57,17 @@ int type_size[8] = {
 ddef_t* ED_FieldAtOfs(int ofs);
 qboolean ED_ParseEpair(void* base, ddef_t* key, char* s);
 
-cvar_t nomonsters = { "nomonsters", "0" };
-cvar_t gamecfg = { "gamecfg", "0" };
-cvar_t scratch1 = { "scratch1", "0" };
-cvar_t scratch2 = { "scratch2", "0" };
-cvar_t scratch3 = { "scratch3", "0" };
-cvar_t scratch4 = { "scratch4", "0" };
-cvar_t savedgamecfg = { "savedgamecfg", "0", true };
-cvar_t saved1 = { "saved1", "0", true };
-cvar_t saved2 = { "saved2", "0", true };
-cvar_t saved3 = { "saved3", "0", true };
-cvar_t saved4 = { "saved4", "0", true };
+cvar_t nomonsters = { "nomonsters", "0", {}, {}, {}, {} };
+cvar_t gamecfg = { "gamecfg", "0", {}, {}, {}, {} };
+cvar_t scratch1 = { "scratch1", "0", {}, {}, {}, {} };
+cvar_t scratch2 = { "scratch2", "0", {}, {}, {}, {} };
+cvar_t scratch3 = { "scratch3", "0", {}, {}, {}, {} };
+cvar_t scratch4 = { "scratch4", "0", {}, {}, {}, {} };
+cvar_t savedgamecfg = { "savedgamecfg", "0", true, {}, {}, {} };
+cvar_t saved1 = { "saved1", "0", true, {}, {}, {} };
+cvar_t saved2 = { "saved2", "0", true, {}, {}, {} };
+cvar_t saved3 = { "saved3", "0", true, {}, {}, {} };
+cvar_t saved4 = { "saved4", "0", true, {}, {}, {} };
 
 #define MAX_FIELD_LEN 64
 #define GEFV_CACHESIZE 2
@@ -3358,7 +3358,7 @@ inline void PF_WriteEntity(void)
 
 //=============================================================================
 
-int ::SV_ModelIndex(const char* name);
+// SV_ModelIndex declared in server.hpp
 
 void PF_makestatic(void)
 {
@@ -3369,7 +3369,7 @@ void PF_makestatic(void)
 
     MSG_WriteByte(&sv.signon, svc_spawnstatic);
 
-    MSG_WriteByte(&sv.signon, ::SV_ModelIndex(PR_GetString(ent->v.model)));
+    MSG_WriteByte(&sv.signon, SV_ModelIndex(PR_GetString(ent->v.model)));
 
     MSG_WriteByte(&sv.signon, ent->v.frame);
     MSG_WriteByte(&sv.signon, ent->v.colormap);

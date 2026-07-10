@@ -1,5 +1,6 @@
 // host_cmd.cpp -- console command implementations for host management
 
+#include <cstring>
 #include "quakedef.hpp"
 
 using namespace CDAudio;
@@ -617,7 +618,7 @@ void Host_Loadgame_f(void)
     // load the edicts out of the savegame file
     entnum = -1; // -1 is the globals
     while (!feof(f)) {
-        for (i = 0; i < sizeof(str) - 1; i++) {
+        for (i = 0; i < static_cast<int>(sizeof(str) - 1); i++) {
             r = fgetc(f);
             if (r == EOF || !r) {
                 break;
@@ -634,7 +635,6 @@ void Host_Loadgame_f(void)
         }
 
         str[i] = 0;
-        start = str;
         start = COM_Parse(str);
         if (!com_token[0]) {
             break; // end of file
@@ -649,7 +649,7 @@ void Host_Loadgame_f(void)
         } else { // parse an edict
 
             ent = EDICT_NUM(entnum);
-            memset(&ent->v, 0, progs->entityfields * 4);
+            std::memset(reinterpret_cast<void*>(&ent->v), 0, static_cast<size_t>(progs->entityfields) * 4);
             ent->free = false;
             ED_ParseEdict(start, ent);
 
@@ -1035,7 +1035,7 @@ void Host_Spawn_f(void)
         // set up the edict
         ent = host_client->edict;
 
-        memset(&ent->v, 0, progs->entityfields * 4);
+        std::memset(reinterpret_cast<void*>(&ent->v), 0, static_cast<size_t>(progs->entityfields) * 4);
         ent->v.colormap = NUM_FOR_EDICT(ent);
         ent->v.team = (host_client->colors & 15) + 1;
         ent->v.netname = PR_SetString(host_client->name);

@@ -1,6 +1,7 @@
 // cmd.cpp -- Quake script command processing module
 
 #include "quakedef.hpp"
+#include <cstring>
 
 using namespace CDAudio;
 using namespace Client;

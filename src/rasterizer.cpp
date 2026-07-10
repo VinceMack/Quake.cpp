@@ -47,7 +47,6 @@ float d_sdivzorigin, d_tdivzorigin, d_ziorigin;
 
 fixed16_t sadjust, tadjust, bbextents, bbextentt;
 
-void (*prealspandrawer)(void);
 
 pixel_t* cacheblock;
 int cachewidth;
@@ -56,9 +55,9 @@ pixel_t* d_viewbuffer;
 // d_init.cpp
 #define NUM_MIPS 4
 
-cvar_t d_subdiv16 = { "d_subdiv16", "1" };
-cvar_t d_mipcap = { "d_mipcap", "0" };
-cvar_t d_mipscale = { "d_mipscale", "1" };
+cvar_t d_subdiv16 = { "d_subdiv16", "1", {}, {}, {}, {} };
+cvar_t d_mipcap = { "d_mipcap", "0", {}, {}, {}, {} };
+cvar_t d_mipscale = { "d_mipscale", "1", {}, {}, {}, {} };
 
 surfcache_t* d_initial_rover;
 qboolean d_roverwrapped;
@@ -82,7 +81,6 @@ static int miplevel;
 
 float scale_for_mip;
 int ubasestep, errorterm, erroradjustup, erroradjustdown;
-int vstartscan;
 
 Vector3 transformed_modelorg;
 
@@ -376,13 +374,10 @@ void D_DrawSolidSurface(surf_t* surf, int color)
 
 void D_CalcGradients(msurface_t* pface)
 {
-    mplane_t* pplane;
     float mipscale;
     Vector3 p_temp1;
     Vector3 p_saxis, p_taxis;
     float t;
-
-    pplane = pface->plane;
 
     mipscale = 1.0 / (float)(1 << miplevel);
 

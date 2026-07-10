@@ -27,8 +27,8 @@ using namespace Cvar;
 using namespace Cmd;
 
 
-cvar_t registered = { "registered", "0" };
-cvar_t cmdline = { "cmdline", "0", false, true };
+cvar_t registered = { "registered", "0", {}, {}, {}, {} };
+cvar_t cmdline = { "cmdline", "0", false, true, {}, {} };
 
 namespace Common {
 
@@ -709,7 +709,7 @@ char* MSG_ReadString(void)
 
         string[l] = c;
         l++;
-    } while (l < sizeof(string) - 1);
+    } while (l < static_cast<int>(sizeof(string) - 1));
 
     string[l] = 0;
 
@@ -1268,7 +1268,7 @@ void COM_CopyFile(char* netpath, char* cachepath)
     out = Sys_FileOpenWrite(cachepath);
 
     while (remaining) {
-        if (remaining < sizeof(buf)) {
+        if (remaining < static_cast<int>(sizeof(buf))) {
             count = remaining;
         } else {
             count = sizeof(buf);

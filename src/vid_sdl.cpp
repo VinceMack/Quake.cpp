@@ -26,17 +26,16 @@ using namespace View;
 using namespace Wad;
 using namespace Cvar;
 using namespace Cmd;
-
 #include "d_local.hpp"
+#include "winquake.hpp"
+
+cvar_t _windowed_mouse = {"_windowed_mouse", "1", {}, {}, {}, {}};
 
 namespace Vid {
 
 viddef_t vid;
 
 unsigned short d_8to16table[256];
-
-#include "winquake.hpp"
-cvar_t _windowed_mouse = {"_windowed_mouse", "1"};
 
 void VID_HandlePause()
 {

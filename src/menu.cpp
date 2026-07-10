@@ -1457,7 +1457,7 @@ void M_UnbindCommand(const char* command)
 
 void M_Keys_Draw(void)
 {
-    int i, l;
+    int i;
     int keys[2];
     const char* name;
     int x, y;
@@ -1473,12 +1473,10 @@ void M_Keys_Draw(void)
     }
 
     // search for known bindings
-    for (i = 0; i < NUMCOMMANDS; i++) {
+    for (i = 0; i < static_cast<int>(NUMCOMMANDS); i++) {
         y = 48 + 8 * i;
 
         M_Print(16, y, bindnames[i][1]);
-
-        l = (int)strlen(bindnames[i][0]);
 
         M_FindKeysForCommand(bindnames[i][0], keys);
 
@@ -1541,7 +1539,7 @@ void M_Keys_Key(int k)
     case K_RIGHTARROW:
         S_LocalSound("misc/menu1.wav");
         keys_cursor++;
-        if (keys_cursor >= NUMCOMMANDS) {
+        if (static_cast<size_t>(keys_cursor) >= NUMCOMMANDS) {
             keys_cursor = 0;
         }
 
@@ -2358,9 +2356,7 @@ void M_LanConfig_Key(int key)
     }
 
     l = Q_atoi(lanConfig_portname);
-    if (l > 65535) {
-        l = lanConfig_port;
-    } else {
+    if (l <= 65535) {
         lanConfig_port = l;
     }
 

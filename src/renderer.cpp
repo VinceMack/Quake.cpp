@@ -50,7 +50,7 @@ namespace {
     float entity_rotation[3][3];
     Vector3 r_worldmodelorg;
     int r_currentbkey;
-    mtriangle_t* ptriangles;
+
     mdl_t* pmdl;
     aliashdr_t* paliashdr;
     finalvert_t* pfinalverts;
@@ -83,22 +83,22 @@ namespace {
     float r_aliastransition, r_resfudge;
     float dp_time1, dp_time2, db_time1, db_time2, rw_time1, rw_time2;
     float se_time1, se_time2, de_time1, de_time2, dv_time1, dv_time2;
-    cvar_t r_draworder = { "r_draworder", "0" };
-    cvar_t r_speeds = { "r_speeds", "0" };
-    cvar_t r_timegraph = { "r_timegraph", "0" };
-    cvar_t r_graphheight = { "r_graphheight", "10" };
-    cvar_t r_waterwarp = { "r_waterwarp", "1" };
-    cvar_t r_fullbright = { "r_fullbright", "0" };
-    cvar_t r_drawentities = { "r_drawentities", "1" };
-    cvar_t r_aliasstats = { "r_polymodelstats", "0" };
-    cvar_t r_dspeeds = { "r_dspeeds", "0" };
-    cvar_t r_ambient = { "r_ambient", "0" };
-    cvar_t r_reportsurfout = { "r_reportsurfout", "0" };
-    cvar_t r_maxsurfs = { "r_maxsurfs", "0" };
-    cvar_t r_numsurfs = { "r_numsurfs", "0" };
-    cvar_t r_reportedgeout = { "r_reportedgeout", "0" };
-    cvar_t r_maxedges = { "r_maxedges", "0" };
-    cvar_t r_numedges = { "r_numedges", "0" };
+    cvar_t r_draworder = { "r_draworder", "0", {}, {}, {}, {} };
+    cvar_t r_speeds = { "r_speeds", "0", {}, {}, {}, {} };
+    cvar_t r_timegraph = { "r_timegraph", "0", {}, {}, {}, {} };
+    cvar_t r_graphheight = { "r_graphheight", "10", {}, {}, {}, {} };
+    cvar_t r_waterwarp = { "r_waterwarp", "1", {}, {}, {}, {} };
+    cvar_t r_fullbright = { "r_fullbright", "0", {}, {}, {}, {} };
+    cvar_t r_drawentities = { "r_drawentities", "1", {}, {}, {}, {} };
+    cvar_t r_aliasstats = { "r_polymodelstats", "0", {}, {}, {}, {} };
+    cvar_t r_dspeeds = { "r_dspeeds", "0", {}, {}, {}, {} };
+    cvar_t r_ambient = { "r_ambient", "0", {}, {}, {}, {} };
+    cvar_t r_reportsurfout = { "r_reportsurfout", "0", {}, {}, {}, {} };
+    cvar_t r_maxsurfs = { "r_maxsurfs", "0", {}, {}, {}, {} };
+    cvar_t r_numsurfs = { "r_numsurfs", "0", {}, {}, {}, {} };
+    cvar_t r_reportedgeout = { "r_reportedgeout", "0", {}, {}, {}, {} };
+    cvar_t r_maxedges = { "r_maxedges", "0", {}, {}, {}, {} };
+    cvar_t r_numedges = { "r_numedges", "0", {}, {}, {}, {} };
 }
 
 // ============================================================
@@ -659,16 +659,14 @@ float beamlength = 16;
 
 void R_EntityParticles(entity_t* ent)
 {
-    int count;
     int i;
     particle_t* p;
     float angle;
-    float sr, sp, sy, cr, cp, cy;
+    float sp, sy, cp, cy;
     Vector3 forward;
     float dist;
 
     dist = 64;
-    count = 50;
 
     if (!avelocities[0].x) {
         for (int j = 0; j < NUMVERTEXNORMALS; j++) {
@@ -685,9 +683,6 @@ void R_EntityParticles(entity_t* ent)
         angle = cl.time * avelocities[i].y;
         sp = sin(angle);
         cp = cos(angle);
-        angle = cl.time * avelocities[i].z;
-        sr = sin(angle);
-        cr = cos(angle);
 
         forward.x = cp * cy;
         forward.y = cp * sy;
@@ -2679,7 +2674,8 @@ void R_RenderFace(msurface_t* fa, int clipflags)
     mplane_t* pplane;
     float distinv;
     Vector3 p_normal;
-    medge_t *pedges, tedge;
+    medge_t *pedges;
+    static medge_t tedge;
     clipplane_t* pclip;
 
     // skip out if no more surfs
@@ -2853,7 +2849,7 @@ void R_RenderBmodelFace(bedge_t* pedges, msurface_t* psurf)
     mplane_t* pplane;
     float distinv;
     Vector3 p_normal;
-    medge_t tedge;
+    static medge_t tedge;
     clipplane_t* pclip;
 
     // skip out if no more surfs
@@ -5925,11 +5921,11 @@ int d_lightstylevalue[256]; // 8.8 fraction of base light value
 
 void R_MarkLeaves(void);
 
-cvar_t r_clearcolor = { "r_clearcolor", "2" };
-cvar_t r_drawviewmodel = { "r_drawviewmodel", "1" };
-cvar_t r_drawflat = { "r_drawflat", "0" };
-cvar_t r_aliastransbase = { "r_aliastransbase", "200" };
-cvar_t r_aliastransadj = { "r_aliastransadj", "100" };
+cvar_t r_clearcolor = { "r_clearcolor", "2", {}, {}, {}, {} };
+cvar_t r_drawviewmodel = { "r_drawviewmodel", "1", {}, {}, {}, {} };
+cvar_t r_drawflat = { "r_drawflat", "0", {}, {}, {}, {} };
+cvar_t r_aliastransbase = { "r_aliastransbase", "200", {}, {}, {}, {} };
+cvar_t r_aliastransadj = { "r_aliastransadj", "100", {}, {}, {}, {} };
 
 void CreatePassages(void);
 void SetVisibilityByPassages(void);

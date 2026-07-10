@@ -34,17 +34,17 @@ namespace Client {
 //============================================================================
 
 // from cl_main.cpp
-cvar_t cl_name = { "_cl_name", "player", true };
-cvar_t cl_color = { "_cl_color", "0", true };
-cvar_t cl_shownet = { "cl_shownet", "0" };
-cvar_t cl_nolerp = { "cl_nolerp", "0" };
-cvar_t lookspring = { "lookspring", "0", true };
-cvar_t lookstrafe = { "lookstrafe", "0", true };
-cvar_t sensitivity = { "sensitivity", "3", true };
-cvar_t m_pitch = { "m_pitch", "0.022", true };
-cvar_t m_yaw = { "m_yaw", "0.022", true };
-cvar_t m_forward = { "m_forward", "1", true };
-cvar_t m_side = { "m_side", "0.8", true };
+cvar_t cl_name = { "_cl_name", "player", true, {}, {}, {} };
+cvar_t cl_color = { "_cl_color", "0", true, {}, {}, {} };
+cvar_t cl_shownet = { "cl_shownet", "0", {}, {}, {}, {} };
+cvar_t cl_nolerp = { "cl_nolerp", "0", {}, {}, {}, {} };
+cvar_t lookspring = { "lookspring", "0", true, {}, {}, {} };
+cvar_t lookstrafe = { "lookstrafe", "0", true, {}, {}, {} };
+cvar_t sensitivity = { "sensitivity", "3", true, {}, {}, {} };
+cvar_t m_pitch = { "m_pitch", "0.022", true, {}, {}, {} };
+cvar_t m_yaw = { "m_yaw", "0.022", true, {}, {}, {} };
+cvar_t m_forward = { "m_forward", "1", true, {}, {}, {} };
+cvar_t m_side = { "m_side", "0.8", true, {}, {}, {} };
 
 ClientSubsystem& GetClientSubsystem()
 {
@@ -63,14 +63,14 @@ kbutton_t in_strafe, in_speed, in_use, in_jump, in_attack;
 kbutton_t in_up, in_down;
 int in_impulse;
 
-cvar_t cl_upspeed = { "cl_upspeed", "200" };
-cvar_t cl_forwardspeed = { "cl_forwardspeed", "200", true };
-cvar_t cl_backspeed = { "cl_backspeed", "200", true };
-cvar_t cl_sidespeed = { "cl_sidespeed", "350" };
-cvar_t cl_movespeedkey = { "cl_movespeedkey", "2.0" };
-cvar_t cl_yawspeed = { "cl_yawspeed", "140" };
-cvar_t cl_pitchspeed = { "cl_pitchspeed", "150" };
-cvar_t cl_anglespeedkey = { "cl_anglespeedkey", "1.5" };
+cvar_t cl_upspeed = { "cl_upspeed", "200", {}, {}, {}, {} };
+cvar_t cl_forwardspeed = { "cl_forwardspeed", "200", true, {}, {}, {} };
+cvar_t cl_backspeed = { "cl_backspeed", "200", true, {}, {}, {} };
+cvar_t cl_sidespeed = { "cl_sidespeed", "350", {}, {}, {}, {} };
+cvar_t cl_movespeedkey = { "cl_movespeedkey", "2.0", {}, {}, {}, {} };
+cvar_t cl_yawspeed = { "cl_yawspeed", "140", {}, {}, {}, {} };
+cvar_t cl_pitchspeed = { "cl_pitchspeed", "150", {}, {}, {}, {} };
+cvar_t cl_anglespeedkey = { "cl_anglespeedkey", "1.5", {}, {}, {}, {} };
 
 // from cl_parse.cpp
 const char* svc_strings[] = {
@@ -131,17 +131,17 @@ void CL_ClearState(void)
     }
 
     // wipe the entire cl structure
-    memset(&cl, 0, sizeof(cl));
+    cl = {};
 
     SZ_Clear(&cls.message);
 
     // clear other arrays
     memset(cl_efrags, 0, sizeof(cl_efrags));
-    memset(cl_entities, 0, sizeof(cl_entities));
-    memset(cl_dlights, 0, sizeof(cl_dlights));
+    for (auto& e : cl_entities) e = {};
+    for (auto& dl : cl_dlights) dl = {};
     memset(cl_lightstyle, 0, sizeof(cl_lightstyle));
-    memset(cl_temp_entities, 0, sizeof(cl_temp_entities));
-    memset(cl_beams, 0, sizeof(cl_beams));
+    for (auto& e : cl_temp_entities) e = {};
+    for (auto& b : cl_beams) b = {};
 
     //
     // allocate the efrags and chain together into a free list
@@ -346,7 +346,7 @@ dlight_t* CL_AllocDlight(int key)
         dl = cl_dlights;
         for (i = 0; i < MAX_DLIGHTS; i++, dl++) {
             if (dl->key == key) {
-                memset(dl, 0, sizeof(*dl));
+                *dl = {};
                 dl->key = key;
 
                 return dl;
@@ -358,7 +358,7 @@ dlight_t* CL_AllocDlight(int key)
     dl = cl_dlights;
     for (i = 0; i < MAX_DLIGHTS; i++, dl++) {
         if (dl->die < cl.time) {
-            memset(dl, 0, sizeof(*dl));
+            *dl = {};
             dl->key = key;
 
             return dl;
@@ -366,7 +366,7 @@ dlight_t* CL_AllocDlight(int key)
     }
 
     dl = &cl_dlights[0];
-    memset(dl, 0, sizeof(*dl));
+    *dl = {};
     dl->key = key;
 
     return dl;
@@ -1181,7 +1181,7 @@ int CL_GetMessage(void)
         fread(&net_message.cursize, 4, 1, cls.demofile);
         VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
         for (i = 0; i < 3; i++) {
-            r = (int)fread(&f, 4, 1, cls.demofile);
+            fread(&f, 4, 1, cls.demofile);
             cl.mviewangles[0][i] = LittleFloat(f);
         }
 
@@ -2602,7 +2602,7 @@ entity_t* CL_NewTempEntity(void)
     }
 
     ent = &cl_temp_entities[num_temp_entities];
-    memset(ent, 0, sizeof(*ent));
+    *ent = {};
     num_temp_entities++;
     cl_visedicts[cl_numvisedicts] = ent;
     cl_numvisedicts++;
