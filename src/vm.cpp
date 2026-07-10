@@ -2506,15 +2506,15 @@ void PF_traceline(void)
 {
     float *v1, *v2;
     trace_t trace;
-    int nomonsters;
+    int no_monsters;
     edict_t* ent;
 
     v1 = G_VECTOR(OFS_PARM0);
     v2 = G_VECTOR(OFS_PARM1);
-    nomonsters = G_FLOAT(OFS_PARM2);
+    no_monsters = G_FLOAT(OFS_PARM2);
     ent = G_EDICT(OFS_PARM3);
 
-    trace = SV_Move(v1, vec3_origin, vec3_origin, v2, nomonsters, ent);
+    trace = SV_Move(v1, vec3_origin, vec3_origin, v2, no_monsters, ent);
 
     pr_global_struct->trace_allsolid = trace.allsolid;
     pr_global_struct->trace_startsolid = trace.startsolid;

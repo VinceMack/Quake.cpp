@@ -1118,7 +1118,7 @@ surfcache_t* D_SCAlloc(int width, int size)
     return new_surf;
 }
 
-surfcache_t* D_CacheSurface(msurface_t* surface, int miplevel)
+surfcache_t* D_CacheSurface(msurface_t* surface, int mip_level)
 {
     surfcache_t* cache;
 
@@ -1128,23 +1128,23 @@ surfcache_t* D_CacheSurface(msurface_t* surface, int miplevel)
     r_drawsurf.lightadj[2] = d_lightstylevalue[surface->styles[2]];
     r_drawsurf.lightadj[3] = d_lightstylevalue[surface->styles[3]];
 
-    cache = surface->cachespots[miplevel];
+    cache = surface->cachespots[mip_level];
 
     if (cache && !cache->dlight && surface->dlightframe != r_framecount && cache->texture == r_drawsurf.texture && cache->lightadj[0] == r_drawsurf.lightadj[0] && cache->lightadj[1] == r_drawsurf.lightadj[1] && cache->lightadj[2] == r_drawsurf.lightadj[2] && cache->lightadj[3] == r_drawsurf.lightadj[3]) {
         return cache;
     }
 
-    surfscale = 1.0 / (1 << miplevel);
-    r_drawsurf.surfmip = miplevel;
-    r_drawsurf.surfwidth = surface->extents[0] >> miplevel;
+    surfscale = 1.0 / (1 << mip_level);
+    r_drawsurf.surfmip = mip_level;
+    r_drawsurf.surfwidth = surface->extents[0] >> mip_level;
     r_drawsurf.rowbytes = r_drawsurf.surfwidth;
-    r_drawsurf.surfheight = surface->extents[1] >> miplevel;
+    r_drawsurf.surfheight = surface->extents[1] >> mip_level;
 
     if (!cache) {
         cache = D_SCAlloc(r_drawsurf.surfwidth,
             r_drawsurf.surfwidth * r_drawsurf.surfheight);
-        surface->cachespots[miplevel] = cache;
-        cache->owner = &surface->cachespots[miplevel];
+        surface->cachespots[mip_level] = cache;
+        cache->owner = &surface->cachespots[mip_level];
         cache->mipscale = surfscale;
     }
 
@@ -1167,7 +1167,7 @@ surfcache_t* D_CacheSurface(msurface_t* surface, int miplevel)
     c_surf++;
     R_DrawSurface();
 
-    return surface->cachespots[miplevel];
+    return surface->cachespots[mip_level];
 }
 
 // ==============================================================

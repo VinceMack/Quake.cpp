@@ -114,8 +114,8 @@ void CvarRegistry::Set(std::string_view var_name, std::string_view value)
 
     Z_Free(const_cast<char*>(var->string)); // free the old value string
 
-    char* new_str = (char *) Z_Malloc(value.length() + 1);
-    Q_memcpy(new_str, const_cast<char*>(value.data()), value.length());
+    char* new_str = (char *) Z_Malloc(static_cast<int>(value.length()) + 1);
+    Q_memcpy(new_str, const_cast<char*>(value.data()), static_cast<int>(value.length()));
     new_str[value.length()] = '\0';
     var->string = new_str;
     var->value = Q_atof(var->string);

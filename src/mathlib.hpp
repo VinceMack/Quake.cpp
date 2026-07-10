@@ -3,14 +3,9 @@
 #include <cmath>
 
 struct Vector3 {
-    union {
-        struct {
-            float x;
-            float y;
-            float z;
-        };
-        float v[3];
-    };
+    float x;
+    float y;
+    float z;
 
     constexpr Vector3() : x(0.0f), y(0.0f), z(0.0f) {}
     constexpr Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
@@ -18,15 +13,15 @@ struct Vector3 {
 
     // Array subscript operators
     constexpr float operator[](size_t index) const {
-        return v[index];
+        return (&x)[index];
     }
     constexpr float& operator[](size_t index) {
-        return v[index];
+        return (&x)[index];
     }
 
     // Implicit conversions to raw pointers
-    constexpr operator float*() { return v; }
-    constexpr operator const float*() const { return v; }
+    constexpr operator float*() { return &x; }
+    constexpr operator const float*() const { return &x; }
 
     // Operator overloads
     constexpr Vector3 operator+(const Vector3& other) const {

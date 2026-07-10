@@ -69,11 +69,26 @@ if(MSVC)
         /Z7
         /w14702      # Force C4702 (Unreachable code) to be a Level 1 Warning
         /wd4996 /wd4244 /wd4113 /wd4047 /wd4024
+        # --- NEW FLAGS ---
+        /Gy          # Function-level linking (puts each function in its own section)
+        /Gw          # Optimize global data (puts each variable in its own section)
+    )
+    target_link_options(clean-quake PRIVATE
+        /INCREMENTAL:NO
+        /OPT:REF       # Eliminate unreferenced functions and data
+        /VERBOSE:REF   # Print out everything the linker throws away
     )
 else()
     target_compile_options(clean-quake PRIVATE 
         -Wall -Wextra 
         -Wunreachable-code # Warn about unreachable code paths
         -Wno-write-strings
+        # --- NEW FLAGS ---
+        -ffunction-sections # Put each function in its own section
+        -fdata-sections     # Put each variable in its own section
+    )
+    target_link_options(clean-quake PRIVATE
+        -Wl,--gc-sections       # Garbage collect empty sections
+        -Wl,--print-gc-sections # Print out everything the linker throws away
     )
 endif()

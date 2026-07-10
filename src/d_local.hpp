@@ -48,7 +48,7 @@ void D_DrawSkyScans8(espan_t* pspan);
 void D_DrawSkyScans16(espan_t* pspan);
 
 void R_ShowSubDiv(void);
-surfcache_t* D_CacheSurface(msurface_t* surface, int miplevel);
+surfcache_t* D_CacheSurface(msurface_t* surface, int mip_level);
 
 extern short* d_pzbuffer;
 

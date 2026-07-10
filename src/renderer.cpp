@@ -4424,15 +4424,15 @@ spritedesc_t r_spritedesc;
 R_RotateSprite
 ================
 */
-void R_RotateSprite(float beamlength)
+void R_RotateSprite(float beam_len)
 {
     Vector3 vec;
 
-    if (beamlength == 0.0) {
+    if (beam_len == 0.0) {
         return;
     }
 
-    vec = r_spritedesc.vpn * -beamlength;
+    vec = r_spritedesc.vpn * -beam_len;
     r_entorigin += vec;
     modelorg -= vec;
 }
