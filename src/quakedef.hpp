@@ -18,7 +18,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <setjmp.h>
+#include <exception>
+#include <stdexcept>
 #include "core_types.hpp"
 
 inline void VID_LockBuffer(void) {}

@@ -33,8 +33,23 @@ void Host_ServerFrame(void);
 void Host_InitCommands(void);
 void Host_Init(quakeparms_t* parms);
 void Host_Shutdown(void);
+class HostException : public std::runtime_error {
+public:
+    explicit HostException(const std::string& msg) : std::runtime_error(msg) {}
+};
+
+class HostEndGameException : public HostException {
+public:
+    using HostException::HostException;
+};
+
+class HostErrorException : public HostException {
+public:
+    using HostException::HostException;
+};
+
 [[noreturn]] void Host_Error(const char* error, ...);
-void Host_EndGame(const char* message, ...);
+[[noreturn]] void Host_EndGame(const char* message, ...);
 void Host_Frame(float time);
 void Host_Quit_f(void);
 void Host_ClientCommands(const char* fmt, ...);
@@ -46,7 +61,6 @@ extern int minimum_memory;
 extern qboolean noclip_anglehack;
 
 extern client_t* host_client;
-extern jmp_buf host_abortserver;
 extern double host_time;
 
 } // namespace Host
