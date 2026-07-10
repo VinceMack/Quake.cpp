@@ -79,9 +79,4 @@ void CRC_ProcessByte(unsigned short* crcvalue, byte data)
     *crcvalue = (*crcvalue << 8) ^ crctable[(*crcvalue >> 8) ^ data];
 }
 
-unsigned short CRC_Value(unsigned short crcvalue)
-{
-    return crcvalue ^ CRC_XOR_VALUE;
-}
-
 } // namespace Common

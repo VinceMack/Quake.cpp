@@ -462,11 +462,6 @@ void ForwardToServer(void)
     }
 }
 
-void CommandRegistry::Print(std::string_view text)
-{
-    Con_Printf("%.*s", static_cast<int>(text.length()), text.data());
-}
-
 // Wrapper APIs forwarding to the singleton registry
 
 void BufferInit(void) { GetCommandRegistry().BufferInit(); }
@@ -480,9 +475,7 @@ std::string_view CompleteCommand(std::string_view partial) { return GetCommandRe
 int Argc(void) { return GetCommandRegistry().Argc(); }
 std::string_view Argv(int arg) { return GetCommandRegistry().Argv(arg); }
 std::string_view Args(void) { return GetCommandRegistry().Args(); }
-void TokenizeString(std::string_view text) { GetCommandRegistry().TokenizeString(text); }
 void ExecuteString(std::string_view text, Source src) { GetCommandRegistry().ExecuteString(text, src); }
 // ForwardToServer is implemented directly above
-void Print(std::string_view text) { GetCommandRegistry().Print(text); }
 
 } // namespace Cmd

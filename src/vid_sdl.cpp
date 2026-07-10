@@ -36,7 +36,6 @@ viddef_t vid;
 unsigned short d_8to16table[256];
 
 #include "winquake.hpp"
-modestate_t modestate = MS_WINDOWED;
 cvar_t _windowed_mouse = {"_windowed_mouse", "1"};
 
 void VID_HandlePause()
@@ -47,7 +46,7 @@ void VID_HandlePause()
 #define BASEWIDTH (320 * 2)
 #define BASEHEIGHT (200 * 2)
 
-int VGA_width, VGA_height, VGA_rowbytes, VGA_bufferrowbytes = 0;
+int VGA_width, VGA_height, VGA_rowbytes;
 byte* VGA_pagebase;
 
 static SDL_Window* window = NULL;

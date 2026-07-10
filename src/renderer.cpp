@@ -2346,7 +2346,6 @@ zpointdesc_t r_zpointdesc;
 polydesc_t r_polydesc;
 
 clipplane_t* entity_clipplanes;
-clipplane_t world_clipplanes[16];
 
 medge_t* r_pedge;
 
@@ -5918,8 +5917,7 @@ int r_drawnpolycount;
 char viewmodname[VIEWMODNAME_LENGTH + 1];
 int modcount;
 
-int reinit_surfcache = 1; // if 1, surface cache is currently empty and
-// must be reinitialized for current cache size
+
 
 texture_t* r_notexture_mip;
 

@@ -34,11 +34,7 @@ cvar_t chase_up = { "chase_up", "16" };
 cvar_t chase_right = { "chase_right", "0" };
 cvar_t chase_active = { "chase_active", "0" };
 
-Vector3 chase_pos;
-Vector3 chase_angles;
-
 Vector3 chase_dest;
-Vector3 chase_dest_angles;
 
 void Chase_Init(void)
 {
