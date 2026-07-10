@@ -2028,11 +2028,11 @@ void PF_setorigin(void)
 void SetMinMaxSize(edict_t* e, float* min, float* max, qboolean rotate)
 {
     float* angles;
-    vec3_t rmin, rmax;
+    Vector3 rmin, rmax;
     float bounds[2][3];
     float xvector[2], yvector[2];
     float a;
-    vec3_t base, transformed;
+    Vector3 base, transformed;
     int i, j, k, l;
 
     for (i = 0; i < 3; i++) {
@@ -2044,8 +2044,8 @@ void SetMinMaxSize(edict_t* e, float* min, float* max, qboolean rotate)
     rotate = false; // FIXME: implement rotation properly again
 
     if (!rotate) {
-        VectorCopy(min, rmin);
-        VectorCopy(max, rmax);
+        rmin = Vector3(min);
+        rmax = Vector3(max);
     } else {
         // find min / max for rotations
         angles = e->v.angles;
@@ -2090,9 +2090,9 @@ void SetMinMaxSize(edict_t* e, float* min, float* max, qboolean rotate)
     }
 
     // set derived values
-    VectorCopy(rmin, e->v.mins);
-    VectorCopy(rmax, e->v.maxs);
-    VectorSubtract(max, min, e->v.size);
+    e->v.mins = rmin;
+    e->v.maxs = rmax;
+    e->v.size = Vector3(max) - Vector3(min);
 
     SV_LinkEdict(e, false);
 }
@@ -2244,7 +2244,7 @@ vector normalize(vector)
 void PF_normalize(void)
 {
     float* value1;
-    vec3_t newvalue;
+    Vector3 newvalue;
     float new_val;
 
     value1 = G_VECTOR(OFS_PARM0);
@@ -2542,7 +2542,7 @@ int PF_newcheckclient(int check)
     byte* pvs;
     edict_t* ent;
     mleaf_t* leaf;
-    vec3_t org;
+    Vector3 org;
 
     // cycle to the next one
 
@@ -2588,7 +2588,7 @@ int PF_newcheckclient(int check)
     }
 
     // get the PVS for the entity
-    VectorAdd(ent->v.origin, ent->v.view_ofs, org);
+    org = ent->v.origin + ent->v.view_ofs;
     leaf = Mod_PointInLeaf(org, sv.worldmodel);
     pvs = Mod_LeafPVS(leaf, sv.worldmodel);
     memcpy(checkpvs, pvs, (sv.worldmodel->numleafs + 7) >> 3);
@@ -2619,7 +2619,7 @@ void PF_checkclient(void)
     edict_t *ent, *self;
     mleaf_t* leaf;
     int l;
-    vec3_t view;
+    Vector3 view;
 
     // find a new check if on a new frame
     if (sv.time - sv.lastchecktime >= 0.1) {
@@ -2637,7 +2637,7 @@ void PF_checkclient(void)
 
     // if current entity can't possibly see the check entity, return 0
     self = PROG_TO_EDICT(pr_global_struct->self);
-    VectorAdd(self->v.origin, self->v.view_ofs, view);
+    view = self->v.origin + self->v.view_ofs;
     leaf = Mod_PointInLeaf(view, sv.worldmodel);
     l = (leaf - sv.worldmodel->leafs) - 1;
     if ((l < 0) || !(checkpvs[l >> 3] & (1 << (l & 7)))) {
@@ -2746,8 +2746,8 @@ void PF_findradius(void)
     edict_t *ent, *chain;
     float rad;
     float* org;
-    vec3_t eorg;
-    int i, j;
+    Vector3 eorg;
+    int i;
 
     chain = (edict_t*)sv.edicts;
 
@@ -2764,10 +2764,8 @@ void PF_findradius(void)
             continue;
         }
 
-        for (j = 0; j < 3; j++) {
-            eorg[j] = org[j] - (ent->v.origin[j] + (ent->v.mins[j] + ent->v.maxs[j]) * 0.5);
-        }
-        if (Length(eorg) > rad) {
+        eorg = Vector3(org) - (ent->v.origin + (ent->v.mins + ent->v.maxs) * 0.5f);
+        if (eorg.length() > rad) {
             continue;
         }
 
@@ -2969,7 +2967,7 @@ void PF_walkmove(void)
 {
     edict_t* ent;
     float yaw, dist;
-    vec3_t move;
+    Vector3 move;
     dfunction_t* oldf;
     int oldself;
 
@@ -2985,9 +2983,9 @@ void PF_walkmove(void)
 
     yaw = yaw * M_PI * 2 / 360;
 
-    move[0] = cos(yaw) * dist;
-    move[1] = sin(yaw) * dist;
-    move[2] = 0;
+    move.x = cos(yaw) * dist;
+    move.y = sin(yaw) * dist;
+    move.z = 0;
 
     // save program state, because SV_movestep may call other progs
     oldf = pr_xfunction;
@@ -3010,20 +3008,20 @@ void() droptofloor
 void PF_droptofloor(void)
 {
     edict_t* ent;
-    vec3_t end;
+    Vector3 end;
     trace_t trace;
 
     ent = PROG_TO_EDICT(pr_global_struct->self);
 
-    VectorCopy(ent->v.origin, end);
-    end[2] -= 256;
+    end = ent->v.origin;
+    end.z -= 256;
 
     trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, false, ent);
 
     if (trace.fraction == 1 || trace.allsolid) {
         G_FLOAT(OFS_RETURN) = 0;
     } else {
-        VectorCopy(trace.endpos, ent->v.origin);
+        ent->v.origin = trace.endpos;
         SV_LinkEdict(ent, false);
         ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
         ent->v.groundentity = EDICT_TO_PROG(trace.ent);
@@ -3157,8 +3155,8 @@ cvar_t sv_aim = { "sv_aim", "0.93" };
 void PF_aim(void)
 {
     edict_t *ent, *check, *bestent;
-    vec3_t start, dir, end, bestdir;
-    int i, j;
+    Vector3 start, dir, end, bestdir;
+    int i;
     trace_t tr;
     float dist, bestdist;
     float speed;
@@ -3166,12 +3164,12 @@ void PF_aim(void)
     ent = G_EDICT(OFS_PARM0);
     speed = G_FLOAT(OFS_PARM1);
 
-    VectorCopy(ent->v.origin, start);
-    start[2] += 20;
+    start = ent->v.origin;
+    start.z += 20;
 
     // try sending a trace straight
-    VectorCopy(pr_global_struct->v_forward, dir);
-    VectorMA(start, 2048, dir, end);
+    dir = pr_global_struct->v_forward;
+    end = start + dir * 2048.0f;
     tr = SV_Move(start, vec3_origin, vec3_origin, end, false, ent);
     if (tr.ent && tr.ent->v.takedamage == DAMAGE_AIM && (!teamplay.value || ent->v.team <= 0 || ent->v.team != tr.ent->v.team)) {
         VectorCopy(pr_global_struct->v_forward, G_VECTOR(OFS_RETURN));
@@ -3180,7 +3178,7 @@ void PF_aim(void)
     }
 
     // try all possible entities
-    VectorCopy(dir, bestdir);
+    bestdir = dir;
     bestdist = sv_aim.value;
     bestent = NULL;
 
@@ -3198,12 +3196,10 @@ void PF_aim(void)
             continue; // don't aim at teammate
         }
 
-        for (j = 0; j < 3; j++) {
-            end[j] = check->v.origin[j] + 0.5 * (check->v.mins[j] + check->v.maxs[j]);
-        }
-        VectorSubtract(end, start, dir);
-        VectorNormalize(dir);
-        dist = DotProduct(dir, pr_global_struct->v_forward);
+        end = check->v.origin + (check->v.mins + check->v.maxs) * 0.5f;
+        dir = end - start;
+        dir.normalize();
+        dist = dir.dot(pr_global_struct->v_forward);
         if (dist < bestdist) {
             continue; // to far to turn
         }
@@ -3216,11 +3212,11 @@ void PF_aim(void)
     }
 
     if (bestent) {
-        VectorSubtract(bestent->v.origin, ent->v.origin, dir);
-        dist = DotProduct(dir, pr_global_struct->v_forward);
-        VectorScale(pr_global_struct->v_forward, dist, end);
-        end[2] = dir[2];
-        VectorNormalize(end);
+        dir = bestent->v.origin - ent->v.origin;
+        dist = dir.dot(pr_global_struct->v_forward);
+        end = pr_global_struct->v_forward * dist;
+        end.z = dir.z;
+        end.normalize();
         VectorCopy(end, G_VECTOR(OFS_RETURN));
     } else {
         VectorCopy(bestdir, G_VECTOR(OFS_RETURN));

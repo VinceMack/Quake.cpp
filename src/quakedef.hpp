@@ -168,8 +168,8 @@ inline void VID_UnlockBuffer(void) {}
 #include "mathlib.hpp"
 
 typedef struct {
-    vec3_t origin;
-    vec3_t angles;
+    Vector3 origin;
+    Vector3 angles;
     int modelindex;
     int frame;
     int colormap;

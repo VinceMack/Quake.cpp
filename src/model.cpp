@@ -93,7 +93,7 @@ void* Mod_Extradata(model_t* mod)
 Mod_PointInLeaf
 ===============
 */
-mleaf_t* Mod_PointInLeaf(vec3_t p, model_t* model)
+mleaf_t* Mod_PointInLeaf(const Vector3& p, model_t* model)
 {
     mnode_t* node;
     float d;
@@ -110,7 +110,7 @@ mleaf_t* Mod_PointInLeaf(vec3_t p, model_t* model)
         }
 
         plane = node->plane;
-        d = DotProduct(p, plane->normal) - plane->dist;
+        d = p.dot(plane->normal) - plane->dist;
         if (d > 0) {
             node = node->children[0];
         } else {
@@ -1161,16 +1161,15 @@ void Mod_LoadPlanes(lump_t* l)
 RadiusFromBounds
 =================
 */
-float RadiusFromBounds(vec3_t mins, vec3_t maxs)
+float RadiusFromBounds(const Vector3& mins, const Vector3& maxs)
 {
-    int i;
-    vec3_t corner;
+    Vector3 corner;
 
-    for (i = 0; i < 3; i++) {
-        corner[i] = fabs(mins[i]) > fabs(maxs[i]) ? fabs(mins[i]) : fabs(maxs[i]);
-    }
+    corner.x = std::max(std::fabs(mins.x), std::fabs(maxs.x));
+    corner.y = std::max(std::fabs(mins.y), std::fabs(maxs.y));
+    corner.z = std::max(std::fabs(mins.z), std::fabs(maxs.z));
 
-    return Length(corner);
+    return corner.length();
 }
 
 /*

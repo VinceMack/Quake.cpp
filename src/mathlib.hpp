@@ -35,6 +35,9 @@ struct Vector3 {
     constexpr Vector3 operator-(const Vector3& other) const {
         return {x - other.x, y - other.y, z - other.z};
     }
+    constexpr Vector3 operator-() const {
+        return {-x, -y, -z};
+    }
     constexpr Vector3 operator*(float scale) const {
         return {x * scale, y * scale, z * scale};
     }
@@ -95,7 +98,6 @@ struct Vector3 {
 };
 
 typedef float vec_t;
-typedef Vector3 vec3_t;
 typedef vec_t vec5_t[5];
 
 typedef int fixed4_t;
@@ -139,7 +141,7 @@ inline constexpr void VectorCopy(const T& a, U&& b) {
 
 namespace Math {
 
-extern vec3_t vec3_origin;
+extern Vector3 vec3_origin;
 extern int nanmask;
 
 // Implement all vector math operations as templates in the header

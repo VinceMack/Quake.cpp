@@ -2,7 +2,7 @@
 #pragma once
 
 typedef struct {
-    vec3_t normal;
+    Vector3 normal;
     float dist;
 } plane_t;
 
@@ -11,7 +11,7 @@ typedef struct {
     qboolean startsolid; // if true, the initial point was in a solid area
     qboolean inopen, inwater;
     float fraction; // time completed, 1.0 = didn't hit anything
-    vec3_t endpos;  // final position
+    Vector3 endpos;  // final position
     plane_t plane;  // surface normal at impact
     edict_t* ent;   // entity the surface is on
 } trace_t;
@@ -36,17 +36,17 @@ void SV_LinkEdict(edict_t* ent, qboolean touch_triggers);
 // sets ent->v.absmin and ent->v.absmax
 // if touchtriggers, calls prog functions for the intersected triggers
 
-int SV_PointContents(const vec3_t& p);
+int SV_PointContents(const Vector3& p);
 // returns the CONTENTS_* value from the world at the given point.
 // does not check any entities at all
 // the non-true version remaps the water current contents to content_water
 
 edict_t* SV_TestEntityPosition(edict_t* ent);
 
-trace_t SV_Move(const vec3_t& start,
-    const vec3_t& mins,
-    const vec3_t& maxs,
-    const vec3_t& end,
+trace_t SV_Move(const Vector3& start,
+    const Vector3& mins,
+    const Vector3& maxs,
+    const Vector3& end,
     int type,
     edict_t* passedict);
 // mins and maxs are reletive
@@ -60,6 +60,6 @@ trace_t SV_Move(const vec3_t& start,
 // shouldn't be considered solid objects
 
 // passedict is explicitly excluded from clipping checks (normally NULL)
-qboolean SV_RecursiveHullCheck(hull_t* hull, int num, float p1f, float p2f, const vec3_t& p1, const vec3_t& p2, trace_t* trace);
+qboolean SV_RecursiveHullCheck(hull_t* hull, int num, float p1f, float p2f, const Vector3& p1, const Vector3& p2, trace_t* trace);
 
 } // namespace Server
