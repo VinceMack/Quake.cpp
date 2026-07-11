@@ -182,7 +182,7 @@ add_compile_definitions(SDL)
 include_directories(SDL2::SDL2)
 
 # clean-quake executable
-add_executable(Quake.cpo ${CORE_SRCS})
-target_include_directories(Quake.cpp PRIVATE src)
-target_link_libraries(Quake.cpp PRIVATE ${SDL2_LIBRARIES})
+add_executable(${PROJECT_NAME} ${CORE_SRCS})
+target_include_directories(${PROJECT_NAME} PRIVATE src)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES})
 
