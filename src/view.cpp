@@ -93,7 +93,7 @@ float V_CalcRoll(const Vector3& angles, const Vector3& velocity)
 
     AngleVectors(angles, forward, right, up);
     side = velocity.dot(right);
-    sign = side < 0 ? -1 : 1;
+    sign = static_cast<float>(side < 0 ? -1 : 1);
     side = fabs(side);
 
     value = cl_rollangle.value;
@@ -120,12 +120,12 @@ float V_CalcBob(void)
     float bob;
     float cycle;
 
-    cycle = cl.time - (int)(cl.time / cl_bobcycle.value) * cl_bobcycle.value;
+    cycle = static_cast<float>(cl.time - (int)(cl.time / cl_bobcycle.value) * cl_bobcycle.value);
     cycle /= cl_bobcycle.value;
     if (cycle < cl_bobup.value) {
-        cycle = M_PI * cycle / cl_bobup.value;
+        cycle = static_cast<float>(M_PI * cycle / cl_bobup.value);
     } else {
-        cycle = M_PI + M_PI * (cycle - cl_bobup.value) / (1.0 - cl_bobup.value);
+        cycle = static_cast<float>(M_PI + M_PI * (cycle - cl_bobup.value) / (1.0 - cl_bobup.value));
     }
 
     // bob is proportional to velocity in the xy plane
@@ -133,7 +133,7 @@ float V_CalcBob(void)
 
     bob = sqrt(cl.velocity[0] * cl.velocity[0] + cl.velocity[1] * cl.velocity[1]) * cl_bob.value;
     //Con_Printf ("speed: %5.1f\n", Length(cl.velocity));
-    bob = bob * 0.3 + bob * 0.7 * sin(cycle);
+    bob = static_cast<float>(bob * 0.3 + bob * 0.7 * sin(cycle));
     if (bob > 4) {
         bob = 4;
     } else if (bob < -7) {
@@ -199,7 +199,7 @@ void V_DriftPitch(void)
         if (fabs(cl.cmd.forwardmove) < cl_forwardspeed.value) {
             cl.driftmove = 0;
         } else {
-            cl.driftmove += host_frametime;
+            cl.driftmove += static_cast<float>(host_frametime);
         }
 
         if (cl.driftmove > v_centermove.value) {
@@ -217,8 +217,8 @@ void V_DriftPitch(void)
         return;
     }
 
-    move = host_frametime * cl.pitchvel;
-    cl.pitchvel += host_frametime * v_centerspeed.value;
+    move = static_cast<float>(host_frametime * cl.pitchvel);
+    cl.pitchvel += static_cast<float>(host_frametime * v_centerspeed.value);
 
     //Con_Printf ("move: %f (%f)\n", move, host_frametime);
 
@@ -263,14 +263,14 @@ void BuildGammaTable(float g)
 
     if (g == 1.0) {
         for (i = 0; i < 256; i++) {
-            gammatable[i] = i;
+            gammatable[i] = static_cast<byte>(i);
         }
 
         return;
     }
 
     for (i = 0; i < 256; i++) {
-        inf = 255 * pow((i + 0.5) / 255.5, g) + 0.5;
+        inf = static_cast<int>(255 * pow((i + 0.5) / 255.5, g) + 0.5);
         if (inf < 0) {
             inf = 0;
         }
@@ -279,7 +279,7 @@ void BuildGammaTable(float g)
             inf = 255;
         }
 
-        gammatable[i] = inf;
+        gammatable[i] = static_cast<byte>(inf);
     }
 }
 
@@ -324,14 +324,14 @@ void V_ParseDamage(void)
     from.y = MSG_ReadCoord();
     from.z = MSG_ReadCoord();
 
-    count = blood * 0.5 + armor * 0.5;
+    count = static_cast<float>(blood * 0.5 + armor * 0.5);
     if (count < 10) {
         count = 10;
     }
 
-    cl.faceanimtime = cl.time + 0.2; // but sbar face into pain frame
+    cl.faceanimtime = static_cast<float>(cl.time + 0.2); // but sbar face into pain frame
 
-    cl.cshifts[CSHIFT_DAMAGE].percent += 3 * count;
+    cl.cshifts[CSHIFT_DAMAGE].percent += static_cast<int>(3 * count);
     if (cl.cshifts[CSHIFT_DAMAGE].percent < 0) {
         cl.cshifts[CSHIFT_DAMAGE].percent = 0;
     }
@@ -497,13 +497,13 @@ void V_UpdatePalette(void)
     }
 
     // drop the damage value
-    cl.cshifts[CSHIFT_DAMAGE].percent -= host_frametime * 150;
+    cl.cshifts[CSHIFT_DAMAGE].percent -= static_cast<int>(host_frametime * 150);
     if (cl.cshifts[CSHIFT_DAMAGE].percent <= 0) {
         cl.cshifts[CSHIFT_DAMAGE].percent = 0;
     }
 
     // drop the bonus value
-    cl.cshifts[CSHIFT_BONUS].percent -= host_frametime * 100;
+    cl.cshifts[CSHIFT_BONUS].percent -= static_cast<int>(host_frametime * 100);
     if (cl.cshifts[CSHIFT_BONUS].percent <= 0) {
         cl.cshifts[CSHIFT_BONUS].percent = 0;
     }
@@ -569,7 +569,7 @@ void CalcGunAngle(void)
     yaw = r_refdef.viewangles[YAW];
     pitch = -r_refdef.viewangles[PITCH];
 
-    yaw = angledelta(yaw - r_refdef.viewangles[YAW]) * 0.4;
+    yaw = static_cast<float>(angledelta(yaw - r_refdef.viewangles[YAW]) * 0.4);
     if (yaw > 10) {
         yaw = 10;
     }
@@ -578,7 +578,7 @@ void CalcGunAngle(void)
         yaw = -10;
     }
 
-    pitch = angledelta(-pitch - r_refdef.viewangles[PITCH]) * 0.4;
+    pitch = static_cast<float>(angledelta(-pitch - r_refdef.viewangles[PITCH]) * 0.4);
     if (pitch > 10) {
         pitch = 10;
     }
@@ -587,7 +587,7 @@ void CalcGunAngle(void)
         pitch = -10;
     }
 
-    move = host_frametime * 20;
+    move = static_cast<float>(host_frametime * 20);
     if (yaw > oldyaw) {
         if (oldyaw + move < yaw) {
             yaw = oldyaw + move;
@@ -614,9 +614,9 @@ void CalcGunAngle(void)
     cl.viewent.angles[YAW] = r_refdef.viewangles[YAW] + yaw;
     cl.viewent.angles[PITCH] = -(r_refdef.viewangles[PITCH] + pitch);
 
-    cl.viewent.angles[ROLL] -= v_idlescale.value * sin(cl.time * v_iroll_cycle.value) * v_iroll_level.value;
-    cl.viewent.angles[PITCH] -= v_idlescale.value * sin(cl.time * v_ipitch_cycle.value) * v_ipitch_level.value;
-    cl.viewent.angles[YAW] -= v_idlescale.value * sin(cl.time * v_iyaw_cycle.value) * v_iyaw_level.value;
+    cl.viewent.angles[ROLL] -= static_cast<float>(v_idlescale.value * sin(cl.time * v_iroll_cycle.value) * v_iroll_level.value);
+    cl.viewent.angles[PITCH] -= static_cast<float>(v_idlescale.value * sin(cl.time * v_ipitch_cycle.value) * v_ipitch_level.value);
+    cl.viewent.angles[YAW] -= static_cast<float>(v_idlescale.value * sin(cl.time * v_iyaw_cycle.value) * v_iyaw_level.value);
 }
 
 /*
@@ -661,9 +661,9 @@ Idle swaying
 */
 void V_AddIdle(void)
 {
-    r_refdef.viewangles[ROLL] += v_idlescale.value * sin(cl.time * v_iroll_cycle.value) * v_iroll_level.value;
-    r_refdef.viewangles[PITCH] += v_idlescale.value * sin(cl.time * v_ipitch_cycle.value) * v_ipitch_level.value;
-    r_refdef.viewangles[YAW] += v_idlescale.value * sin(cl.time * v_iyaw_cycle.value) * v_iyaw_level.value;
+    r_refdef.viewangles[ROLL] += static_cast<float>(v_idlescale.value * sin(cl.time * v_iroll_cycle.value) * v_iroll_level.value);
+    r_refdef.viewangles[PITCH] += static_cast<float>(v_idlescale.value * sin(cl.time * v_ipitch_cycle.value) * v_ipitch_level.value);
+    r_refdef.viewangles[YAW] += static_cast<float>(v_idlescale.value * sin(cl.time * v_iyaw_cycle.value) * v_iyaw_level.value);
 }
 
 /*
@@ -683,7 +683,7 @@ void V_CalcViewRoll(void)
     if (v_dmg_time > 0) {
         r_refdef.viewangles[ROLL] += v_dmg_time / v_kicktime.value * v_dmg_roll;
         r_refdef.viewangles[PITCH] += v_dmg_time / v_kicktime.value * v_dmg_pitch;
-        v_dmg_time -= host_frametime;
+        v_dmg_time -= static_cast<float>(host_frametime);
     }
 
     if (cl.stats[STAT_HEALTH] <= 0) {
@@ -810,7 +810,7 @@ void V_CalcRefdef(void)
     if (cl.onground && ent->origin[2] - oldz > 0) {
         float steptime;
 
-        steptime = cl.time - cl.oldtime;
+        steptime = static_cast<float>(cl.time - cl.oldtime);
         if (steptime < 0) {
             //FIXME		I_Error ("steptime < 0");
             steptime = 0;
@@ -903,8 +903,8 @@ void V_RenderView(void)
     }
 
     if (crosshair.value) {
-        Draw_Character(scr_vrect.x + scr_vrect.width / 2 + cl_crossx.value,
-            scr_vrect.y + scr_vrect.height / 2 + cl_crossy.value, '+');
+        Draw_Character(static_cast<int>(scr_vrect.x + scr_vrect.width / 2 + cl_crossx.value),
+            static_cast<int>(scr_vrect.y + scr_vrect.height / 2 + cl_crossy.value), '+');
     }
 
 }

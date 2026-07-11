@@ -43,8 +43,6 @@ using namespace Cmd;
 const char* basedir = ".";
 const char* cachedir = "/tmp";
 
-cvar_t sys_linerefresh = { "sys_linerefresh", "0" }; // set for entity display
-
 namespace Host {
 qboolean isDedicated;
 cvar_t sys_nostdout = { "sys_nostdout", "0" };
@@ -58,7 +56,7 @@ void Sys_Printf(const char* fmt, ...)
     char text[1024];
 
     va_start(argptr, fmt);
-    vsprintf(text, fmt, argptr);
+    vsprintf_s(text, sizeof(text), fmt, argptr);
     va_end(argptr);
     fprintf(stderr, "%s", text);
 
@@ -101,7 +99,7 @@ void Sys_HighFPPrecision(void)
     char string[1024];
 
     va_start(argptr, error);
-    vsprintf(string, error, argptr);
+    vsprintf_s(string, sizeof(string), error, argptr);
     va_end(argptr);
     fprintf(stderr, "Error: %s\n", string);
 
@@ -157,8 +155,7 @@ int Sys_FileOpenRead(const char* path, int* hndl)
 
     i = findhandle();
 
-    f = fopen(path, "rb");
-    if (!f) {
+    if (fopen_s(&f, path, "rb") != 0) {
         *hndl = -1;
 
         return -1;
@@ -177,9 +174,10 @@ int Sys_FileOpenWrite(const char* path)
 
     i = findhandle();
 
-    f = fopen(path, "wb");
-    if (!f) {
-        Sys_Error("Error opening %s: %s", path, strerror(errno));
+    if (fopen_s(&f, path, "wb") != 0) {
+        char errbuf[256];
+        strerror_s(errbuf, sizeof(errbuf), errno);
+        Sys_Error("Error opening %s: %s", path, errbuf);
     }
 
     sys_handles[i] = f;
@@ -252,8 +250,7 @@ int Sys_FileTime(const char* path)
 {
     FILE* f;
 
-    f = fopen(path, "rb");
-    if (f) {
+    if (fopen_s(&f, path, "rb") == 0) {
         fclose(f);
 
         return 1;
@@ -280,10 +277,6 @@ double Sys_FloatTime(void)
 // =======================================================================
 
 static volatile int oktogo;
-
-void Sys_LineRefresh(void)
-{
-}
 
 void moncontrol()
 {
@@ -344,12 +337,7 @@ int main(int c, char** v)
             moncontrol(); // profile only while we do each Quake frame
         }
 
-        Host_Frame(time);
+        Host_Frame(static_cast<float>(time));
         moncontrol();
-
-        // graphic debugging aids
-        if (sys_linerefresh.value) {
-            Sys_LineRefresh();
-        }
     }
 }

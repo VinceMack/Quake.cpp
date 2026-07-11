@@ -95,9 +95,9 @@ for a few moments
 */
 void SCR_CenterPrint(const char* str)
 {
-    strncpy(scr_centerstring, str, sizeof(scr_centerstring) - 1);
+    strncpy_s(scr_centerstring, sizeof(scr_centerstring), str, sizeof(scr_centerstring) - 1);
     scr_centertime_off = scr_centertime.value;
-    scr_centertime_start = cl.time;
+    scr_centertime_start = static_cast<float>(cl.time);
 
     // count the number of lines for centering
     scr_center_lines = 1;
@@ -121,7 +121,7 @@ void SCR_EraseCenterString(void)
     }
 
     if (scr_center_lines <= 4) {
-        y = vid.height * 0.35;
+        y = static_cast<int>(vid.height * 0.35);
     } else {
         y = 48;
     }
@@ -140,7 +140,7 @@ void SCR_DrawCenterString(void)
 
     // the finale prints the characters one at a time
     if (cl.intermission) {
-        remaining = scr_printspeed.value * (cl.time - scr_centertime_start);
+        remaining = static_cast<int>(scr_printspeed.value * (cl.time - scr_centertime_start));
     } else {
         remaining = 9999;
     }
@@ -149,7 +149,7 @@ void SCR_DrawCenterString(void)
     start = scr_centerstring;
 
     if (scr_center_lines <= 4) {
-        y = vid.height * 0.35;
+        y = static_cast<int>(vid.height * 0.35);
     } else {
         y = 48;
     }
@@ -190,7 +190,7 @@ void SCR_CheckDrawCenterString(void)
         scr_erase_lines = scr_center_lines;
     }
 
-    scr_centertime_off -= host_frametime;
+    scr_centertime_off -= static_cast<float>(host_frametime);
 
     if (scr_centertime_off <= 0 && !cl.intermission) {
         return;
@@ -219,11 +219,11 @@ float CalcFov(float fov_x, float width, float height)
         Sys_Error("Bad fov: %f", fov_x);
     }
 
-    x = width / tan(fov_x / 360 * M_PI);
+    x = width / static_cast<float>(tan(fov_x / 360 * M_PI));
 
     a = atan(height / x);
 
-    a = a * 360 / M_PI;
+    a = static_cast<float>(a * 360 / M_PI);
 
     return a;
 }
@@ -268,7 +268,7 @@ static void SCR_CalcRefdef(void)
     }
 
     r_refdef.fov_x = scr_fov.value;
-    r_refdef.fov_y = CalcFov(r_refdef.fov_x, r_refdef.vrect.width, r_refdef.vrect.height);
+    r_refdef.fov_y = CalcFov(r_refdef.fov_x, static_cast<float>(r_refdef.vrect.width), static_cast<float>(r_refdef.vrect.height));
 
     // intermission is always full screen
     if (cl.intermission) {
@@ -297,7 +297,7 @@ static void SCR_CalcRefdef(void)
     // guard against going from one mode to another that's less than half the
     // vertical resolution
     if (scr_con_current > vid.height) {
-        scr_con_current = vid.height;
+        scr_con_current = static_cast<float>(vid.height);
     }
 
     // notify the refresh of the change
@@ -484,22 +484,22 @@ void SCR_SetUpToDrawConsole(void)
     con_forcedup = !cl.worldmodel || cls.signon != SIGNONS;
 
     if (con_forcedup) {
-        scr_conlines = vid.height; // full screen
+        scr_conlines = static_cast<float>(vid.height); // full screen
         scr_con_current = scr_conlines;
     } else if (key_dest == key_console) {
-        scr_conlines = vid.height / 2; // half screen
+        scr_conlines = static_cast<float>(vid.height / 2); // half screen
     } else {
         scr_conlines = 0; // none visible
     }
 
     if (scr_conlines < scr_con_current) {
-        scr_con_current -= scr_conspeed.value * host_frametime;
+        scr_con_current -= static_cast<float>(scr_conspeed.value * host_frametime);
         if (scr_conlines > scr_con_current) {
             scr_con_current = scr_conlines;
         }
 
     } else if (scr_conlines > scr_con_current) {
-        scr_con_current += scr_conspeed.value * host_frametime;
+        scr_con_current += static_cast<float>(scr_conspeed.value * host_frametime);
         if (scr_conlines < scr_con_current) {
             scr_con_current = scr_conlines;
         }
@@ -507,8 +507,8 @@ void SCR_SetUpToDrawConsole(void)
 
     if (clearconsole++ < vid.numpages) {
         scr_copytop = 1;
-        Draw_TileClear(0, (int)scr_con_current, vid.width,
-            vid.height - (int)scr_con_current);
+        Draw_TileClear(0, static_cast<int>(scr_con_current), vid.width,
+            vid.height - static_cast<int>(scr_con_current));
         Sbar_Changed();
     } else if (clearnotify++ < vid.numpages) {
         scr_copytop = 1;
@@ -527,7 +527,7 @@ void SCR_DrawConsole(void)
 {
     if (scr_con_current) {
         scr_copyeverything = 1;
-        Con_DrawConsole(scr_con_current, true);
+        Con_DrawConsole(static_cast<int>(scr_con_current), true);
         clearconsole = 0;
     } else {
         if (key_dest == key_game || key_dest == key_message) {
@@ -622,7 +622,7 @@ void WritePCXfile(char* filename,
     }
 
     // write output file
-    length = pack - (byte*)pcx;
+    length = static_cast<int>(pack - (byte*)pcx);
     COM_WriteFile(filename, pcx, length);
 }
 
@@ -640,12 +640,12 @@ void SCR_ScreenShot_f(void)
     //
     // find a file name to save it to
     //
-    strcpy(pcxname, "quake00.pcx");
+    strcpy_s(pcxname, sizeof(pcxname), "quake00.pcx");
 
     for (i = 0; i <= 99; i++) {
-        pcxname[5] = i / 10 + '0';
-        pcxname[6] = i % 10 + '0';
-        sprintf(checkname, "%s/%s", com_gamedir, pcxname);
+        pcxname[5] = static_cast<char>(i / 10 + '0');
+        pcxname[6] = static_cast<char>(i % 10 + '0');
+        sprintf_s(checkname, sizeof(checkname), "%s/%s", com_gamedir, pcxname);
         if (Sys_FileTime(checkname) == -1) {
             break; // file doesn't exist
         }
@@ -703,7 +703,7 @@ void SCR_BeginLoadingPlaque(void)
     scr_drawloading = false;
 
     scr_disabled_for_loading = true;
-    scr_disabled_time = realtime;
+    scr_disabled_time = static_cast<float>(realtime);
     scr_fullupdate = 0;
 }
 
@@ -734,7 +734,7 @@ void SCR_DrawNotifyString(void)
 
     start = scr_notifystring;
 
-    y = vid.height * 0.35;
+    y = static_cast<int>(vid.height * 0.35);
 
     do {
         // scan the width of the line

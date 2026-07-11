@@ -151,7 +151,7 @@ void VID_Init(unsigned char* palette)
     // Now know everything we need to know about the buffer
     VGA_width = vid.conwidth = vid.width;
     VGA_height = vid.conheight = vid.height;
-    vid.aspect = ((float)vid.height / (float)vid.width) * (320.0 / 240.0);
+    vid.aspect = static_cast<float>(((float)vid.height / (float)vid.width) * (320.0 / 240.0));
     vid.numpages = 1;
     vid.colormap = host_colormap;
     vid.fullbright = 256 - LittleLong(*((int*)vid.colormap + 2048));
@@ -474,8 +474,8 @@ void Sys_SendKeyEvents(void)
 
         case SDL_MOUSEMOTION:
             if (((unsigned)event.motion.x != (vid.width / 2)) || ((unsigned)event.motion.y != (vid.height / 2))) {
-                mouse_x = event.motion.xrel * 10;
-                mouse_y = event.motion.yrel * 10;
+                mouse_x = static_cast<float>(event.motion.xrel * 10);
+                mouse_y = static_cast<float>(event.motion.yrel * 10);
                 if (((unsigned)event.motion.x < ((vid.width / 2) - (vid.width / 4))) || ((unsigned)event.motion.x > ((vid.width / 2) + (vid.width / 4))) || ((unsigned)event.motion.y < ((vid.height / 2) - (vid.height / 4))) || ((unsigned)event.motion.y > ((vid.height / 2) + (vid.height / 4)))) {
                     SDL_WarpMouseInWindow(window, vid.width / 2, vid.height / 2);
                 }

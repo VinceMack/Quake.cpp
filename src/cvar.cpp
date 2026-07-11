@@ -134,7 +134,7 @@ SetValue
 void CvarRegistry::SetValue(std::string_view var_name, float value)
 {
     char val[32];
-    std::sprintf(val, "%f", value);
+    sprintf_s(val, sizeof(val), "%f", value);
     Set(var_name, val);
 }
 

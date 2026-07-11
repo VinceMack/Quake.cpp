@@ -235,7 +235,7 @@ void D_SetupFrame(void)
     d_roverwrapped = false;
     d_initial_rover = sc_rover;
 
-    d_minmip = d_mipcap.value;
+    d_minmip = static_cast<int>(d_mipcap.value);
     if (d_minmip > 3) {
         d_minmip = 3;
     } else if (d_minmip < 0) {
@@ -349,15 +349,15 @@ void D_DrawSolidSurface(surf_t* surf, int color)
         pdest = (byte*)d_viewbuffer + screenwidth * span->v;
         u = span->u;
         u2 = span->u + span->count - 1;
-        ((byte*)pdest)[u] = pix;
+        ((byte*)pdest)[u] = static_cast<byte>(pix);
 
         if (u2 - u < 8) {
             for (u++; u <= u2; u++) {
-                ((byte*)pdest)[u] = pix;
+                ((byte*)pdest)[u] = static_cast<byte>(pix);
             }
         } else {
             for (u++; u & 3; u++) {
-                ((byte*)pdest)[u] = pix;
+                ((byte*)pdest)[u] = static_cast<byte>(pix);
             }
 
             u2 -= 4;
@@ -366,7 +366,7 @@ void D_DrawSolidSurface(surf_t* surf, int color)
             }
             u2 += 4;
             for (; u <= u2; u++) {
-                ((byte*)pdest)[u] = pix;
+                ((byte*)pdest)[u] = static_cast<byte>(pix);
             }
         }
     }
@@ -379,7 +379,7 @@ void D_CalcGradients(msurface_t* pface)
     Vector3 p_saxis, p_taxis;
     float t;
 
-    mipscale = 1.0 / (float)(1 << miplevel);
+    mipscale = 1.0f / static_cast<float>(1 << miplevel);
 
     TransformVector(pface->texinfo->vecs[0], p_saxis);
     TransformVector(pface->texinfo->vecs[1], p_taxis);
@@ -398,8 +398,8 @@ void D_CalcGradients(msurface_t* pface)
     p_temp1 = transformed_modelorg * mipscale;
 
     t = 0x10000 * mipscale;
-    sadjust = ((fixed16_t)(p_temp1.dot(p_saxis) * 0x10000 + 0.5)) - ((pface->texturemins[0] << 16) >> miplevel) + pface->texinfo->vecs[0][3] * t;
-    tadjust = ((fixed16_t)(p_temp1.dot(p_taxis) * 0x10000 + 0.5)) - ((pface->texturemins[1] << 16) >> miplevel) + pface->texinfo->vecs[1][3] * t;
+    sadjust = static_cast<fixed16_t>(p_temp1.dot(p_saxis) * 0x10000 + 0.5f - ((pface->texturemins[0] << 16) >> miplevel) + pface->texinfo->vecs[0][3] * t);
+    tadjust = static_cast<fixed16_t>(p_temp1.dot(p_taxis) * 0x10000 + 0.5f - ((pface->texturemins[1] << 16) >> miplevel) + pface->texinfo->vecs[1][3] * t);
 
     bbextents = ((pface->extents[0] << 16) >> miplevel) - 1;
     bbextentt = ((pface->extents[1] << 16) >> miplevel) - 1;
@@ -770,7 +770,7 @@ void D_DrawSpans8(espan_t* pspan)
                 sstep = (snext - s) >> 3;
                 tstep = (tnext - t) >> 3;
             } else {
-                spancountminus1 = (float)(spancount - 1);
+                spancountminus1 = static_cast<float>(spancount - 1);
                 sdivz += d_sdivzstepu * spancountminus1;
                 tdivz += d_tdivzstepu * spancountminus1;
                 zi += d_zistepu * spancountminus1;
@@ -873,8 +873,8 @@ void D_Sky_uv_To_st(int u, int v, fixed16_t* s, fixed16_t* t)
         temp = (float)r_refdef.vrect.height;
     }
 
-    wu = 8192.0 * (float)(u - ((int)vid.width >> 1)) / temp;
-    wv = 8192.0 * (float)(((int)vid.height >> 1) - v) / temp;
+    wu = 8192.0f * static_cast<float>(u - (static_cast<int>(vid.width) >> 1)) / temp;
+    wv = 8192.0f * static_cast<float>((static_cast<int>(vid.height) >> 1) - v) / temp;
 
     end = vpn * 4096.0f + vright * wu + vup * wv;
     end.z *= 3.0f;
@@ -890,7 +890,7 @@ void D_DrawSkyScans8(espan_t* pspan)
     int count, spancount, u, v;
     unsigned char* pdest;
     fixed16_t s, t, snext = 0, tnext = 0, sstep, tstep;
-    int spancountminus1;
+    float spancountminus1;
 
     sstep = 0;
     tstep = 0;
@@ -921,14 +921,14 @@ void D_DrawSkyScans8(espan_t* pspan)
                 sstep = (snext - s) >> SKY_SPAN_SHIFT;
                 tstep = (tnext - t) >> SKY_SPAN_SHIFT;
             } else {
-                spancountminus1 = (float)(spancount - 1);
+                spancountminus1 = static_cast<float>(spancount - 1);
 
                 if (spancountminus1 > 0) {
-                    u += spancountminus1;
+                    u += static_cast<int>(spancountminus1);
                     D_Sky_uv_To_st(u, v, &snext, &tnext);
 
-                    sstep = (snext - s) / spancountminus1;
-                    tstep = (tnext - t) / spancountminus1;
+                    sstep = static_cast<fixed16_t>((snext - s) / spancountminus1);
+                    tstep = static_cast<fixed16_t>((tnext - t) / spancountminus1);
                 }
             }
 
@@ -1046,7 +1046,7 @@ surfcache_t* D_SCAlloc(int width, int size)
         Sys_Error("D_SCAlloc: bad cache size %d\n", size);
     }
 
-    size = (intptr_t)&((surfcache_t*)0)->data[size];
+    size = static_cast<int>(reinterpret_cast<intptr_t>(&((surfcache_t*)0)->data[size]));
     size = (size + 3) & ~3;
     if (size > sc_size) {
         Sys_Error("D_SCAlloc: %i > cache size", size);
@@ -1129,7 +1129,7 @@ surfcache_t* D_CacheSurface(msurface_t* surface, int mip_level)
         return cache;
     }
 
-    surfscale = 1.0 / (1 << mip_level);
+    surfscale = 1.0f / (1 << mip_level);
     r_drawsurf.surfmip = mip_level;
     r_drawsurf.surfwidth = surface->extents[0] >> mip_level;
     r_drawsurf.rowbytes = r_drawsurf.surfwidth;
@@ -1256,7 +1256,7 @@ void D_SpriteDrawSpans(sspan_t* pspan)
                 sstep = (snext - s) >> 3;
                 tstep = (tnext - t) >> 3;
             } else {
-                spancountminus1 = (float)(spancount - 1);
+                spancountminus1 = static_cast<float>(spancount - 1);
                 sdivz += d_sdivzstepu * spancountminus1;
                 tdivz += d_tdivzstepu * spancountminus1;
                 zi += d_zistepu * spancountminus1;
@@ -1456,7 +1456,7 @@ void D_SpriteCalculateGradients(void)
     TransformVector(r_spritedesc.vup, p_taxis);
     p_taxis = -p_taxis;
 
-    distinv = 1.0 / (-modelorg.dot(r_spritedesc.vpn));
+    distinv = 1.0f / (-modelorg.dot(r_spritedesc.vpn));
 
     d_sdivzstepu = p_saxis.x * xscaleinv;
     d_tdivzstepu = p_taxis.x * xscaleinv;
@@ -1561,10 +1561,10 @@ void D_PolysetDrawFinalVerts(finalvert_t* fv, int num_verts)
             if (z >= *zbuf) {
                 int pix;
 
-                *zbuf = z;
+                *zbuf = static_cast<short>(z);
                 pix = skintable[fv->v[3] >> 16][fv->v[2] >> 16];
                 pix = ((byte*)acolormap)[pix + (fv->v[4] & 0xFF00)];
-                d_viewbuffer[d_scantable[fv->v[1]] + fv->v[0]] = pix;
+                d_viewbuffer[d_scantable[fv->v[1]] + fv->v[0]] = static_cast<pixel_t>(pix);
             }
         }
     }
@@ -1756,9 +1756,9 @@ split:
     if (z >= *zbuf) {
         int pix;
 
-        *zbuf = z;
+        *zbuf = static_cast<short>(z);
         pix = d_pcolormap[skintable[new_poly[3] >> 16][new_poly[2] >> 16]];
-        d_viewbuffer[d_scantable[new_poly[1]] + new_poly[0]] = pix;
+        d_viewbuffer[d_scantable[new_poly[1]] + new_poly[0]] = static_cast<pixel_t>(pix);
     }
 
 nodraw:
@@ -1862,34 +1862,34 @@ void D_PolysetCalcGradients(int s_width)
     float xstepdenominv, ystepdenominv, t0, t1;
     float p01_minus_p21, p11_minus_p21, p00_minus_p20, p10_minus_p20;
 
-    p00_minus_p20 = r_p0[0] - r_p2[0];
-    p01_minus_p21 = r_p0[1] - r_p2[1];
-    p10_minus_p20 = r_p1[0] - r_p2[0];
-    p11_minus_p21 = r_p1[1] - r_p2[1];
+    p00_minus_p20 = static_cast<float>(r_p0[0] - r_p2[0]);
+    p01_minus_p21 = static_cast<float>(r_p0[1] - r_p2[1]);
+    p10_minus_p20 = static_cast<float>(r_p1[0] - r_p2[0]);
+    p11_minus_p21 = static_cast<float>(r_p1[1] - r_p2[1]);
 
-    xstepdenominv = 1.0 / (float)d_xdenom;
+    xstepdenominv = 1.0f / static_cast<float>(d_xdenom);
 
     ystepdenominv = -xstepdenominv;
 
-    t0 = r_p0[4] - r_p2[4];
-    t1 = r_p1[4] - r_p2[4];
+    t0 = static_cast<float>(r_p0[4] - r_p2[4]);
+    t1 = static_cast<float>(r_p1[4] - r_p2[4]);
     r_lstepx = (int)ceil((t1 * p01_minus_p21 - t0 * p11_minus_p21) * xstepdenominv);
     r_lstepy = (int)ceil((t1 * p00_minus_p20 - t0 * p10_minus_p20) * ystepdenominv);
 
-    t0 = r_p0[2] - r_p2[2];
-    t1 = r_p1[2] - r_p2[2];
-    r_sstepx = (int)((t1 * p01_minus_p21 - t0 * p11_minus_p21) * xstepdenominv);
-    r_sstepy = (int)((t1 * p00_minus_p20 - t0 * p10_minus_p20) * ystepdenominv);
+    t0 = static_cast<float>(r_p0[2] - r_p2[2]);
+    t1 = static_cast<float>(r_p1[2] - r_p2[2]);
+    r_sstepx = static_cast<int>((t1 * p01_minus_p21 - t0 * p11_minus_p21) * xstepdenominv);
+    r_sstepy = static_cast<int>((t1 * p00_minus_p20 - t0 * p10_minus_p20) * ystepdenominv);
 
-    t0 = r_p0[3] - r_p2[3];
-    t1 = r_p1[3] - r_p2[3];
-    r_tstepx = (int)((t1 * p01_minus_p21 - t0 * p11_minus_p21) * xstepdenominv);
-    r_tstepy = (int)((t1 * p00_minus_p20 - t0 * p10_minus_p20) * ystepdenominv);
+    t0 = static_cast<float>(r_p0[3] - r_p2[3]);
+    t1 = static_cast<float>(r_p1[3] - r_p2[3]);
+    r_tstepx = static_cast<int>((t1 * p01_minus_p21 - t0 * p11_minus_p21) * xstepdenominv);
+    r_tstepy = static_cast<int>((t1 * p00_minus_p20 - t0 * p10_minus_p20) * ystepdenominv);
 
-    t0 = r_p0[5] - r_p2[5];
-    t1 = r_p1[5] - r_p2[5];
-    r_zistepx = (int)((t1 * p01_minus_p21 - t0 * p11_minus_p21) * xstepdenominv);
-    r_zistepy = (int)((t1 * p00_minus_p20 - t0 * p10_minus_p20) * ystepdenominv);
+    t0 = static_cast<float>(r_p0[5] - r_p2[5]);
+    t1 = static_cast<float>(r_p1[5] - r_p2[5]);
+    r_zistepx = static_cast<int>((t1 * p01_minus_p21 - t0 * p11_minus_p21) * xstepdenominv);
+    r_zistepy = static_cast<int>((t1 * p00_minus_p20 - t0 * p10_minus_p20) * ystepdenominv);
 
     a_sstepxfrac = r_sstepx & 0xFFFF;
     a_tstepxfrac = r_tstepx & 0xFFFF;
@@ -2204,7 +2204,7 @@ void D_DrawParticle(particle_t* pparticle)
         return;
     }
 
-    zi = 1.0 / transformed.z;
+    zi = 1.0f / transformed.z;
     u = (int)(xcenter + zi * transformed.x + 0.5);
     v = (int)(ycenter - zi * transformed.y + 0.5);
 
@@ -2230,8 +2230,8 @@ void D_DrawParticle(particle_t* pparticle)
 
         for (; count; count--, pz += d_zwidth, pdest += screenwidth) {
             if (pz[0] <= izi) {
-                pz[0] = izi;
-                pdest[0] = pparticle->color;
+                pz[0] = static_cast<short>(izi);
+                pdest[0] = static_cast<byte>(pparticle->color);
             }
         }
         break;
@@ -2241,13 +2241,13 @@ void D_DrawParticle(particle_t* pparticle)
 
         for (; count; count--, pz += d_zwidth, pdest += screenwidth) {
             if (pz[0] <= izi) {
-                pz[0] = izi;
-                pdest[0] = pparticle->color;
+                pz[0] = static_cast<short>(izi);
+                pdest[0] = static_cast<byte>(pparticle->color);
             }
 
             if (pz[1] <= izi) {
-                pz[1] = izi;
-                pdest[1] = pparticle->color;
+                pz[1] = static_cast<short>(izi);
+                pdest[1] = static_cast<byte>(pparticle->color);
             }
         }
         break;
@@ -2257,18 +2257,18 @@ void D_DrawParticle(particle_t* pparticle)
 
         for (; count; count--, pz += d_zwidth, pdest += screenwidth) {
             if (pz[0] <= izi) {
-                pz[0] = izi;
-                pdest[0] = pparticle->color;
+                pz[0] = static_cast<short>(izi);
+                pdest[0] = static_cast<byte>(pparticle->color);
             }
 
             if (pz[1] <= izi) {
-                pz[1] = izi;
-                pdest[1] = pparticle->color;
+                pz[1] = static_cast<short>(izi);
+                pdest[1] = static_cast<byte>(pparticle->color);
             }
 
             if (pz[2] <= izi) {
-                pz[2] = izi;
-                pdest[2] = pparticle->color;
+                pz[2] = static_cast<short>(izi);
+                pdest[2] = static_cast<byte>(pparticle->color);
             }
         }
         break;
@@ -2278,23 +2278,23 @@ void D_DrawParticle(particle_t* pparticle)
 
         for (; count; count--, pz += d_zwidth, pdest += screenwidth) {
             if (pz[0] <= izi) {
-                pz[0] = izi;
-                pdest[0] = pparticle->color;
+                pz[0] = static_cast<short>(izi);
+                pdest[0] = static_cast<byte>(pparticle->color);
             }
 
             if (pz[1] <= izi) {
-                pz[1] = izi;
-                pdest[1] = pparticle->color;
+                pz[1] = static_cast<short>(izi);
+                pdest[1] = static_cast<byte>(pparticle->color);
             }
 
             if (pz[2] <= izi) {
-                pz[2] = izi;
-                pdest[2] = pparticle->color;
+                pz[2] = static_cast<short>(izi);
+                pdest[2] = static_cast<byte>(pparticle->color);
             }
 
             if (pz[3] <= izi) {
-                pz[3] = izi;
-                pdest[3] = pparticle->color;
+                pz[3] = static_cast<short>(izi);
+                pdest[3] = static_cast<byte>(pparticle->color);
             }
         }
         break;
@@ -2305,8 +2305,8 @@ void D_DrawParticle(particle_t* pparticle)
         for (; count; count--, pz += d_zwidth, pdest += screenwidth) {
             for (i = 0; i < pix; i++) {
                 if (pz[i] <= izi) {
-                    pz[i] = izi;
-                    pdest[i] = pparticle->color;
+                    pz[i] = static_cast<short>(izi);
+                    pdest[i] = static_cast<byte>(pparticle->color);
                 }
             }
         }

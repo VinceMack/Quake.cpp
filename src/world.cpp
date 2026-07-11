@@ -86,12 +86,12 @@ void SV_InitBoxHull(void)
 
         box_clipnodes[i].children[side] = CONTENTS_EMPTY;
         if (i != 5) {
-            box_clipnodes[i].children[side ^ 1] = i + 1;
+            box_clipnodes[i].children[side ^ 1] = static_cast<short>(i + 1);
         } else {
             box_clipnodes[i].children[side ^ 1] = CONTENTS_SOLID;
         }
 
-        box_planes[i].type = i >> 1;
+        box_planes[i].type = static_cast<byte>(i >> 1);
         box_planes[i].normal[i >> 1] = 1;
     }
 }
@@ -226,7 +226,7 @@ areanode_t* SV_CreateAreaNode(int depth, const Vector3& mins, const Vector3& max
         anode->axis = 1;
     }
 
-    anode->dist = 0.5 * (maxs[anode->axis] + mins[anode->axis]);
+    anode->dist = static_cast<float>(0.5 * (maxs[anode->axis] + mins[anode->axis]));
     mins1 = mins;
     mins2 = mins;
     maxs1 = maxs;
@@ -301,9 +301,9 @@ void SV_TouchLinks(edict_t* ent, areanode_t* node)
         old_self = pr_global_struct->self;
         old_other = pr_global_struct->other;
 
-        pr_global_struct->self = EDICT_TO_PROG(touch);
-        pr_global_struct->other = EDICT_TO_PROG(ent);
-        pr_global_struct->time = sv.time;
+        pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(touch));
+        pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(ent));
+        pr_global_struct->time = static_cast<float>(sv.time);
         PR_ExecuteProgram(touch->v.touch);
 
         pr_global_struct->self = old_self;
@@ -349,9 +349,9 @@ void SV_FindTouchedLeafs(edict_t* ent, mnode_t* node)
         }
 
         leaf = (mleaf_t*)node;
-        leafnum = leaf - sv.worldmodel->leafs - 1;
+        leafnum = static_cast<int>(leaf - sv.worldmodel->leafs - 1);
 
-        ent->leafnums[ent->num_leafs] = leafnum;
+        ent->leafnums[ent->num_leafs] = static_cast<short>(leafnum);
         ent->num_leafs++;
 
         return;
@@ -637,9 +637,9 @@ qboolean SV_RecursiveHullCheck(hull_t* hull,
 
     // put the crosspoint DIST_EPSILON pixels on the near side
     if (t1 < 0) {
-        frac = (t1 + DIST_EPSILON) / (t1 - t2);
+        frac = static_cast<float>((t1 + DIST_EPSILON) / (t1 - t2));
     } else {
-        frac = (t1 - DIST_EPSILON) / (t1 - t2);
+        frac = static_cast<float>((t1 - DIST_EPSILON) / (t1 - t2));
     }
 
     if (frac < 0) {

@@ -79,7 +79,7 @@ qpic_t* Draw_CachePic(const char* path)
         }
 
         menu_numcachepics++;
-        strcpy(pic->name, path);
+        strcpy_s(pic->name, sizeof(pic->name), path);
     }
 
     dat = (qpic_t *) Cache_Check(&pic->cache);
@@ -523,7 +523,7 @@ void Draw_ConsoleBackground(int lines)
 
 // hack the version number directly into the pic
     dest = conback->data + 320 - 43 + 320 * 186;
-    sprintf(ver, "%4.2f", VERSION);
+    sprintf_s(ver, sizeof(ver), "%4.2f", VERSION);
 
     for (x = 0; x < static_cast<int>(strlen(ver)); x++) {
         Draw_CharToConback(ver[x], dest + (x << 3));
@@ -752,7 +752,7 @@ void Draw_Fill(int x, int y, int w, int h, int c)
         dest = vid.buffer + y * vid.rowbytes + x;
         for (v = 0; v < h; v++, dest += vid.rowbytes) {
             for (u = 0; u < w; u++) {
-                dest[u] = c;
+                dest[u] = static_cast<byte>(c);
             }
         }
     } else {
@@ -761,7 +761,7 @@ void Draw_Fill(int x, int y, int w, int h, int c)
         pusdest = (unsigned short*)vid.buffer + y * (vid.rowbytes >> 1) + x;
         for (v = 0; v < h; v++, pusdest += (vid.rowbytes >> 1)) {
             for (u = 0; u < w; u++) {
-                pusdest[u] = uc;
+                pusdest[u] = static_cast<unsigned short>(uc);
             }
         }
     }

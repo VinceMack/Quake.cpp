@@ -272,7 +272,7 @@ sfx_t* S_FindName(const char* name)
     }
 
     sfx = &known_sfx[i];
-    strcpy(sfx->name, name);
+    strcpy_s(sfx->name, sizeof(sfx->name), name);
 
     num_sfx++;
 
@@ -399,18 +399,18 @@ void SND_Spatialize(channel_t* ch)
         rscale = 1.0;
         lscale = 1.0;
     } else {
-        rscale = 1.0 + dot;
-        lscale = 1.0 - dot;
+        rscale = static_cast<vec_t>(1.0 + dot);
+        lscale = static_cast<vec_t>(1.0 - dot);
     }
 
     // add in distance effect
-    scale = (1.0 - dist) * rscale;
+    scale = static_cast<vec_t>((1.0 - dist) * rscale);
     ch->rightvol = (int)(ch->master_vol * scale);
     if (ch->rightvol < 0) {
         ch->rightvol = 0;
     }
 
-    scale = (1.0 - dist) * lscale;
+    scale = static_cast<vec_t>((1.0 - dist) * lscale);
     ch->leftvol = (int)(ch->master_vol * scale);
     if (ch->leftvol < 0) {
         ch->leftvol = 0;
@@ -446,7 +446,7 @@ void S_StartSound(int entnum,
         return;
     }
 
-    vol = fvol * 255;
+    vol = static_cast<int>(fvol * 255);
 
     // pick a channel to play on
     target_chan = SND_PickChannel(entnum, entchannel);
@@ -476,7 +476,7 @@ void S_StartSound(int entnum,
     }
 
     target_chan->sfx = sfx;
-    target_chan->pos = 0.0;
+    target_chan->pos = static_cast<int>(0.0);
     target_chan->end = paintedtime + sc->length;
 
     // if an identical sound has also been started this frame, offset the pos
@@ -593,7 +593,7 @@ void S_StaticSound(sfx_t* sfx, const Vector3& origin, float vol, float attenuati
 
     ss->sfx = sfx;
     ss->origin = origin;
-    ss->master_vol = vol;
+    ss->master_vol = static_cast<int>(vol);
     ss->dist_mult = (attenuation / 64) / sound_nominal_clip_dist;
     ss->end = paintedtime + sc->length;
 
@@ -644,14 +644,14 @@ void S_UpdateAmbientSounds(void)
 
         // don't adjust volume too fast
         if (chan->master_vol < vol) {
-            chan->master_vol += host_frametime * ambient_fade.value;
+            chan->master_vol = static_cast<int>(chan->master_vol + host_frametime * ambient_fade.value);
             if (chan->master_vol > vol) {
-                chan->master_vol = vol;
+                chan->master_vol = static_cast<int>(vol);
             }
         } else if (chan->master_vol > vol) {
-            chan->master_vol -= host_frametime * ambient_fade.value;
+            chan->master_vol = static_cast<int>(chan->master_vol - host_frametime * ambient_fade.value);
             if (chan->master_vol < vol) {
-                chan->master_vol = vol;
+                chan->master_vol = static_cast<int>(vol);
             }
         }
 
@@ -907,10 +907,10 @@ void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data)
 
     stepscale = (float)inrate / shm->speed; // this is usually 0.5, 1, or 2
 
-    outcount = sc->length / stepscale;
+    outcount = static_cast<int>(sc->length / stepscale);
     sc->length = outcount;
     if (sc->loopstart != -1) {
-        sc->loopstart = sc->loopstart / stepscale;
+        sc->loopstart = static_cast<int>(sc->loopstart / stepscale);
     }
 
     sc->speed = shm->speed;
@@ -932,7 +932,7 @@ void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data)
     } else {
         // general case
         samplefrac = 0;
-        fracstep = stepscale * 256;
+        fracstep = static_cast<int>(stepscale * 256);
         for (i = 0; i < outcount; i++) {
             srcsample = samplefrac >> 8;
             samplefrac += fracstep;
@@ -943,9 +943,9 @@ void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data)
             }
 
             if (sc->width == 2) {
-                ((short*)sc->data)[i] = sample;
+                ((short*)sc->data)[i] = static_cast<short>(sample);
             } else {
-                ((signed char*)sc->data)[i] = sample >> 8;
+                ((signed char*)sc->data)[i] = static_cast<signed char>(sample >> 8);
             }
         }
     }
@@ -997,7 +997,7 @@ sfxcache_t* S_LoadSound(sfx_t* s)
     }
 
     stepscale = (float)info.rate / shm->speed;
-    len = info.samples / stepscale;
+    len = static_cast<int>(info.samples / stepscale);
 
     len = len * info.width * info.channels;
 
@@ -1183,7 +1183,7 @@ wavinfo_t GetWavinfo(char* name, byte* wav, int wavlength)
         info.samples = samples;
     }
 
-    info.dataofs = data_p - wav;
+    info.dataofs = static_cast<int>(data_p - wav);
 
     return info;
 }
@@ -1214,7 +1214,7 @@ void Snd_WriteLinearBlastStereo16(void)
         } else if (val < -32768) {
             snd_out[i] = -32768;
         } else {
-            snd_out[i] = val;
+            snd_out[i] = static_cast<short>(val);
         }
 
         val = (snd_p[i + 1] * snd_vol) >> 8;
@@ -1223,7 +1223,7 @@ void Snd_WriteLinearBlastStereo16(void)
         } else if (val < -32768) {
             snd_out[i + 1] = -32768;
         } else {
-            snd_out[i + 1] = val;
+            snd_out[i + 1] = static_cast<short>(val);
         }
     }
 }
@@ -1234,7 +1234,7 @@ void S_TransferStereo16(int endtime)
     int lpaintedtime;
     unsigned char* pbuf;
 
-    snd_vol = volume.value * 256;
+    snd_vol = static_cast<int>(volume.value * 256);
 
     snd_p = (int*)paintbuffer;
     lpaintedtime = paintedtime;
@@ -1287,7 +1287,7 @@ void S_TransferPaintBuffer(int endtime)
     out_mask = shm->samples - 1;
     out_idx = paintedtime * shm->channels & out_mask;
     step = 3 - shm->channels;
-    mix_vol = volume.value * 256;
+    mix_vol = static_cast<int>(volume.value * 256);
 
     {
         pbuf = (unsigned char*)shm->buffer;
@@ -1304,7 +1304,7 @@ void S_TransferPaintBuffer(int endtime)
                 val = -32768;
             }
 
-            out[out_idx] = val;
+            out[out_idx] = static_cast<short>(val);
             out_idx = (out_idx + 1) & out_mask;
         }
     } else if (shm->samplebits == 8) {
@@ -1318,7 +1318,7 @@ void S_TransferPaintBuffer(int endtime)
                 val = -32768;
             }
 
-            out[out_idx] = (val >> 8) + 128;
+            out[out_idx] = static_cast<unsigned char>((val >> 8) + 128);
             out_idx = (out_idx + 1) & out_mask;
         }
     }

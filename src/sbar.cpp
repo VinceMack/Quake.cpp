@@ -345,13 +345,13 @@ int Sbar_itoa(int num, char* buf)
     do {
         pow10 /= 10;
         dig = num / pow10;
-        *str++ = '0' + dig;
+        *str++ = static_cast<char>('0' + dig);
         num -= dig * pow10;
     } while (pow10 != 1);
 
     *str = 0;
 
-    return str - buf;
+    return static_cast<int>(str - buf);
 }
 
 /*
@@ -443,24 +443,24 @@ void Sbar_SoloScoreboard(void)
     int minutes, seconds, tens, units;
     int l;
 
-    sprintf(str, "Monsters:%3i /%3i", cl.stats[STAT_MONSTERS],
+    sprintf_s(str, sizeof(str), "Monsters:%3i /%3i", cl.stats[STAT_MONSTERS],
         cl.stats[STAT_TOTALMONSTERS]);
     Sbar_DrawString(8, 4, str);
 
-    sprintf(str, "Secrets :%3i /%3i", cl.stats[STAT_SECRETS],
+    sprintf_s(str, sizeof(str), "Secrets :%3i /%3i", cl.stats[STAT_SECRETS],
         cl.stats[STAT_TOTALSECRETS]);
     Sbar_DrawString(8, 12, str);
 
     // time
-    minutes = cl.time / 60;
-    seconds = cl.time - 60 * minutes;
+    minutes = static_cast<int>(cl.time / 60);
+    seconds = static_cast<int>(cl.time - 60 * minutes);
     tens = seconds / 10;
     units = seconds - 10 * tens;
-    sprintf(str, "Time :%3i:%i%i", minutes, tens, units);
+    sprintf_s(str, sizeof(str), "Time :%3i:%i%i", minutes, tens, units);
     Sbar_DrawString(184, 4, str);
 
     // draw level name
-    l = (int)strlen(cl.levelname);
+    l = static_cast<int>(strlen(cl.levelname));
     Sbar_DrawString(232 - l * 4, 12, cl.levelname);
 }
 
@@ -505,7 +505,7 @@ void Sbar_DrawInventory(void)
     for (i = 0; i < 7; i++) {
         if (cl.items & (IT_SHOTGUN << i)) {
             time = cl.item_gettime[i];
-            flashon = (int)((cl.time - time) * 10);
+            flashon = static_cast<int>((cl.time - time) * 10);
             if (flashon >= 10) {
                 if (cl.stats[STAT_ACTIVEWEAPON] == (IT_SHOTGUN << i)) {
                     flashon = 1;
@@ -531,7 +531,7 @@ void Sbar_DrawInventory(void)
         for (i = 0; i < 4; i++) {
             if (cl.items & (1 << hipweapons[i])) {
                 time = cl.item_gettime[hipweapons[i]];
-                flashon = (int)((cl.time - time) * 10);
+flashon = static_cast<int>((cl.time - time) * 10);
                 if (flashon >= 10) {
                     if (cl.stats[STAT_ACTIVEWEAPON] == (1 << hipweapons[i])) {
                         flashon = 1;
@@ -584,7 +584,7 @@ void Sbar_DrawInventory(void)
 
     // ammo counts
     for (i = 0; i < 4; i++) {
-        sprintf(num, "%3i", cl.stats[STAT_SHELLS + i]);
+        sprintf_s(num, sizeof(num), "%3i", cl.stats[STAT_SHELLS + i]);
         if (num[0] != ' ') {
             Sbar_DrawCharacter((6 * i + 1) * 8 - 2, -24, 18 + num[0] - '0');
         }
@@ -720,7 +720,7 @@ void Sbar_DrawFrags(void)
 
         // draw number
         f = s->frags;
-        sprintf(num, "%3i", f);
+        sprintf_s(num, sizeof(num), "%3i", f);
 
         Sbar_DrawCharacter((x + 1) * 8, -24, num[0]);
         Sbar_DrawCharacter((x + 2) * 8, -24, num[1]);
@@ -773,7 +773,7 @@ void Sbar_DrawFace(void)
 
         // draw number
         f = s->frags;
-        sprintf(num, "%3i", f);
+        sprintf_s(num, sizeof(num), "%3i", f);
 
         if (top == 8) {
             if (num[0] != ' ') {
@@ -1044,7 +1044,7 @@ void Sbar_DeathmatchOverlay(void)
 
         // draw number
         f = s->frags;
-        sprintf(num, "%3i", f);
+        sprintf_s(num, sizeof(num), "%3i", f);
 
         Draw_Character(x + 8, y, num[0]);
         Draw_Character(x + 16, y, num[1]);
@@ -1115,7 +1115,7 @@ void Sbar_MiniDeathmatchOverlay(void)
     }
 
     x = 324;
-    for (/* */; i < scoreboardlines && y < (int)vid.height - 8; i++) {
+    for (/* */; i < scoreboardlines && y < static_cast<int>(vid.height) - 8; i++) {
         k = fragsort[i];
         s = &cl.scores[k];
         if (!s->name[0]) {
@@ -1133,7 +1133,7 @@ void Sbar_MiniDeathmatchOverlay(void)
 
         // draw number
         f = s->frags;
-        sprintf(num, "%3i", f);
+        sprintf_s(num, sizeof(num), "%3i", f);
 
         Draw_Character(x + 8, y, num[0]);
         Draw_Character(x + 16, y, num[1]);

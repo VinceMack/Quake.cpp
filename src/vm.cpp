@@ -51,7 +51,7 @@ int pr_edict_size; // in bytes
 unsigned short pr_crc;
 
 int type_size[8] = {
-    1, sizeof(string_t) / 4, 1, 3, 1, 1, sizeof(func_t) / 4, sizeof(void*) / 4
+    1, static_cast<int>(sizeof(string_t) / 4), 1, 3, 1, 1, static_cast<int>(sizeof(func_t) / 4), static_cast<int>(sizeof(void*) / 4)
 };
 
 ddef_t* ED_FieldAtOfs(int ofs);
@@ -154,7 +154,7 @@ void ED_Free(edict_t* ed)
     ed->v.nextthink = -1;
     ed->v.solid = 0;
 
-    ed->freetime = sv.time;
+    ed->freetime = static_cast<float>(sv.time);
 }
 
 //===========================================================================
@@ -276,7 +276,7 @@ eval_t* GetEdictFieldValue(edict_t* ed, const char* field)
 
     if (strlen(field) < MAX_FIELD_LEN) {
         gefvCache[rep].pcache = def;
-        strcpy(gefvCache[rep].field, field);
+        strcpy_s(gefvCache[rep].field, sizeof(gefvCache[rep].field), field);
         rep ^= 1;
     }
 
@@ -305,34 +305,34 @@ char* PR_ValueString(etype_t type, eval_t* val)
 
     switch (type) {
     case ev_string:
-        sprintf(line, "%s", PR_GetString(val->string));
+        sprintf_s(line, sizeof(line), "%s", PR_GetString(val->string));
         break;
     case ev_entity:
-        sprintf(line, "entity %i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
+        sprintf_s(line, sizeof(line), "entity %i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
         break;
     case ev_function:
         f = pr_functions + val->function;
-        sprintf(line, "%s()", PR_GetString(f->s_name));
+        sprintf_s(line, sizeof(line), "%s()", PR_GetString(f->s_name));
         break;
     case ev_field:
         def = ED_FieldAtOfs(val->_int);
-        sprintf(line, ".%s", PR_GetString(def->s_name));
+        sprintf_s(line, sizeof(line), ".%s", PR_GetString(def->s_name));
         break;
     case ev_void:
-        sprintf(line, "void");
+        sprintf_s(line, sizeof(line), "void");
         break;
     case ev_float:
-        sprintf(line, "%5.1f", val->_float);
+        sprintf_s(line, sizeof(line), "%5.1f", val->_float);
         break;
     case ev_vector:
-        sprintf(line, "'%5.1f %5.1f %5.1f'", val->vector[0], val->vector[1],
+        sprintf_s(line, sizeof(line), "'%5.1f %5.1f %5.1f'", val->vector[0], val->vector[1],
             val->vector[2]);
         break;
     case ev_pointer:
-        sprintf(line, "pointer");
+        sprintf_s(line, sizeof(line), "pointer");
         break;
     default:
-        sprintf(line, "bad type %i", type);
+        sprintf_s(line, sizeof(line), "bad type %i", type);
         break;
     }
 
@@ -357,30 +357,30 @@ char* PR_UglyValueString(etype_t type, eval_t* val)
 
     switch (type) {
     case ev_string:
-        sprintf(line, "%s", PR_GetString(val->string));
+        sprintf_s(line, sizeof(line), "%s", PR_GetString(val->string));
         break;
     case ev_entity:
-        sprintf(line, "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
+        sprintf_s(line, sizeof(line), "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
         break;
     case ev_function:
         f = pr_functions + val->function;
-        sprintf(line, "%s", PR_GetString(f->s_name));
+        sprintf_s(line, sizeof(line), "%s", PR_GetString(f->s_name));
         break;
     case ev_field:
         def = ED_FieldAtOfs(val->_int);
-        sprintf(line, "%s", PR_GetString(def->s_name));
+        sprintf_s(line, sizeof(line), "%s", PR_GetString(def->s_name));
         break;
     case ev_void:
-        sprintf(line, "void");
+        sprintf_s(line, sizeof(line), "void");
         break;
     case ev_float:
-        sprintf(line, "%f", val->_float);
+        sprintf_s(line, sizeof(line), "%f", val->_float);
         break;
     case ev_vector:
-        sprintf(line, "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
+        sprintf_s(line, sizeof(line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
         break;
     default:
-        sprintf(line, "bad type %i", type);
+        sprintf_s(line, sizeof(line), "bad type %i", type);
         break;
     }
 
@@ -406,17 +406,17 @@ char* PR_GlobalString(int ofs)
     val = (void*)&pr_globals[ofs];
     def = ED_GlobalAtOfs(ofs);
     if (!def) {
-        sprintf(line, "%i(??? unknown)", ofs);
+        sprintf_s(line, sizeof(line), "%i(??? unknown)", ofs);
     } else {
         s = PR_ValueString((etype_t)def->type, (eval_t*)val);
-        sprintf(line, "%i(%s)%s", ofs, PR_GetString(def->s_name), s);
+        sprintf_s(line, sizeof(line), "%i(%s)%s", ofs, PR_GetString(def->s_name), s);
     }
 
     i = (int)strlen(line);
     for (; i < 20; i++) {
-        strcat(line, " ");
+        strcat_s(line, sizeof(line), " ");
     }
-    strcat(line, " ");
+    strcat_s(line, sizeof(line), " ");
 
     return line;
 }
@@ -429,16 +429,16 @@ char* PR_GlobalStringNoContents(int ofs)
 
     def = ED_GlobalAtOfs(ofs);
     if (!def) {
-        sprintf(line, "%i(\?\?\?)", ofs);
+        sprintf_s(line, sizeof(line), "%i(???)", ofs);
     } else {
-        sprintf(line, "%i(%s)", ofs, PR_GetString(def->s_name));
+        sprintf_s(line, sizeof(line), "%i(%s)", ofs, PR_GetString(def->s_name));
     }
 
     i = (int)strlen(line);
     for (; i < 20; i++) {
-        strcat(line, " ");
+        strcat_s(line, sizeof(line), " ");
     }
-    strcat(line, " ");
+    strcat_s(line, sizeof(line), " ");
 
     return line;
 }
@@ -695,7 +695,7 @@ void ED_ParseGlobals(char* data)
             Sys_Error("ED_ParseEntity: EOF without closing brace");
         }
 
-        strcpy(keyname, com_token);
+        strcpy_s(keyname, sizeof(keyname), com_token);
 
         // parse value
         data = COM_Parse(data);
@@ -779,11 +779,11 @@ qboolean ED_ParseEpair(void* base, ddef_t* key, char* s)
         break;
 
     case ev_float:
-        *(float*)d = atof(s);
+        *(float*)d = static_cast<float>(atof(s));
         break;
 
     case ev_vector:
-        strcpy(string, s);
+        strcpy_s(string, sizeof(string), s);
         v = string;
         w = string;
         for (i = 0; i < 3; i++) {
@@ -791,13 +791,13 @@ qboolean ED_ParseEpair(void* base, ddef_t* key, char* s)
                 v++;
             }
             *v = 0;
-            ((float*)d)[i] = atof(w);
+            ((float*)d)[i] = static_cast<float>(atof(w));
             w = v = v + 1;
         }
         break;
 
     case ev_entity:
-        *(int*)d = EDICT_TO_PROG(EDICT_NUM(atoi(s)));
+        *(int*)d = static_cast<int>(EDICT_TO_PROG(EDICT_NUM(atoi(s))));
         break;
 
     case ev_field:
@@ -819,7 +819,7 @@ qboolean ED_ParseEpair(void* base, ddef_t* key, char* s)
             return false;
         }
 
-        *(func_t*)d = func - pr_functions;
+        *(func_t*)d = static_cast<func_t>(func - pr_functions);
         break;
 
     default:
@@ -868,7 +868,7 @@ char* ED_ParseEdict(char* data, edict_t* ent)
         // anglehack is to allow QuakeEd to write single scalar angles
         // and allow them to be turned into vectors. (FIXME...)
         if (!strcmp(com_token, "angle")) {
-            strcpy(com_token, "angles");
+            strcpy_s(com_token, sizeof(com_token), "angles");
             anglehack = true;
         } else {
             anglehack = false;
@@ -876,10 +876,10 @@ char* ED_ParseEdict(char* data, edict_t* ent)
 
         // FIXME: change light to _light to get rid of this hack
         if (!strcmp(com_token, "light")) {
-            strcpy(com_token, "light_lev"); // hack for single light def
+            strcpy_s(com_token, sizeof(com_token), "light_lev"); // hack for single light def
         }
 
-        strcpy(keyname, com_token);
+        strcpy_s(keyname, sizeof(keyname), com_token);
 
         // another hack to fix heynames with trailing spaces
         n = (int)strlen(keyname);
@@ -914,8 +914,8 @@ char* ED_ParseEdict(char* data, edict_t* ent)
 
         if (anglehack) {
             char temp[32];
-            strcpy(temp, com_token);
-            sprintf(com_token, "0 %s 0", temp);
+            strcpy_s(temp, sizeof(temp), com_token);
+            sprintf_s(com_token, sizeof(com_token), "0 %s 0", temp);
         }
 
         if (!ED_ParseEpair((void*)&ent->v, key, com_token)) {
@@ -953,7 +953,7 @@ void ED_LoadFromFile(char* data)
 
     ent = NULL;
     inhibit = 0;
-    pr_global_struct->time = sv.time;
+    pr_global_struct->time = static_cast<float>(sv.time);
 
     // parse ents
     while (1) {
@@ -1008,8 +1008,8 @@ void ED_LoadFromFile(char* data)
             continue;
         }
 
-        pr_global_struct->self = EDICT_TO_PROG(ent);
-        PR_ExecuteProgram(func - pr_functions);
+        pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
+        PR_ExecuteProgram(static_cast<func_t>(func - pr_functions));
     }
 
     Con_DPrintf("%i entities inhibited\n", inhibit);
@@ -1154,7 +1154,7 @@ int NUM_FOR_EDICT(edict_t* e)
 {
     int b;
 
-    b = (byte*)e - (byte*)sv.edicts;
+    b = static_cast<int>((byte*)e - (byte*)sv.edicts);
     b = b / pr_edict_size;
 
     if (b < 0 || b >= sv.num_edicts) {
@@ -1499,13 +1499,13 @@ PR_RunError
 Aborts the currently executing function
 ============
 */
-void PR_RunError(const char* error, ...)
+[[noreturn]] void PR_RunError(const char* error, ...)
 {
     va_list argptr;
     char string[1024];
 
     va_start(argptr, error);
-    vsprintf(string, error, argptr);
+    vsprintf_s(string, sizeof(string), error, argptr);
     va_end(argptr);
 
     PR_PrintStatement(pr_statements + pr_xstatement);
@@ -1694,11 +1694,11 @@ void PR_ExecuteProgram(func_t fnum)
             break;
 
         case OP_BITAND:
-            c->_float = (int)a->_float & (int)b->_float;
+            c->_float = static_cast<float>(static_cast<int>(a->_float) & static_cast<int>(b->_float));
             break;
 
         case OP_BITOR:
-            c->_float = (int)a->_float | (int)b->_float;
+            c->_float = static_cast<float>(static_cast<int>(a->_float) | static_cast<int>(b->_float));
             break;
 
         case OP_GE:
@@ -1759,7 +1759,7 @@ void PR_ExecuteProgram(func_t fnum)
             c->_float = (a->vector[0] != b->vector[0]) || (a->vector[1] != b->vector[1]) || (a->vector[2] != b->vector[2]);
             break;
         case OP_NE_S:
-            c->_float = strcmp(PR_GetString(a->string), PR_GetString(b->string));
+            c->_float = static_cast<float>(strcmp(PR_GetString(a->string), PR_GetString(b->string)));
             break;
         case OP_NE_E:
             c->_float = a->_int != b->_int;
@@ -1806,7 +1806,7 @@ void PR_ExecuteProgram(func_t fnum)
                 PR_RunError("assignment to world entity");
             }
 
-            c->_int = (byte*)((int*)&ed->v + b->_int) - (byte*)sv.edicts;
+            c->_int = static_cast<int>((byte*)((int*)&ed->v + b->_int) - (byte*)sv.edicts);
             break;
 
         case OP_LOAD_F:
@@ -1898,9 +1898,9 @@ void PR_ExecuteProgram(func_t fnum)
         case OP_STATE:
             ed = PROG_TO_EDICT(pr_global_struct->self);
 #ifdef FPS_20
-            ed->v.nextthink = pr_global_struct->time + 0.05;
+            ed->v.nextthink = pr_global_struct->time + 0.05f;
 #else
-            ed->v.nextthink = pr_global_struct->time + 0.1;
+            ed->v.nextthink = pr_global_struct->time + 0.1f;
 #endif
             if (a->_float != ed->v.frame) {
                 ed->v.frame = a->_float;
@@ -1919,7 +1919,7 @@ void PR_ExecuteProgram(func_t fnum)
 // pr_cmds.cpp -- built-in QuakeC function implementations
 // ============================================================================
 
-#define RETURN_EDICT(e) (((int*)pr_globals)[OFS_RETURN] = EDICT_TO_PROG(e))
+#define RETURN_EDICT(e) (((int*)pr_globals)[OFS_RETURN] = static_cast<int>(EDICT_TO_PROG(e)))
 
 /*
 ===============================================================================
@@ -1936,7 +1936,7 @@ char* PF_VarString(int first)
 
     out[0] = 0;
     for (i = first; i < pr_argc; i++) {
-        strcat(out, G_STRING((OFS_PARM0 + i * 3)));
+        strcat_s(out, sizeof(out), G_STRING((OFS_PARM0 + i * 3)));
     }
 
     return out;
@@ -2050,7 +2050,7 @@ void SetMinMaxSize(edict_t* e, float* min, float* max, qboolean rotate)
         // find min / max for rotations
         angles = e->v.angles;
 
-        a = angles[1] / 180 * M_PI;
+        a = angles[1] / 180.0f * static_cast<float>(M_PI);
 
         xvector[0] = cos(a);
         xvector[1] = sin(a);
@@ -2146,7 +2146,7 @@ void PF_setmodel(void)
     }
 
     e->v.model = PR_SetString(m);
-    e->v.modelindex = i; //SV_ModelIndex (m);
+    e->v.modelindex = static_cast<float>(i); //SV_ModelIndex (m);
 
     mod = sv.models[(int)e->v.modelindex]; // Mod_ForName (m, true);
 
@@ -2301,7 +2301,7 @@ void PF_vectoyaw(void)
     if (value1[1] == 0 && value1[0] == 0) {
         yaw = 0;
     } else {
-        yaw = (int)(atan2(value1[1], value1[0]) * 180 / M_PI);
+        yaw = static_cast<float>(static_cast<int>(atan2(value1[1], value1[0]) * 180.0 / M_PI));
         if (yaw < 0) {
             yaw += 360;
         }
@@ -2333,13 +2333,13 @@ void PF_vectoangles(void)
             pitch = 270;
         }
     } else {
-        yaw = (int)(atan2(value1[1], value1[0]) * 180 / M_PI);
+        yaw = static_cast<float>(static_cast<int>(atan2(value1[1], value1[0]) * 180.0 / M_PI));
         if (yaw < 0) {
             yaw += 360;
         }
 
         forward = sqrt(value1[0] * value1[0] + value1[1] * value1[1]);
-        pitch = (int)(atan2(value1[2], forward) * 180 / M_PI);
+        pitch = static_cast<float>(static_cast<int>(atan2(value1[2], forward) * 180.0 / M_PI));
         if (pitch < 0) {
             pitch += 360;
         }
@@ -2385,7 +2385,7 @@ void PF_particle(void)
     dir = G_VECTOR(OFS_PARM1);
     color = G_FLOAT(OFS_PARM2);
     count = G_FLOAT(OFS_PARM3);
-    SV_StartParticle(org, dir, color, count);
+    SV_StartParticle(org, dir, static_cast<int>(color), static_cast<int>(count));
 }
 
 /*
@@ -2429,8 +2429,8 @@ void PF_ambientsound(void)
 
     MSG_WriteByte(&sv.signon, soundnum);
 
-    MSG_WriteByte(&sv.signon, vol * 255);
-    MSG_WriteByte(&sv.signon, attenuation * 64);
+    MSG_WriteByte(&sv.signon, static_cast<int>(vol * 255.0f));
+    MSG_WriteByte(&sv.signon, static_cast<int>(attenuation * 64.0f));
 }
 
 /*
@@ -2457,7 +2457,7 @@ void PF_sound(void)
     float attenuation;
 
     entity = G_EDICT(OFS_PARM0);
-    channel = G_FLOAT(OFS_PARM1);
+    channel = static_cast<int>(G_FLOAT(OFS_PARM1));
     sample = G_STRING(OFS_PARM2);
     vol = (int)(G_FLOAT(OFS_PARM3) * 255);
     attenuation = G_FLOAT(OFS_PARM4);
@@ -2511,7 +2511,7 @@ void PF_traceline(void)
 
     v1 = G_VECTOR(OFS_PARM0);
     v2 = G_VECTOR(OFS_PARM1);
-    no_monsters = G_FLOAT(OFS_PARM2);
+    no_monsters = static_cast<int>(G_FLOAT(OFS_PARM2));
     ent = G_EDICT(OFS_PARM3);
 
     trace = SV_Move(v1, vec3_origin, vec3_origin, v2, no_monsters, ent);
@@ -2525,9 +2525,9 @@ void PF_traceline(void)
     VectorCopy(trace.plane.normal, pr_global_struct->trace_plane_normal);
     pr_global_struct->trace_plane_dist = trace.plane.dist;
     if (trace.ent) {
-        pr_global_struct->trace_ent = EDICT_TO_PROG(trace.ent);
+        pr_global_struct->trace_ent = static_cast<int>(EDICT_TO_PROG(trace.ent));
     } else {
-        pr_global_struct->trace_ent = EDICT_TO_PROG(sv.edicts);
+        pr_global_struct->trace_ent = static_cast<int>(EDICT_TO_PROG(sv.edicts));
     }
 }
 
@@ -2639,7 +2639,7 @@ void PF_checkclient(void)
     self = PROG_TO_EDICT(pr_global_struct->self);
     view = self->v.origin + self->v.view_ofs;
     leaf = Mod_PointInLeaf(view, sv.worldmodel);
-    l = (leaf - sv.worldmodel->leafs) - 1;
+    l = static_cast<int>((leaf - sv.worldmodel->leafs) - 1);
     if ((l < 0) || !(checkpvs[l >> 3] & (1 << (l & 7)))) {
         c_notvis++;
         RETURN_EDICT(sv.edicts);
@@ -2769,7 +2769,7 @@ void PF_findradius(void)
             continue;
         }
 
-        ent->v.chain = EDICT_TO_PROG(chain);
+        ent->v.chain = static_cast<int>(EDICT_TO_PROG(chain));
         chain = ent;
     }
 
@@ -2794,9 +2794,9 @@ void PF_ftos(void)
     v = G_FLOAT(OFS_PARM0);
 
     if (v == (int)v) {
-        sprintf(pr_string_temp, "%d", (int)v);
+        sprintf_s(pr_string_temp, sizeof(pr_string_temp), "%d", (int)v);
     } else {
-        sprintf(pr_string_temp, "%5.1f", v);
+        sprintf_s(pr_string_temp, sizeof(pr_string_temp), "%5.1f", v);
     }
 
     G_INT(OFS_RETURN) = PR_SetString(pr_string_temp);
@@ -2806,12 +2806,12 @@ void PF_fabs(void)
 {
     float v;
     v = G_FLOAT(OFS_PARM0);
-    G_FLOAT(OFS_RETURN) = fabs(v);
+    G_FLOAT(OFS_RETURN) = static_cast<float>(fabs(v));
 }
 
 void PF_vtos(void)
 {
-    sprintf(pr_string_temp, "'%5.1f %5.1f %5.1f'", G_VECTOR(OFS_PARM0)[0],
+    sprintf_s(pr_string_temp, sizeof(pr_string_temp), "'%5.1f %5.1f %5.1f'", G_VECTOR(OFS_PARM0)[0],
         G_VECTOR(OFS_PARM0)[1], G_VECTOR(OFS_PARM0)[2]);
     G_INT(OFS_RETURN) = PR_SetString(pr_string_temp);
 }
@@ -2981,7 +2981,7 @@ void PF_walkmove(void)
         return;
     }
 
-    yaw = yaw * M_PI * 2 / 360;
+    yaw = yaw * static_cast<float>(M_PI) * 2.0f / 360.0f;
 
     move.x = cos(yaw) * dist;
     move.y = sin(yaw) * dist;
@@ -3023,8 +3023,8 @@ void PF_droptofloor(void)
     } else {
         ent->v.origin = trace.endpos;
         SV_LinkEdict(ent, false);
-        ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
-        ent->v.groundentity = EDICT_TO_PROG(trace.ent);
+        ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) | FL_ONGROUND);
+        ent->v.groundentity = static_cast<int>(EDICT_TO_PROG(trace.ent));
         G_FLOAT(OFS_RETURN) = 1;
     }
 }
@@ -3043,7 +3043,7 @@ void PF_lightstyle(void)
     client_t* client;
     int j;
 
-    style = G_FLOAT(OFS_PARM0);
+    style = static_cast<int>(G_FLOAT(OFS_PARM0));
     val = G_STRING(OFS_PARM1);
 
     // change the string in sv
@@ -3068,9 +3068,9 @@ void PF_rint(void)
     float f;
     f = G_FLOAT(OFS_PARM0);
     if (f > 0) {
-        G_FLOAT(OFS_RETURN) = (int)(f + 0.5);
+        G_FLOAT(OFS_RETURN) = static_cast<float>(static_cast<int>(f + 0.5f));
     } else {
-        G_FLOAT(OFS_RETURN) = (int)(f - 0.5);
+        G_FLOAT(OFS_RETURN) = static_cast<float>(static_cast<int>(f - 0.5f));
     }
 }
 
@@ -3109,7 +3109,7 @@ void PF_pointcontents(void)
 
     v = G_VECTOR(OFS_PARM0);
 
-    G_FLOAT(OFS_RETURN) = SV_PointContents(v);
+    G_FLOAT(OFS_RETURN) = static_cast<float>(SV_PointContents(v));
 }
 
 /*
@@ -3288,7 +3288,7 @@ sizebuf_t* WriteDest(void)
     int dest;
     edict_t* ent;
 
-    dest = G_FLOAT(OFS_PARM0);
+    dest = static_cast<int>(G_FLOAT(OFS_PARM0));
     switch (dest) {
     case MSG_BROADCAST:
         return &sv.datagram;
@@ -3310,30 +3310,27 @@ sizebuf_t* WriteDest(void)
 
     default:
         PR_RunError("WriteDest: bad destination");
-        break;
     }
-
-    return NULL;
 }
 
 inline void PF_WriteByte(void)
 {
-    MSG_WriteByte(WriteDest(), G_FLOAT(OFS_PARM1));
+    MSG_WriteByte(WriteDest(), static_cast<int>(G_FLOAT(OFS_PARM1)));
 }
 
 inline void PF_WriteChar(void)
 {
-    MSG_WriteChar(WriteDest(), G_FLOAT(OFS_PARM1));
+    MSG_WriteChar(WriteDest(), static_cast<int>(G_FLOAT(OFS_PARM1)));
 }
 
 inline void PF_WriteShort(void)
 {
-    MSG_WriteShort(WriteDest(), G_FLOAT(OFS_PARM1));
+    MSG_WriteShort(WriteDest(), static_cast<int>(G_FLOAT(OFS_PARM1)));
 }
 
 inline void PF_WriteLong(void)
 {
-    MSG_WriteLong(WriteDest(), G_FLOAT(OFS_PARM1));
+    MSG_WriteLong(WriteDest(), static_cast<int>(G_FLOAT(OFS_PARM1)));
 }
 
 inline void PF_WriteAngle(void)
@@ -3371,9 +3368,9 @@ void PF_makestatic(void)
 
     MSG_WriteByte(&sv.signon, SV_ModelIndex(PR_GetString(ent->v.model)));
 
-    MSG_WriteByte(&sv.signon, ent->v.frame);
-    MSG_WriteByte(&sv.signon, ent->v.colormap);
-    MSG_WriteByte(&sv.signon, ent->v.skin);
+    MSG_WriteByte(&sv.signon, static_cast<int>(ent->v.frame));
+    MSG_WriteByte(&sv.signon, static_cast<int>(ent->v.colormap));
+    MSG_WriteByte(&sv.signon, static_cast<int>(ent->v.skin));
     for (i = 0; i < 3; i++) {
         MSG_WriteCoord(&sv.signon, ent->v.origin[i]);
         MSG_WriteAngle(&sv.signon, ent->v.angles[i]);

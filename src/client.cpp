@@ -259,7 +259,7 @@ void CL_SignonReply(void)
                 ((int)cl_color.value) & 15));
 
         MSG_WriteByte(&cls.message, clc_stringcmd);
-        sprintf(str, "spawn %s", cls.spawnparms);
+        sprintf_s(str, sizeof(str), "spawn %s", cls.spawnparms);
         MSG_WriteString(&cls.message, str);
         break;
 
@@ -302,7 +302,7 @@ void CL_NextDemo(void)
         }
     }
 
-    sprintf(str, "playdemo %s\n", cls.demos[cls.demonum]);
+    sprintf_s(str, sizeof(str), "playdemo %s\n", cls.demos[cls.demonum]);
     Cmd::BufferInsertText(str);
     cls.demonum++;
 }
@@ -384,7 +384,7 @@ void CL_DecayLights(void)
     dlight_t* dl;
     float time;
 
-    time = cl.time - cl.oldtime;
+    time = static_cast<float>(cl.time - cl.oldtime);
 
     dl = cl_dlights;
     for (i = 0; i < MAX_DLIGHTS; i++, dl++) {
@@ -411,7 +411,7 @@ float CL_LerpPoint(void)
 {
     float f, frac;
 
-    f = cl.mtime[0] - cl.mtime[1];
+    f = static_cast<float>(cl.mtime[0] - cl.mtime[1]);
 
     if (!f || cl_nolerp.value || cls.timedemo || sv.active) {
         cl.time = cl.mtime[0];
@@ -424,7 +424,7 @@ float CL_LerpPoint(void)
         f = 0.1f;
     }
 
-    frac = (cl.time - cl.mtime[1]) / f;
+    frac = static_cast<float>((cl.time - cl.mtime[1]) / f);
     //Con_Printf ("frac: %f\n",frac);
     if (frac < 0) {
         if (frac < -0.01) {
@@ -484,7 +484,7 @@ void CL_RelinkEntities(void)
         }
     }
 
-    bobjrotate = anglemod(100 * cl.time);
+    bobjrotate = anglemod(static_cast<float>(100 * cl.time));
 
     // start on the entity after the world
     for (i = 1, ent = cl_entities + 1; i < cl.num_entities; i++, ent++) {
@@ -549,24 +549,24 @@ void CL_RelinkEntities(void)
             AngleVectors(ent->angles, fv, rv, uv);
 
             dl->origin += fv * 18;
-            dl->radius = 200 + (rand() & 31);
+            dl->radius = static_cast<float>(200 + (rand() & 31));
             dl->minlight = 32;
-            dl->die = cl.time + 0.1;
+            dl->die = static_cast<float>(cl.time + 0.1);
         }
 
         if (ent->effects & EF_BRIGHTLIGHT) {
             dl = CL_AllocDlight(i);
             VectorCopy(ent->origin, dl->origin);
             dl->origin[2] += 16;
-            dl->radius = 400 + (rand() & 31);
-            dl->die = cl.time + 0.001;
+            dl->radius = static_cast<float>(400 + (rand() & 31));
+            dl->die = static_cast<float>(cl.time + 0.001);
         }
 
         if (ent->effects & EF_DIMLIGHT) {
             dl = CL_AllocDlight(i);
             VectorCopy(ent->origin, dl->origin);
-            dl->radius = 200 + (rand() & 31);
-            dl->die = cl.time + 0.001;
+            dl->radius = static_cast<float>(200 + (rand() & 31));
+            dl->die = static_cast<float>(cl.time + 0.001);
         }
 
 
@@ -582,8 +582,8 @@ void CL_RelinkEntities(void)
             R_RocketTrail(oldorg, ent->origin, 0);
             dl = CL_AllocDlight(i);
             VectorCopy(ent->origin, dl->origin);
-            dl->radius = 200;
-            dl->die = cl.time + 0.01;
+            dl->radius = 200.0f;
+            dl->die = static_cast<float>(cl.time + 0.01);
         } else if (ent->model->flags & EF_GRENADE) {
             R_RocketTrail(oldorg, ent->origin, 1);
         } else if (ent->model->flags & EF_TRACER3) {
@@ -627,7 +627,7 @@ int CL_ReadFromServer(void)
             break;
         }
 
-        cl.last_received_message = realtime;
+        cl.last_received_message = static_cast<float>(realtime);
         CL_ParseServerMessage();
     } while (ret && cls.state == ca_connected);
 
@@ -884,9 +884,9 @@ void CL_AdjustAngles(void)
     float up, down;
 
     if (in_speed.state & 1) {
-        speed = host_frametime * cl_anglespeedkey.value;
+        speed = static_cast<float>(host_frametime * cl_anglespeedkey.value);
     } else {
-        speed = host_frametime;
+        speed = static_cast<float>(host_frametime);
     }
 
     if (!(in_strafe.state & 1)) {
@@ -995,15 +995,15 @@ void CL_SendMove(usercmd_t* cmd)
     //
     MSG_WriteByte(&buf, clc_move);
 
-    MSG_WriteFloat(&buf, cl.mtime[0]); // so server can get ping times
+    MSG_WriteFloat(&buf, static_cast<float>(cl.mtime[0])); // so server can get ping times
 
     for (i = 0; i < 3; i++) {
         MSG_WriteAngle(&buf, cl.viewangles[i]);
     }
 
-    MSG_WriteShort(&buf, cmd->forwardmove);
-    MSG_WriteShort(&buf, cmd->sidemove);
-    MSG_WriteShort(&buf, cmd->upmove);
+    MSG_WriteShort(&buf, static_cast<int>(cmd->forwardmove));
+    MSG_WriteShort(&buf, static_cast<int>(cmd->sidemove));
+    MSG_WriteShort(&buf, static_cast<int>(cmd->upmove));
 
     //
     // send button bits
@@ -1170,7 +1170,7 @@ int CL_GetMessage(void)
                 // if this is the second frame, grab the real td_starttime
                 // so the bogus time on the first frame doesn't count
                 if (host_framecount == cls.td_startframe + 1) {
-                    cls.td_starttime = realtime;
+                    cls.td_starttime = static_cast<float>(realtime);
                 }
             } else if (/* cl.time > 0 && */ cl.time <= cl.mtime[0]) {
                 return 0; // don't need another message yet
@@ -1299,7 +1299,7 @@ void CL_Record_f(void)
         track = -1;
     }
 
-    sprintf(name, "%s/%s", com_gamedir, std::string(Cmd::Argv(1)).c_str());
+    sprintf_s(name, sizeof(name), "%s/%s", com_gamedir, std::string(Cmd::Argv(1)).c_str());
 
     //
     // start the map up
@@ -1314,7 +1314,7 @@ void CL_Record_f(void)
     COM_DefaultExtension(name, ".dem");
 
     Con_Printf("recording to %s.\n", name);
-    cls.demofile = fopen(name, "wb");
+    fopen_s(&cls.demofile, name, "wb");
     if (!cls.demofile) {
         Con_Printf("ERROR: couldn't open.\n");
 
@@ -1402,7 +1402,7 @@ void CL_FinishTimeDemo(void)
 
     // the first frame didn't count
     frames = (host_framecount - cls.td_startframe) - 1;
-    time = realtime - cls.td_starttime;
+    time = static_cast<float>(realtime - cls.td_starttime);
     if (!time) {
         time = 1;
     }
@@ -1492,7 +1492,7 @@ void CL_ParseStartSoundPacket(void)
     }
 
     if (field_mask & SND_ATTENUATION) {
-        attenuation = MSG_ReadByte() / 64.0;
+        attenuation = MSG_ReadByte() / 64.0f;
     } else {
         attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
     }
@@ -1511,7 +1511,7 @@ void CL_ParseStartSoundPacket(void)
     pos.y = MSG_ReadCoord();
     pos.z = MSG_ReadCoord();
 
-    S_StartSound(ent, channel, cl.sound_precache[sound_num], pos, packet_vol / 255.0, attenuation);
+    S_StartSound(ent, channel, cl.sound_precache[sound_num], pos, packet_vol / 255.0f, attenuation);
 }
 
 /*
@@ -1565,7 +1565,7 @@ void CL_KeepaliveMessage(void)
     memcpy(net_message.data, olddata, net_message.cursize);
 
     // check time
-    time = Sys_FloatTime();
+    time = static_cast<float>(Sys_FloatTime());
     if (time - lastmsg < 5) {
         return;
     }
@@ -1622,7 +1622,7 @@ void CL_ParseServerInfo(void)
 
     // parse signon message
     str = MSG_ReadString();
-    strncpy(cl.levelname, str, sizeof(cl.levelname) - 1);
+    strncpy_s(cl.levelname, sizeof(cl.levelname), str, _TRUNCATE);
 
     // seperate the printfs so the server message can have a color
     Con_Printf(
@@ -1650,7 +1650,7 @@ void CL_ParseServerInfo(void)
             return;
         }
 
-        strcpy(model_precache[nummodels], str);
+        strcpy_s(model_precache[nummodels], sizeof(model_precache[nummodels]), str);
         Mod_TouchModel(str);
     }
 
@@ -1668,7 +1668,7 @@ void CL_ParseServerInfo(void)
             return;
         }
 
-        strcpy(sound_precache[numsounds], str);
+        strcpy_s(sound_precache[numsounds], sizeof(sound_precache[numsounds]), str);
         S_TouchSound(str);
     }
 
@@ -1899,29 +1899,29 @@ void CL_ParseClientdata(int bits)
     int i, j;
 
     if (bits & SU_VIEWHEIGHT) {
-        cl.viewheight = MSG_ReadChar();
+        cl.viewheight = static_cast<float>(MSG_ReadChar());
     } else {
-        cl.viewheight = DEFAULT_VIEWHEIGHT;
+        cl.viewheight = static_cast<float>(DEFAULT_VIEWHEIGHT);
     }
 
     if (bits & SU_IDEALPITCH) {
-        cl.idealpitch = MSG_ReadChar();
+        cl.idealpitch = static_cast<float>(MSG_ReadChar());
     } else {
-        cl.idealpitch = 0;
+        cl.idealpitch = 0.0f;
     }
 
     VectorCopy(cl.mvelocity[0], cl.mvelocity[1]);
     for (i = 0; i < 3; i++) {
         if (bits & (SU_PUNCH1 << i)) {
-            cl.punchangle[i] = MSG_ReadChar();
+            cl.punchangle[i] = static_cast<float>(MSG_ReadChar());
         } else {
-            cl.punchangle[i] = 0;
+            cl.punchangle[i] = 0.0f;
         }
 
         if (bits & (SU_VELOCITY1 << i)) {
-            cl.mvelocity[0][i] = MSG_ReadChar() * 16;
+            cl.mvelocity[0][i] = static_cast<float>(MSG_ReadChar() * 16);
         } else {
-            cl.mvelocity[0][i] = 0;
+            cl.mvelocity[0][i] = 0.0f;
         }
     }
 
@@ -1932,7 +1932,7 @@ void CL_ParseClientdata(int bits)
         Sbar_Changed();
         for (j = 0; j < 32; j++) {
             if ((i & (1 << j)) && !(cl.items & (1 << j))) {
-                cl.item_gettime[j] = cl.time;
+                cl.item_gettime[j] = static_cast<float>(cl.time);
             }
         }
         cl.items = i;
@@ -2094,7 +2094,7 @@ void CL_ParseStaticSound(void)
     vol = MSG_ReadByte();
     atten = MSG_ReadByte();
 
-    S_StaticSound(cl.sound_precache[sound_num], org, vol, atten);
+    S_StaticSound(cl.sound_precache[sound_num], org, static_cast<float>(vol), static_cast<float>(atten));
 }
 
 #define SHOWNET(x)             \
@@ -2238,7 +2238,7 @@ void CL_ParseServerMessage(void)
                 Host_Error("CL_ParseServerMessage: svc_updatename > MAX_SCOREBOARD");
             }
 
-            strcpy(cl.scores[i].name, MSG_ReadString());
+            strcpy_s(cl.scores[i].name, sizeof(cl.scores[i].name), MSG_ReadString());
             break;
 
         case svc_updatefrags:
@@ -2336,20 +2336,20 @@ void CL_ParseServerMessage(void)
 
         case svc_intermission:
             cl.intermission = 1;
-            cl.completed_time = cl.time;
+            cl.completed_time = static_cast<int>(cl.time);
             vid.recalc_refdef = true; // go to full screen
             break;
 
         case svc_finale:
             cl.intermission = 2;
-            cl.completed_time = cl.time;
+            cl.completed_time = static_cast<int>(cl.time);
             vid.recalc_refdef = true; // go to full screen
             SCR_CenterPrint(MSG_ReadString());
             break;
 
         case svc_cutscene:
             cl.intermission = 3;
-            cl.completed_time = cl.time;
+            cl.completed_time = static_cast<int>(cl.time);
             vid.recalc_refdef = true; // go to full screen
             SCR_CenterPrint(MSG_ReadString());
             break;
@@ -2408,7 +2408,7 @@ void CL_ParseBeam(model_t* m)
         if (b->entity == ent) {
             b->entity = ent;
             b->model = m;
-            b->endtime = cl.time + 0.2;
+            b->endtime = static_cast<float>(cl.time + 0.2);
             b->start = start;
             b->end = end;
 
@@ -2421,7 +2421,7 @@ void CL_ParseBeam(model_t* m)
         if (!b->model || b->endtime < cl.time) {
             b->entity = ent;
             b->model = m;
-            b->endtime = cl.time + 0.2;
+            b->endtime = static_cast<float>(cl.time + 0.2);
             b->start = start;
             b->end = end;
 
@@ -2516,9 +2516,9 @@ void CL_ParseTEnt(void)
         R_ParticleExplosion(pos);
         dl = CL_AllocDlight(0);
         dl->origin = pos;
-        dl->radius = 350;
-        dl->die = cl.time + 0.5;
-        dl->decay = 300;
+        dl->radius = 350.0f;
+        dl->die = static_cast<float>(cl.time + 0.5);
+        dl->decay = 300.0f;
         S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
         break;
 
@@ -2572,9 +2572,9 @@ void CL_ParseTEnt(void)
         R_ParticleExplosion2(pos, colorStart, colorLength);
         dl = CL_AllocDlight(0);
         dl->origin = pos;
-        dl->radius = 350;
-        dl->die = cl.time + 0.5;
-        dl->decay = 300;
+        dl->radius = 350.0f;
+        dl->die = static_cast<float>(cl.time + 0.5);
+        dl->decay = 300.0f;
         S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
         break;
 
@@ -2651,13 +2651,13 @@ void CL_UpdateTEnts(void)
                 pitch = 270;
             }
         } else {
-            yaw = (int)(atan2(dist.y, dist.x) * 180 / M_PI);
+            yaw = static_cast<float>(atan2(dist.y, dist.x) * 180 / M_PI);
             if (yaw < 0) {
                 yaw += 360;
             }
 
             forward = sqrt(dist.x * dist.x + dist.y * dist.y);
-            pitch = (int)(atan2(dist.z, forward) * 180 / M_PI);
+            pitch = static_cast<float>(atan2(dist.z, forward) * 180 / M_PI);
             if (pitch < 0) {
                 pitch += 360;
             }
@@ -2676,7 +2676,7 @@ void CL_UpdateTEnts(void)
             ent->model = b->model;
             ent->angles[0] = pitch;
             ent->angles[1] = yaw;
-            ent->angles[2] = rand() % 360;
+            ent->angles[2] = static_cast<float>(rand() % 360);
 
             org += dist * 30;
             d -= 30;

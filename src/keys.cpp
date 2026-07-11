@@ -276,7 +276,7 @@ void Key_Console(int key)
     }
 
     if (key_linepos < MAXCMDLINE - 1) {
-        key_lines[edit_line][key_linepos] = key;
+        key_lines[edit_line][key_linepos] = static_cast<char>(key);
         key_linepos++;
         key_lines[edit_line][key_linepos] = 0;
     }
@@ -330,7 +330,7 @@ void Key_Message(int key)
         return; // all full
     }
 
-    chat_buffer[chat_bufferlen++] = key;
+    chat_buffer[chat_bufferlen++] = static_cast<char>(key);
     chat_buffer[chat_bufferlen] = 0;
 }
 
@@ -385,7 +385,7 @@ const char* Key_KeynumToString(int keynum)
     }
 
     if (keynum > 32 && keynum < 127) { // printable ascii
-        tinystr[0] = keynum;
+        tinystr[0] = static_cast<char>(keynum);
         tinystr[1] = 0;
 
         return tinystr;
@@ -687,14 +687,14 @@ void Key_Event(int key, qboolean down)
     if (!down) {
         kb = keybindings[key];
         if (kb && kb[0] == '+') {
-            sprintf(cmd, "-%s %i\n", kb + 1, key);
+            sprintf_s(cmd, sizeof(cmd), "-%s %i\n", kb + 1, key);
             Cmd::BufferAddText(cmd);
         }
 
         if (keyshift[key] != key) {
             kb = keybindings[keyshift[key]];
             if (kb && kb[0] == '+') {
-                sprintf(cmd, "-%s %i\n", kb + 1, key);
+                sprintf_s(cmd, sizeof(cmd), "-%s %i\n", kb + 1, key);
                 Cmd::BufferAddText(cmd);
             }
         }
@@ -718,7 +718,7 @@ void Key_Event(int key, qboolean down)
         kb = keybindings[key];
         if (kb) {
             if (kb[0] == '+') { // button commands add keynum as a parm
-                sprintf(cmd, "%s %i\n", kb, key);
+                sprintf_s(cmd, sizeof(cmd), "%s %i\n", kb, key);
                 Cmd::BufferAddText(cmd);
             } else {
                 Cmd::BufferAddText(kb);

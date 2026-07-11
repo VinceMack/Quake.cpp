@@ -226,7 +226,7 @@ static void Echo_f(void)
 static char* CopyString(const char* in)
 {
     char* out = (char *) Z_Malloc(static_cast<int>(std::strlen(in)) + 1);
-    std::strcpy(out, in);
+    strcpy_s(out, std::strlen(in) + 1, in);
     return out;
 }
 
@@ -268,12 +268,12 @@ static void Alias_f(void)
     cmd[0] = 0;
     int c = Cmd::Argc();
     for (int i = 2; i < c; i++) {
-        std::strcat(cmd, Cmd::Argv(i).data());
+        strcat_s(cmd, sizeof(cmd), Cmd::Argv(i).data());
         if (i != c) {
-            std::strcat(cmd, " ");
+            strcat_s(cmd, sizeof(cmd), " ");
         }
     }
-    std::strcat(cmd, "\n");
+    strcat_s(cmd, sizeof(cmd), "\n");
 
     a->value = CopyString(cmd);
 }

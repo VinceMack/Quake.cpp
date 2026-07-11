@@ -104,7 +104,7 @@ void SV_Init(void)
     Cvar::Register(&sv_nostep);
 
     for (i = 0; i < MAX_MODELS; i++) {
-        sprintf(localmodels[i], "*%i", i);
+        sprintf_s(localmodels[i], sizeof(localmodels[i]), "*%i", i);
     }
 }
 
@@ -128,7 +128,7 @@ void SV_StartParticle(const Vector3& org, const Vector3& dir, int color, int cou
     MSG_WriteCoord(&sv.datagram, org[1]);
     MSG_WriteCoord(&sv.datagram, org[2]);
     for (i = 0; i < 3; i++) {
-        v = dir[i] * 16;
+        v = static_cast<int>(dir[i] * 16);
         if (v > 127) {
             v = 127;
         } else if (v < -128) {
@@ -218,7 +218,7 @@ void SV_StartSound(edict_t* entity,
     }
 
     if (field_mask & SND_ATTENUATION) {
-        MSG_WriteByte(&sv.datagram, attenuation * 64);
+        MSG_WriteByte(&sv.datagram, static_cast<int>(attenuation * 64));
     }
 
     MSG_WriteShort(&sv.datagram, channel);
@@ -226,7 +226,7 @@ void SV_StartSound(edict_t* entity,
     for (i = 0; i < 3; i++) {
         MSG_WriteCoord(
             &sv.datagram,
-            entity->v.origin[i] + 0.5 * (entity->v.mins[i] + entity->v.maxs[i]));
+            static_cast<float>(entity->v.origin[i] + 0.5 * (entity->v.mins[i] + entity->v.maxs[i])));
     }
 }
 
@@ -244,7 +244,7 @@ void SV_SendServerinfo(client_t* client)
     char message[2048];
 
     MSG_WriteByte(&client->message, svc_print);
-    sprintf(message, "%c\nVERSION %4.2f SERVER (%i CRC)", 2, VERSION, pr_crc);
+    sprintf_s(message, sizeof(message), "%c\nVERSION %4.2f SERVER (%i CRC)", 2, VERSION, pr_crc);
     MSG_WriteString(&client->message, message);
 
     MSG_WriteByte(&client->message, svc_serverinfo);
@@ -257,7 +257,7 @@ void SV_SendServerinfo(client_t* client)
         MSG_WriteByte(&client->message, GAME_COOP);
     }
 
-    sprintf(message, PR_GetString(sv.edicts->v.message));
+    sprintf_s(message, sizeof(message), "%s", PR_GetString(sv.edicts->v.message));
 
     MSG_WriteString(&client->message, message);
 
@@ -273,8 +273,8 @@ void SV_SendServerinfo(client_t* client)
 
     // send music
     MSG_WriteByte(&client->message, svc_cdtrack);
-    MSG_WriteByte(&client->message, sv.edicts->v.sounds);
-    MSG_WriteByte(&client->message, sv.edicts->v.sounds);
+    MSG_WriteByte(&client->message, static_cast<int>(sv.edicts->v.sounds));
+    MSG_WriteByte(&client->message, static_cast<int>(sv.edicts->v.sounds));
 
     // set view
     MSG_WriteByte(&client->message, svc_setview);
@@ -322,7 +322,7 @@ void SV_ConnectClient(int clientnum)
     memset(client, 0, sizeof(*client));
     client->netconnection = netconnection;
 
-    strcpy(client->name, "unconnected");
+    strcpy_s(client->name, sizeof(client->name), "unconnected");
     client->active = true;
     client->spawned = false;
     client->edict = ent;
@@ -558,23 +558,23 @@ void SV_WriteEntitiesToClient(edict_t* clent, sizebuf_t* msg)
         }
 
         if (bits & U_MODEL) {
-            MSG_WriteByte(msg, ent->v.modelindex);
+            MSG_WriteByte(msg, static_cast<int>(ent->v.modelindex));
         }
 
         if (bits & U_FRAME) {
-            MSG_WriteByte(msg, ent->v.frame);
+            MSG_WriteByte(msg, static_cast<int>(ent->v.frame));
         }
 
         if (bits & U_COLORMAP) {
-            MSG_WriteByte(msg, ent->v.colormap);
+            MSG_WriteByte(msg, static_cast<int>(ent->v.colormap));
         }
 
         if (bits & U_SKIN) {
-            MSG_WriteByte(msg, ent->v.skin);
+            MSG_WriteByte(msg, static_cast<int>(ent->v.skin));
         }
 
         if (bits & U_EFFECTS) {
-            MSG_WriteByte(msg, ent->v.effects);
+            MSG_WriteByte(msg, static_cast<int>(ent->v.effects));
         }
 
         if (bits & U_ORIGIN1) {
@@ -616,7 +616,7 @@ void SV_CleanupEnts(void)
 
     ent = NEXT_EDICT(sv.edicts);
     for (e = 1; e < sv.num_edicts; e++, ent = NEXT_EDICT(ent)) {
-        ent->v.effects = (int)ent->v.effects & ~EF_MUZZLEFLASH;
+        ent->v.effects = static_cast<float>(static_cast<int>(ent->v.effects) & ~EF_MUZZLEFLASH);
     }
 }
 
@@ -640,10 +640,10 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
     if (ent->v.dmg_take || ent->v.dmg_save) {
         other = PROG_TO_EDICT(ent->v.dmg_inflictor);
         MSG_WriteByte(msg, svc_damage);
-        MSG_WriteByte(msg, ent->v.dmg_save);
-        MSG_WriteByte(msg, ent->v.dmg_take);
+        MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_save));
+        MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_take));
         for (i = 0; i < 3; i++) {
-            MSG_WriteCoord(msg, other->v.origin[i] + 0.5 * (other->v.mins[i] + other->v.maxs[i]));
+            MSG_WriteCoord(msg, static_cast<float>(other->v.origin[i] + 0.5 * (other->v.mins[i] + other->v.maxs[i])));
         }
 
         ent->v.dmg_take = 0;
@@ -679,15 +679,15 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
     val = GetEdictFieldValue(ent, "items2");
 
     if (val) {
-        items = (int)ent->v.items | ((int)val->_float << 23);
+        items = static_cast<int>(ent->v.items) | (static_cast<int>(val->_float) << 23);
     } else {
-        items = (int)ent->v.items | ((int)pr_global_struct->serverflags << 28);
+        items = static_cast<int>(ent->v.items) | (static_cast<int>(pr_global_struct->serverflags) << 28);
     }
 
 
     bits |= SU_ITEMS;
 
-    if ((int)ent->v.flags & FL_ONGROUND) {
+    if (static_cast<int>(ent->v.flags) & FL_ONGROUND) {
         bits |= SU_ONGROUND;
     }
 
@@ -722,20 +722,20 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
     MSG_WriteShort(msg, bits);
 
     if (bits & SU_VIEWHEIGHT) {
-        MSG_WriteChar(msg, ent->v.view_ofs[2]);
+        MSG_WriteChar(msg, static_cast<int>(ent->v.view_ofs[2]));
     }
 
     if (bits & SU_IDEALPITCH) {
-        MSG_WriteChar(msg, ent->v.idealpitch);
+        MSG_WriteChar(msg, static_cast<int>(ent->v.idealpitch));
     }
 
     for (i = 0; i < 3; i++) {
         if (bits & (SU_PUNCH1 << i)) {
-            MSG_WriteChar(msg, ent->v.punchangle[i]);
+            MSG_WriteChar(msg, static_cast<int>(ent->v.punchangle[i]));
         }
 
         if (bits & (SU_VELOCITY1 << i)) {
-            MSG_WriteChar(msg, ent->v.velocity[i] / 16);
+            MSG_WriteChar(msg, static_cast<int>(ent->v.velocity[i] / 16));
         }
     }
 
@@ -743,29 +743,29 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
     MSG_WriteLong(msg, items);
 
     if (bits & SU_WEAPONFRAME) {
-        MSG_WriteByte(msg, ent->v.weaponframe);
+        MSG_WriteByte(msg, static_cast<int>(ent->v.weaponframe));
     }
 
     if (bits & SU_ARMOR) {
-        MSG_WriteByte(msg, ent->v.armorvalue);
+        MSG_WriteByte(msg, static_cast<int>(ent->v.armorvalue));
     }
 
     if (bits & SU_WEAPON) {
         MSG_WriteByte(msg, SV_ModelIndex(PR_GetString(ent->v.weaponmodel)));
     }
 
-    MSG_WriteShort(msg, ent->v.health);
-    MSG_WriteByte(msg, ent->v.currentammo);
-    MSG_WriteByte(msg, ent->v.ammo_shells);
-    MSG_WriteByte(msg, ent->v.ammo_nails);
-    MSG_WriteByte(msg, ent->v.ammo_rockets);
-    MSG_WriteByte(msg, ent->v.ammo_cells);
+    MSG_WriteShort(msg, static_cast<int>(ent->v.health));
+    MSG_WriteByte(msg, static_cast<int>(ent->v.currentammo));
+    MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_shells));
+    MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_nails));
+    MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_rockets));
+    MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_cells));
 
     if (standard_quake) {
-        MSG_WriteByte(msg, ent->v.weapon);
+        MSG_WriteByte(msg, static_cast<int>(ent->v.weapon));
     } else {
         for (i = 0; i < 32; i++) {
-            if (((int)ent->v.weapon) & (1 << i)) {
+            if (static_cast<int>(ent->v.weapon) & (1 << i)) {
                 MSG_WriteByte(msg, i);
                 break;
             }
@@ -788,7 +788,7 @@ qboolean SV_SendClientDatagram(client_t* client)
     msg.cursize = 0;
 
     MSG_WriteByte(&msg, svc_time);
-    MSG_WriteFloat(&msg, sv.time);
+    MSG_WriteFloat(&msg, static_cast<float>(sv.time));
 
     // add the client specific data to the datagram
     SV_WriteClientdataToMessage(client->edict, &msg);
@@ -831,10 +831,10 @@ void SV_UpdateToReliableMessages(void)
 
                 MSG_WriteByte(&client->message, svc_updatefrags);
                 MSG_WriteByte(&client->message, i);
-                MSG_WriteShort(&client->message, host_client->edict->v.frags);
+                MSG_WriteShort(&client->message, static_cast<int>(host_client->edict->v.frags));
             }
 
-            host_client->old_frags = host_client->edict->v.frags;
+            host_client->old_frags = static_cast<int>(host_client->edict->v.frags);
         }
     }
 
@@ -1007,8 +1007,8 @@ void SV_CreateBaseline(void)
         //
         VectorCopy(svent->v.origin, svent->baseline.origin);
         VectorCopy(svent->v.angles, svent->baseline.angles);
-        svent->baseline.frame = svent->v.frame;
-        svent->baseline.skin = svent->v.skin;
+        svent->baseline.frame = static_cast<int>(svent->v.frame);
+        svent->baseline.skin = static_cast<int>(svent->v.skin);
         if (entnum > 0 && entnum <= svs.maxclients) {
             svent->baseline.colormap = entnum;
             svent->baseline.modelindex = SV_ModelIndex("progs/player.mdl");
@@ -1072,7 +1072,7 @@ void SV_SaveSpawnparms(void)
 {
     int i, j;
 
-    svs.serverflags = pr_global_struct->serverflags;
+    svs.serverflags = static_cast<int>(pr_global_struct->serverflags);
 
     for (i = 0, host_client = svs.clients; i < svs.maxclients;
         i++, host_client++) {
@@ -1081,7 +1081,7 @@ void SV_SaveSpawnparms(void)
         }
 
         // call the progs to get default spawn parms for the new client
-        pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
+        pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(host_client->edict));
         PR_ExecuteProgram(pr_global_struct->SetChangeParms);
         for (j = 0; j < NUM_SPAWN_PARMS; j++) {
             host_client->spawn_parms[j] = (&pr_global_struct->parm1)[j];
@@ -1125,7 +1125,7 @@ void SV_SpawnServer(char* server)
         Cvar::SetValue("deathmatch", 0);
     }
 
-    current_skill = (int)(skill.value + 0.5);
+    current_skill = static_cast<int>(skill.value + 0.5);
     if (current_skill < 0) {
         current_skill = 0;
     }
@@ -1134,7 +1134,7 @@ void SV_SpawnServer(char* server)
         current_skill = 3;
     }
 
-    Cvar::SetValue("skill", (float)current_skill);
+    Cvar::SetValue("skill", static_cast<float>(current_skill));
 
     //
     // set up the new server
@@ -1143,7 +1143,7 @@ void SV_SpawnServer(char* server)
 
     memset(&sv, 0, sizeof(sv));
 
-    strcpy(sv.name, server);
+    strcpy_s(sv.name, sizeof(sv.name), server);
 
     // load progs to get entity field count
     PR_LoadProgs();
@@ -1177,8 +1177,8 @@ void SV_SpawnServer(char* server)
 
     sv.time = 1.0;
 
-    strcpy(sv.name, server);
-    sprintf(sv.modelname, "maps/%s.bsp", server);
+    strcpy_s(sv.name, sizeof(sv.name), server);
+    sprintf_s(sv.modelname, sizeof(sv.modelname), "maps/%s.bsp", server);
     sv.worldmodel = Mod_ForName(sv.modelname, false);
     if (!sv.worldmodel) {
         Con_Printf("Couldn't spawn server %s\n", sv.modelname);
@@ -1223,7 +1223,7 @@ void SV_SpawnServer(char* server)
     pr_global_struct->mapname = PR_SetString(sv.name);
 
     // serverflags are for cross level information (sigils)
-    pr_global_struct->serverflags = svs.serverflags;
+    pr_global_struct->serverflags = static_cast<float>(svs.serverflags);
 
     ED_LoadFromFile(sv.worldmodel->entities);
 
@@ -1326,15 +1326,15 @@ qboolean SV_RunThink(edict_t* ent)
     }
 
     if (thinktime < sv.time) {
-        thinktime = sv.time; // don't let things stay in the past.
+        thinktime = static_cast<float>(sv.time); // don't let things stay in the past.
     }
 
     // it is possible to start that way
     // by a trigger with a local time.
     ent->v.nextthink = 0;
     pr_global_struct->time = thinktime;
-    pr_global_struct->self = EDICT_TO_PROG(ent);
-    pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
+    pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
+    pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
     PR_ExecuteProgram(ent->v.think);
 
     return !ent->free;
@@ -1354,16 +1354,16 @@ void SV_Impact(edict_t* e1, edict_t* e2)
     old_self = pr_global_struct->self;
     old_other = pr_global_struct->other;
 
-    pr_global_struct->time = sv.time;
+    pr_global_struct->time = static_cast<float>(sv.time);
     if (e1->v.touch && e1->v.solid != SOLID_NOT) {
-        pr_global_struct->self = EDICT_TO_PROG(e1);
-        pr_global_struct->other = EDICT_TO_PROG(e2);
+        pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(e1));
+        pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(e2));
         PR_ExecuteProgram(e1->v.touch);
     }
 
     if (e2->v.touch && e2->v.solid != SOLID_NOT) {
-        pr_global_struct->self = EDICT_TO_PROG(e2);
-        pr_global_struct->other = EDICT_TO_PROG(e1);
+        pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(e2));
+        pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(e1));
         PR_ExecuteProgram(e2->v.touch);
     }
 
@@ -1476,8 +1476,8 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
         if (trace.plane.normal.z > 0.7) {
             blocked |= 1; // floor
             if (trace.ent->v.solid == SOLID_BSP) {
-                ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
-                ent->v.groundentity = EDICT_TO_PROG(trace.ent);
+                ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) | FL_ONGROUND);
+                ent->v.groundentity = static_cast<int>(EDICT_TO_PROG(trace.ent));
             }
         }
 
@@ -1573,7 +1573,7 @@ void SV_AddGravity(edict_t* ent)
         ent_gravity = 1.0;
     }
 
-    ent->v.velocity[2] -= ent_gravity * sv_gravity.value * host_frametime;
+    ent->v.velocity[2] -= static_cast<float>(ent_gravity * sv_gravity.value * host_frametime);
 }
 
 //=============================================================================
@@ -1663,7 +1663,7 @@ void SV_PushMove(edict_t* pusher, float movetime)
         }
 
         // if the entity is standing on the pusher, it will definately be moved
-        if (!(((int)check->v.flags & FL_ONGROUND) && PROG_TO_EDICT(check->v.groundentity) == pusher)) {
+        if (!((static_cast<int>(check->v.flags) & FL_ONGROUND) && PROG_TO_EDICT(check->v.groundentity) == pusher)) {
             if (check->v.absmin.x >= maxs.x || check->v.absmin.y >= maxs.y || check->v.absmin.z >= maxs.z || check->v.absmax.x <= mins.x || check->v.absmax.y <= mins.y || check->v.absmax.z <= mins.z) {
                 continue;
             }
@@ -1676,7 +1676,7 @@ void SV_PushMove(edict_t* pusher, float movetime)
 
         // remove the onground flag for non-players
         if (check->v.movetype != MOVETYPE_WALK) {
-            check->v.flags = (int)check->v.flags & ~FL_ONGROUND;
+            check->v.flags = static_cast<float>(static_cast<int>(check->v.flags) & ~FL_ONGROUND);
         }
 
         entorig = check->v.origin;
@@ -1712,8 +1712,8 @@ void SV_PushMove(edict_t* pusher, float movetime)
             // if the pusher has a "blocked" function, call it
             // otherwise, just stay in place until the obstacle is gone
             if (pusher->v.blocked) {
-                pr_global_struct->self = EDICT_TO_PROG(pusher);
-                pr_global_struct->other = EDICT_TO_PROG(check);
+                pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(pusher));
+                pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(check));
                 PR_ExecuteProgram(pusher->v.blocked);
             }
 
@@ -1750,7 +1750,7 @@ void SV_Physics_Pusher(edict_t* ent)
             movetime = 0;
         }
     } else {
-        movetime = host_frametime;
+        movetime = static_cast<float>(host_frametime);
     }
 
     if (movetime) {
@@ -1759,9 +1759,9 @@ void SV_Physics_Pusher(edict_t* ent)
 
     if (thinktime > oldltime && thinktime <= ent->v.ltime) {
         ent->v.nextthink = 0;
-        pr_global_struct->time = sv.time;
-        pr_global_struct->self = EDICT_TO_PROG(ent);
-        pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
+        pr_global_struct->time = static_cast<float>(sv.time);
+        pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
+        pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
         PR_ExecuteProgram(ent->v.think);
         if (ent->free) {
             return;
@@ -1838,7 +1838,7 @@ qboolean SV_CheckWater(edict_t* ent)
     ent->v.watertype = CONTENTS_EMPTY;
     cont = SV_PointContents(point);
     if (cont <= CONTENTS_WATER) {
-        ent->v.watertype = cont;
+        ent->v.watertype = static_cast<float>(cont);
         ent->v.waterlevel = 1;
         point.z = ent->v.origin.z + (ent->v.mins.z + ent->v.maxs.z) * 0.5f;
         cont = SV_PointContents(point);
@@ -1986,13 +1986,13 @@ void SV_WalkMove(edict_t* ent)
     //
     // do a regular slide move unless it looks like you ran into a step
     //
-    oldonground = (int)ent->v.flags & FL_ONGROUND;
-    ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
+    oldonground = static_cast<int>(ent->v.flags) & FL_ONGROUND;
+    ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) & ~FL_ONGROUND);
 
     oldorg = ent->v.origin;
     oldvel = ent->v.velocity;
 
-    clip = SV_FlyMove(ent, host_frametime, &steptrace);
+    clip = SV_FlyMove(ent, static_cast<float>(host_frametime), &steptrace);
 
     if (!(clip & 2)) {
         return; // move didn't block on a step
@@ -2010,7 +2010,7 @@ void SV_WalkMove(edict_t* ent)
         return;
     }
 
-    if ((int)sv_player->v.flags & FL_WATERJUMP) {
+    if (static_cast<int>(sv_player->v.flags) & FL_WATERJUMP) {
         return;
     }
 
@@ -2025,14 +2025,14 @@ void SV_WalkMove(edict_t* ent)
     upmove = vec3_origin;
     downmove = vec3_origin;
     upmove.z = STEPSIZE;
-    downmove.z = -STEPSIZE + oldvel.z * host_frametime;
+    downmove.z = static_cast<float>(-STEPSIZE + oldvel.z * host_frametime);
 
     // move up
     SV_PushEntity(ent, upmove); // FIXME: don't link?
 
     // move forward
     ent->v.velocity = Vector3(oldvel.x, oldvel.y, 0.0f);
-    clip = SV_FlyMove(ent, host_frametime, &steptrace);
+    clip = SV_FlyMove(ent, static_cast<float>(host_frametime), &steptrace);
 
     // check for stuckness, possibly due to the limited precision of floats
     // in the clipping hulls
@@ -2052,8 +2052,8 @@ void SV_WalkMove(edict_t* ent)
 
     if (downtrace.plane.normal.z > 0.7) {
         if (ent->v.solid == SOLID_BSP) {
-            ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
-            ent->v.groundentity = EDICT_TO_PROG(downtrace.ent);
+            ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) | FL_ONGROUND);
+            ent->v.groundentity = static_cast<int>(EDICT_TO_PROG(downtrace.ent));
         }
     } else {
         // if the push down didn't end up on good ground, use the move without
@@ -2080,8 +2080,8 @@ void SV_Physics_Client(edict_t* ent, int num)
     //
     // call standard client pre-think
     //
-    pr_global_struct->time = sv.time;
-    pr_global_struct->self = EDICT_TO_PROG(ent);
+    pr_global_struct->time = static_cast<float>(sv.time);
+    pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
     PR_ExecuteProgram(pr_global_struct->PlayerPreThink);
 
     //
@@ -2092,7 +2092,7 @@ void SV_Physics_Client(edict_t* ent, int num)
     //
     // decide which move function to call
     //
-    switch ((int)ent->v.movetype) {
+    switch (static_cast<int>(ent->v.movetype)) {
     case MOVETYPE_NONE:
         if (!SV_RunThink(ent)) {
             return;
@@ -2105,7 +2105,7 @@ void SV_Physics_Client(edict_t* ent, int num)
             return;
         }
 
-        if (!SV_CheckWater(ent) && !((int)ent->v.flags & FL_WATERJUMP)) {
+        if (!SV_CheckWater(ent) && !(static_cast<int>(ent->v.flags) & FL_WATERJUMP)) {
             SV_AddGravity(ent);
         }
 
@@ -2124,7 +2124,7 @@ void SV_Physics_Client(edict_t* ent, int num)
             return;
         }
 
-        SV_FlyMove(ent, host_frametime, NULL);
+        SV_FlyMove(ent, static_cast<float>(host_frametime), NULL);
         break;
 
     case MOVETYPE_NOCLIP:
@@ -2132,11 +2132,11 @@ void SV_Physics_Client(edict_t* ent, int num)
             return;
         }
 
-        VectorMA(ent->v.origin, host_frametime, ent->v.velocity, ent->v.origin);
+        VectorMA(ent->v.origin, static_cast<float>(host_frametime), ent->v.velocity, ent->v.origin);
         break;
 
     default:
-        Sys_Error("SV_Physics_client: bad movetype %i", (int)ent->v.movetype);
+        Sys_Error("SV_Physics_client: bad movetype %i", static_cast<int>(ent->v.movetype));
     }
 
     //
@@ -2144,8 +2144,8 @@ void SV_Physics_Client(edict_t* ent, int num)
     //
     SV_LinkEdict(ent, true);
 
-    pr_global_struct->time = sv.time;
-    pr_global_struct->self = EDICT_TO_PROG(ent);
+    pr_global_struct->time = static_cast<float>(sv.time);
+    pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
     PR_ExecuteProgram(pr_global_struct->PlayerPostThink);
 }
 
@@ -2179,8 +2179,8 @@ void SV_Physics_Noclip(edict_t* ent)
         return;
     }
 
-    VectorMA(ent->v.angles, host_frametime, ent->v.avelocity, ent->v.angles);
-    VectorMA(ent->v.origin, host_frametime, ent->v.velocity, ent->v.origin);
+    VectorMA(ent->v.angles, static_cast<float>(host_frametime), ent->v.avelocity, ent->v.angles);
+    VectorMA(ent->v.origin, static_cast<float>(host_frametime), ent->v.velocity, ent->v.origin);
 
     SV_LinkEdict(ent, false);
 }
@@ -2200,7 +2200,7 @@ void SV_CheckWaterTransition(edict_t* ent)
     int cont;
     cont = SV_PointContents(ent->v.origin);
     if (!ent->v.watertype) { // just spawned here
-        ent->v.watertype = cont;
+        ent->v.watertype = static_cast<float>(cont);
         ent->v.waterlevel = 1;
 
         return;
@@ -2211,15 +2211,15 @@ void SV_CheckWaterTransition(edict_t* ent)
             SV_StartSound(ent, 0, "misc/h2ohit1.wav", 255, 1);
         }
 
-        ent->v.watertype = cont;
-        ent->v.waterlevel = 1;
-    } else {
-        if (ent->v.watertype != CONTENTS_EMPTY) { // just crossed into water
-            SV_StartSound(ent, 0, "misc/h2ohit1.wav", 255, 1);
-        }
+            ent->v.watertype = static_cast<float>(cont);
+            ent->v.waterlevel = 1;
+        } else {
+            if (ent->v.watertype != CONTENTS_EMPTY) { // just crossed into water
+                SV_StartSound(ent, 0, "misc/h2ohit1.wav", 255, 1);
+            }
 
-        ent->v.watertype = CONTENTS_EMPTY;
-        ent->v.waterlevel = cont;
+            ent->v.watertype = static_cast<float>(CONTENTS_EMPTY);
+            ent->v.waterlevel = static_cast<float>(cont);
     }
 }
 
@@ -2241,7 +2241,7 @@ void SV_Physics_Toss(edict_t* ent)
     }
 
     // if onground, return without moving
-    if (((int)ent->v.flags & FL_ONGROUND)) {
+    if ((static_cast<int>(ent->v.flags) & FL_ONGROUND)) {
         return;
     }
 
@@ -2254,10 +2254,10 @@ void SV_Physics_Toss(edict_t* ent)
 
 
     // move angles
-    ent->v.angles += ent->v.avelocity * host_frametime;
+    ent->v.angles += ent->v.avelocity * static_cast<float>(host_frametime);
 
 // move origin
-    move = ent->v.velocity * host_frametime;
+    move = ent->v.velocity * static_cast<float>(host_frametime);
     trace = SV_PushEntity(ent, move);
     if (trace.fraction == 1) {
         return;
@@ -2281,8 +2281,8 @@ void SV_Physics_Toss(edict_t* ent)
     if (trace.plane.normal.z > 0.7) {
         if (ent->v.velocity.z < 60 || ent->v.movetype != MOVETYPE_BOUNCE)
         {
-            ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
-            ent->v.groundentity = EDICT_TO_PROG(trace.ent);
+            ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) | FL_ONGROUND);
+            ent->v.groundentity = static_cast<int>(EDICT_TO_PROG(trace.ent));
             ent->v.velocity = vec3_origin;
             ent->v.avelocity = vec3_origin;
         }
@@ -2312,7 +2312,7 @@ void SV_Physics_Step(edict_t* ent)
     qboolean hitsound;
 
     // freefall if not onground
-    if (!((int)ent->v.flags & (FL_ONGROUND | FL_FLY | FL_SWIM))) {
+    if (!(static_cast<int>(ent->v.flags) & (FL_ONGROUND | FL_FLY | FL_SWIM))) {
         if (ent->v.velocity.z < sv_gravity.value * -0.1) {
             hitsound = true;
         } else {
@@ -2321,10 +2321,10 @@ void SV_Physics_Step(edict_t* ent)
 
         SV_AddGravity(ent);
         SV_CheckVelocity(ent);
-        SV_FlyMove(ent, host_frametime, NULL);
+        SV_FlyMove(ent, static_cast<float>(host_frametime), NULL);
         SV_LinkEdict(ent, true);
 
-        if ((int)ent->v.flags & FL_ONGROUND) // just hit ground
+        if (static_cast<int>(ent->v.flags) & FL_ONGROUND) // just hit ground
         {
             if (hitsound) {
                 SV_StartSound(ent, 0, "demon/dland2.wav", 255, 1);
@@ -2352,9 +2352,9 @@ void SV_Physics(void)
     edict_t* ent;
 
     // let the progs know that a new frame has started
-    pr_global_struct->self = EDICT_TO_PROG(sv.edicts);
-    pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
-    pr_global_struct->time = sv.time;
+    pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(sv.edicts));
+    pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
+    pr_global_struct->time = static_cast<float>(sv.time);
     PR_ExecuteProgram(pr_global_struct->StartFrame);
 
     //SV_CheckAllEnts ();
@@ -2388,7 +2388,7 @@ void SV_Physics(void)
             || ent->v.movetype == MOVETYPE_FLY || ent->v.movetype == MOVETYPE_FLYMISSILE) {
             SV_Physics_Toss(ent);
         } else {
-            Sys_Error("SV_Physics: bad movetype %i", (int)ent->v.movetype);
+            Sys_Error("SV_Physics: bad movetype %i", static_cast<int>(ent->v.movetype));
         }
     }
 
@@ -2505,7 +2505,7 @@ qboolean SV_movestep(edict_t* ent, const Vector3& move, qboolean relink)
     neworg = ent->v.origin + move;
 
     // flying monsters don't step up
-    if ((int)ent->v.flags & (FL_SWIM | FL_FLY)) {
+    if (static_cast<int>(ent->v.flags) & (FL_SWIM | FL_FLY)) {
         // try one move with vertical motion, then one without
         for (i = 0; i < 2; i++) {
             neworg = ent->v.origin + move;
@@ -2524,7 +2524,7 @@ qboolean SV_movestep(edict_t* ent, const Vector3& move, qboolean relink)
             trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, neworg, false, ent);
 
             if (trace.fraction == 1) {
-                if (((int)ent->v.flags & FL_SWIM) && SV_PointContents(trace.endpos) == CONTENTS_EMPTY) {
+                if ((static_cast<int>(ent->v.flags) & FL_SWIM) && SV_PointContents(trace.endpos) == CONTENTS_EMPTY) {
                     return false; // swim monster left water
                 }
 
@@ -2565,13 +2565,13 @@ qboolean SV_movestep(edict_t* ent, const Vector3& move, qboolean relink)
 
     if (trace.fraction == 1) {
         // if monster had the ground pulled out, go ahead and fall
-        if ((int)ent->v.flags & FL_PARTIALGROUND) {
+if (static_cast<int>(ent->v.flags) & FL_PARTIALGROUND) {
             ent->v.origin += move;
             if (relink) {
                 SV_LinkEdict(ent, true);
             }
 
-            ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
+            ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) & ~FL_ONGROUND);
 
             //	Con_Printf ("fall down\n");
             return true;
@@ -2584,7 +2584,7 @@ qboolean SV_movestep(edict_t* ent, const Vector3& move, qboolean relink)
     ent->v.origin = trace.endpos;
 
     if (!SV_CheckBottom(ent)) {
-        if ((int)ent->v.flags & FL_PARTIALGROUND) { // entity had floor mostly pulled out from underneath it
+        if (static_cast<int>(ent->v.flags) & FL_PARTIALGROUND) { // entity had floor mostly pulled out from underneath it
             // and is trying to correct
             if (relink) {
                 SV_LinkEdict(ent, true);
@@ -2598,12 +2598,12 @@ qboolean SV_movestep(edict_t* ent, const Vector3& move, qboolean relink)
         return false;
     }
 
-    if ((int)ent->v.flags & FL_PARTIALGROUND) {
+    if (static_cast<int>(ent->v.flags) & FL_PARTIALGROUND) {
         //		Con_Printf ("back on ground\n");
-        ent->v.flags = (int)ent->v.flags & ~FL_PARTIALGROUND;
+        ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) & ~FL_PARTIALGROUND);
     }
 
-    ent->v.groundentity = EDICT_TO_PROG(trace.ent);
+    ent->v.groundentity = static_cast<int>(EDICT_TO_PROG(trace.ent));
 
     // the move is ok
     if (relink) {
@@ -2631,7 +2631,7 @@ qboolean SV_StepDirection(edict_t* ent, float yaw, float dist)
     ent->v.ideal_yaw = yaw;
     VM::PF_changeyaw();
 
-    yaw = yaw * M_PI * 2 / 360;
+    yaw = static_cast<float>(yaw * M_PI * 2 / 360);
     move.x = cos(yaw) * dist;
     move.y = sin(yaw) * dist;
     move.z = 0;
@@ -2663,7 +2663,7 @@ void SV_FixCheckBottom(edict_t* ent)
 {
     //	Con_Printf ("SV_FixCheckBottom\n");
 
-    ent->v.flags = (int)ent->v.flags | FL_PARTIALGROUND;
+    ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) | FL_PARTIALGROUND);
 }
 
 /*
@@ -2680,7 +2680,7 @@ void SV_NewChaseDir(edict_t* actor, edict_t* enemy, float dist)
     float d[3];
     float tdir, olddir, turnaround;
 
-    olddir = anglemod((int)(actor->v.ideal_yaw / 45) * 45);
+    olddir = anglemod(static_cast<float>(static_cast<int>(actor->v.ideal_yaw / 45) * 45));
     turnaround = anglemod(olddir - 180);
 
     deltax = enemy->v.origin[0] - actor->v.origin[0];
@@ -2704,9 +2704,9 @@ void SV_NewChaseDir(edict_t* actor, edict_t* enemy, float dist)
     // try direct route
     if (d[1] != DI_NODIR && d[2] != DI_NODIR) {
         if (d[1] == 0) {
-            tdir = d[2] == 90 ? 45 : 315;
+            tdir = d[2] == 90 ? 45.0f : 315.0f;
         } else {
-            tdir = d[2] == 90 ? 135 : 215;
+            tdir = d[2] == 90 ? 135.0f : 215.0f;
         }
 
         if (tdir != turnaround && SV_StepDirection(actor, tdir, dist)) {
@@ -2802,7 +2802,7 @@ void SV_MoveToGoal(void)
     goal = PROG_TO_EDICT(ent->v.goalentity);
     dist = G_FLOAT(OFS_PARM0);
 
-    if (!((int)ent->v.flags & (FL_ONGROUND | FL_FLY | FL_SWIM))) {
+    if (!(static_cast<int>(ent->v.flags) & (FL_ONGROUND | FL_FLY | FL_SWIM))) {
         G_FLOAT(OFS_RETURN) = 0;
 
         return;
@@ -2840,11 +2840,11 @@ void SV_SetIdealPitch(void)
     int i, j;
     int step, dir, steps;
 
-    if (!((int)sv_player->v.flags & FL_ONGROUND)) {
+    if (!(static_cast<int>(sv_player->v.flags) & FL_ONGROUND)) {
         return;
     }
 
-    angleval = sv_player->v.angles[YAW] * M_PI * 2 / 360;
+    angleval = static_cast<float>(sv_player->v.angles[YAW] * M_PI * 2 / 360);
     sinval = sin(angleval);
     cosval = cos(angleval);
 
@@ -2872,7 +2872,7 @@ void SV_SetIdealPitch(void)
     dir = 0;
     steps = 0;
     for (j = 1; j < i; j++) {
-        step = z[j] - z[j - 1];
+        step = static_cast<int>(z[j] - z[j - 1]);
         if (step > -ON_EPSILON && step < ON_EPSILON) {
             continue;
         }
@@ -2932,7 +2932,7 @@ void SV_UserFriction(void)
 
     // apply friction
     control = speed < sv_stopspeed.value ? sv_stopspeed.value : speed;
-    newspeed = speed - host_frametime * control * friction;
+    newspeed = static_cast<float>(speed - host_frametime * control * friction);
 
     if (newspeed < 0) {
         newspeed = 0;
@@ -2961,7 +2961,7 @@ void SV_Accelerate(void)
         return;
     }
 
-    accelspeed = sv_accelerate.value * host_frametime * wishspeed;
+    accelspeed = static_cast<float>(sv_accelerate.value * host_frametime * wishspeed);
     if (accelspeed > addspeed) {
         accelspeed = addspeed;
     }
@@ -2988,7 +2988,7 @@ void SV_AirAccelerate(Vector3 wishveloc)
     }
 
     //	accelspeed = sv_accelerate.value * host_frametime;
-    accelspeed = sv_accelerate.value * wishspeed * host_frametime;
+    accelspeed = static_cast<float>(sv_accelerate.value * wishspeed * host_frametime);
     if (accelspeed > addspeed) {
         accelspeed = addspeed;
     }
@@ -3004,7 +3004,7 @@ void DropPunchAngle(void)
 
     len = sv_player->v.punchangle.normalize();
 
-    len -= 10 * host_frametime;
+    len -= static_cast<float>(10 * host_frametime);
     if (len < 0) {
         len = 0;
     }
@@ -3051,7 +3051,7 @@ void SV_WaterMove(void)
     //
     speed = Length(velocity);
     if (speed) {
-        newspeed = speed - host_frametime * speed * sv_friction.value;
+        newspeed = speed - static_cast<float>(host_frametime * speed * sv_friction.value);
         if (newspeed < 0) {
             newspeed = 0;
         }
@@ -3074,7 +3074,7 @@ void SV_WaterMove(void)
     }
 
     wishvel.normalize();
-    accelspeed = sv_accelerate.value * w_speed * host_frametime;
+    accelspeed = static_cast<float>(sv_accelerate.value * w_speed * host_frametime);
     if (accelspeed > addspeed) {
         accelspeed = addspeed;
     }
@@ -3087,7 +3087,7 @@ void SV_WaterMove(void)
 void SV_WaterJump(void)
 {
     if (sv.time > sv_player->v.teleport_time || !sv_player->v.waterlevel) {
-        sv_player->v.flags = (int)sv_player->v.flags & ~FL_WATERJUMP;
+        sv_player->v.flags = static_cast<float>(static_cast<int>(sv_player->v.flags) & ~FL_WATERJUMP);
         sv_player->v.teleport_time = 0;
     }
 
@@ -3119,7 +3119,7 @@ void SV_AirMove(void)
 
     wishvel = forward * fmove + right * smove;
 
-    if ((int)sv_player->v.movetype != MOVETYPE_WALK) {
+    if (static_cast<int>(sv_player->v.movetype) != MOVETYPE_WALK) {
         wishvel.z = cmd.upmove;
     } else {
         wishvel.z = 0;
@@ -3158,7 +3158,7 @@ void SV_ClientThink(void)
         return;
     }
 
-    onground = (int)sv_player->v.flags & FL_ONGROUND;
+    onground = static_cast<int>(sv_player->v.flags) & FL_ONGROUND;
 
     origin = sv_player->v.origin;
     velocity = sv_player->v.velocity;
@@ -3185,7 +3185,7 @@ void SV_ClientThink(void)
         angles[YAW] = v_angle[YAW];
     }
 
-    if ((int)sv_player->v.flags & FL_WATERJUMP) {
+    if (static_cast<int>(sv_player->v.flags) & FL_WATERJUMP) {
         SV_WaterJump();
 
         return;
@@ -3215,7 +3215,7 @@ void SV_ReadClientMove(usercmd_t* move)
     int bits;
 
     // read ping time
-    host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = sv.time - MSG_ReadFloat();
+    host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = static_cast<float>(sv.time) - MSG_ReadFloat();
     host_client->num_pings++;
 
     // read current angles
@@ -3226,18 +3226,18 @@ void SV_ReadClientMove(usercmd_t* move)
     host_client->edict->v.v_angle = angle;
 
     // read movement
-    move->forwardmove = MSG_ReadShort();
-    move->sidemove = MSG_ReadShort();
-    move->upmove = MSG_ReadShort();
+    move->forwardmove = static_cast<float>(MSG_ReadShort());
+    move->sidemove = static_cast<float>(MSG_ReadShort());
+    move->upmove = static_cast<float>(MSG_ReadShort());
 
     // read buttons
     bits = MSG_ReadByte();
-    host_client->edict->v.button0 = bits & 1;
-    host_client->edict->v.button2 = (bits & 2) >> 1;
+    host_client->edict->v.button0 = static_cast<float>(bits & 1);
+    host_client->edict->v.button2 = static_cast<float>((bits & 2) >> 1);
 
     i = MSG_ReadByte();
     if (i) {
-        host_client->edict->v.impulse = i;
+        host_client->edict->v.impulse = static_cast<float>(i);
     }
 
 }

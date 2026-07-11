@@ -196,13 +196,13 @@ inline void AngleVectors(const T& angles, U&& forward, V&& right, W&& up) {
     float angle;
     float sr, sp, sy, cr, cp, cy;
 
-    angle = angles[1] * (3.14159265358979323846 * 2 / 360); // YAW
+    angle = angles[1] * (3.14159265358979323846f * 2 / 360); // YAW
     sy = std::sin(angle);
     cy = std::cos(angle);
-    angle = angles[0] * (3.14159265358979323846 * 2 / 360); // PITCH
+    angle = angles[0] * (3.14159265358979323846f * 2 / 360); // PITCH
     sp = std::sin(angle);
     cp = std::cos(angle);
-    angle = angles[2] * (3.14159265358979323846 * 2 / 360); // ROLL
+    angle = angles[2] * (3.14159265358979323846f * 2 / 360); // ROLL
     sr = std::sin(angle);
     cr = std::cos(angle);
 

@@ -78,7 +78,7 @@ void Chase_Update(void)
         dist = 1;
     }
 
-    r_refdef.viewangles[PITCH] = -atan(stop.z / dist) / M_PI * 180;
+    r_refdef.viewangles[PITCH] = static_cast<float>(-atan(stop.z / dist) / M_PI * 180);
 
     // move towards destination
     r_refdef.vieworg = chase_dest;

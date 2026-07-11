@@ -142,13 +142,13 @@ static void CD_f()
     }
 
     if (!Q_strcasecmp(command, "play")) {
-        CDAudio_Play(Q_atoi(Cmd::Argv(2)), false);
+        CDAudio_Play(static_cast<byte>(Q_atoi(Cmd::Argv(2))), false);
 
         return;
     }
 
     if (!Q_strcasecmp(command, "loop")) {
-        CDAudio_Play(Q_atoi(Cmd::Argv(2)), true);
+        CDAudio_Play(static_cast<byte>(Q_atoi(Cmd::Argv(2))), true);
 
         return;
     }

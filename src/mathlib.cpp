@@ -41,7 +41,7 @@ int nanmask = 255 << 23;
 
 float anglemod(float a)
 {
-    a = (360.0 / 65536) * ((int)(a * (65536 / 360.0)) & 65535);
+    a = static_cast<float>((360.0 / 65536) * ((int)(a * (65536 / 360.0)) & 65535));
 
     return a;
 }

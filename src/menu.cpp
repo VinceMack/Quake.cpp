@@ -180,7 +180,7 @@ void M_BuildTranslationTable(int top, int bottom)
     byte *dest, *source;
 
     for (j = 0; j < 256; j++) {
-        identityTable[j] = j;
+        identityTable[j] = static_cast<byte>(j);
     }
     dest = translationTable;
     source = identityTable;
@@ -486,17 +486,17 @@ void M_ScanSaves(void)
     int version;
 
     for (i = 0; i < MAX_SAVEGAMES; i++) {
-        strcpy(m_filenames[i], "--- UNUSED SLOT ---");
+        strcpy_s(m_filenames[i], sizeof(m_filenames[i]), "--- UNUSED SLOT ---");
         loadable[i] = false;
-        sprintf(name, "%s/s%i.sav", com_gamedir, i);
-        f = fopen(name, "r");
+        sprintf_s(name, sizeof(name), "%s/s%i.sav", com_gamedir, i);
+        fopen_s(&f, name, "r");
         if (!f) {
             continue;
         }
 
-        fscanf(f, "%i\n", &version);
-        fscanf(f, "%79s\n", name);
-        strncpy(m_filenames[i], name, sizeof(m_filenames[i]) - 1);
+        fscanf_s(f, "%i\n", &version);
+        fscanf_s(f, "%79s\n", name, (unsigned)sizeof(name));
+        strncpy_s(m_filenames[i], sizeof(m_filenames[i]), name, sizeof(m_filenames[i]) - 1);
 
         // change _ back to space
         for (j = 0; j < SAVEGAME_COMMENT_LENGTH; j++) {
@@ -913,7 +913,7 @@ void M_Setup_Key(int k)
             l = (int)strlen(setup_hostname);
             if (l < 15) {
                 setup_hostname[l + 1] = 0;
-                setup_hostname[l] = k;
+                setup_hostname[l] = static_cast<char>(k);
             }
         }
 
@@ -921,7 +921,7 @@ void M_Setup_Key(int k)
             l = (int)strlen(setup_myname);
             if (l < 15) {
                 setup_myname[l + 1] = 0;
-                setup_myname[l] = k;
+                setup_myname[l] = static_cast<char>(k);
             }
         }
     }
@@ -1154,7 +1154,7 @@ void M_AdjustSliders(int dir)
         Cvar::SetValue("viewsize", scr_viewsize.value);
         break;
     case 4: // gamma
-        v_gamma.value -= dir * 0.05;
+        v_gamma.value -= static_cast<float>(dir * 0.05);
         if (v_gamma.value < 0.5) {
             v_gamma.value = 0.5;
         }
@@ -1166,7 +1166,7 @@ void M_AdjustSliders(int dir)
         Cvar::SetValue("gamma", v_gamma.value);
         break;
     case 5: // mouse speed
-        sensitivity.value += dir * 0.5;
+        sensitivity.value += static_cast<float>(dir * 0.5);
         if (sensitivity.value < 1) {
             sensitivity.value = 1;
         }
@@ -1178,7 +1178,7 @@ void M_AdjustSliders(int dir)
         Cvar::SetValue("sensitivity", sensitivity.value);
         break;
     case 6: // music volume
-        bgmvolume.value += dir * 0.1;
+        bgmvolume.value += static_cast<float>(dir * 0.1);
         if (bgmvolume.value < 0) {
             bgmvolume.value = 0;
         }
@@ -1190,7 +1190,7 @@ void M_AdjustSliders(int dir)
         Cvar::SetValue("bgmvolume", bgmvolume.value);
         break;
     case 7: // sfx volume
-        volume.value += dir * 0.1;
+        volume.value += static_cast<float>(dir * 0.1);
         if (volume.value < 0) {
             volume.value = 0;
         }
@@ -1204,11 +1204,11 @@ void M_AdjustSliders(int dir)
 
     case 8: // allways run
         if (cl_forwardspeed.value > 200) {
-            Cvar::SetValue("cl_forwardspeed", 200);
-            Cvar::SetValue("cl_backspeed", 200);
+            Cvar::SetValue("cl_forwardspeed", static_cast<float>(200));
+            Cvar::SetValue("cl_backspeed", static_cast<float>(200));
         } else {
-            Cvar::SetValue("cl_forwardspeed", 400);
-            Cvar::SetValue("cl_backspeed", 400);
+            Cvar::SetValue("cl_forwardspeed", static_cast<float>(400));
+            Cvar::SetValue("cl_backspeed", static_cast<float>(400));
         }
 
         break;
@@ -1218,11 +1218,11 @@ void M_AdjustSliders(int dir)
         break;
 
     case 10: // lookspring
-        Cvar::SetValue("lookspring", !lookspring.value);
+        Cvar::SetValue("lookspring", static_cast<float>(!lookspring.value));
         break;
 
     case 11: // lookstrafe
-        Cvar::SetValue("lookstrafe", !lookstrafe.value);
+        Cvar::SetValue("lookstrafe", static_cast<float>(!lookstrafe.value));
         break;
 
 
@@ -1246,7 +1246,7 @@ inline void M_DrawSlider(int x, int y, float range)
         M_DrawCharacter(x + i * 8, y, 129);
     }
     M_DrawCharacter(x + i * 8, y, 130);
-    M_DrawCharacter(x + (SLIDER_RANGE - 1) * 8 * range, y, 131);
+    M_DrawCharacter(x + static_cast<int>((SLIDER_RANGE - 1) * 8 * range), y, 131);
 }
 
 inline void M_DrawCheckbox(int x, int y, int on)
@@ -1276,7 +1276,7 @@ void M_Options_Draw(void)
     M_DrawSlider(220, 56, r);
 
     M_Print(16, 64, "            Brightness");
-    r = (1.0 - v_gamma.value) / 0.5;
+    r = static_cast<float>((1.0 - v_gamma.value) / 0.5);
     M_DrawSlider(220, 64, r);
 
     M_Print(16, 72, "           Mouse Speed");
@@ -1298,10 +1298,10 @@ void M_Options_Draw(void)
     M_DrawCheckbox(220, 104, m_pitch.value < 0);
 
     M_Print(16, 112, "            Lookspring");
-    M_DrawCheckbox(220, 112, lookspring.value);
+    M_DrawCheckbox(220, 112, static_cast<int>(lookspring.value));
 
     M_Print(16, 120, "            Lookstrafe");
-    M_DrawCheckbox(220, 120, lookstrafe.value);
+    M_DrawCheckbox(220, 120, static_cast<int>(lookstrafe.value));
 
     if (vid_menudrawfn) {
         M_Print(16, 128, "         Video Options");
@@ -1510,7 +1510,7 @@ void M_Keys_Key(int k)
         if (k == K_ESCAPE) {
             bind_grab = false;
         } else if (k != '`') {
-            sprintf(cmd, "bind \"%s\" \"%s\"\n", Key_KeynumToString(k),
+            sprintf_s(cmd, sizeof(cmd), "bind \"%s\" \"%s\"\n", Key_KeynumToString(k),
                 bindnames[keys_cursor][0]);
             Cmd::BufferInsertText(cmd);
         }
@@ -1941,7 +1941,7 @@ void M_SerialConfig_Key(int key)
             l = (int)strlen(serialConfig_phone);
             if (l < 15) {
                 serialConfig_phone[l + 1] = 0;
-                serialConfig_phone[l] = key;
+                serialConfig_phone[l] = static_cast<char>(key);
             }
         }
     }
@@ -2126,7 +2126,7 @@ void M_ModemConfig_Key(int key)
             l = (int)strlen(modemConfig_clear);
             if (l < 15) {
                 modemConfig_clear[l + 1] = 0;
-                modemConfig_clear[l] = key;
+                modemConfig_clear[l] = static_cast<char>(key);
             }
         }
 
@@ -2134,7 +2134,7 @@ void M_ModemConfig_Key(int key)
             l = (int)strlen(modemConfig_init);
             if (l < 29) {
                 modemConfig_init[l + 1] = 0;
-                modemConfig_init[l] = key;
+                modemConfig_init[l] = static_cast<char>(key);
             }
         }
 
@@ -2142,7 +2142,7 @@ void M_ModemConfig_Key(int key)
             l = (int)strlen(modemConfig_hangup);
             if (l < 15) {
                 modemConfig_hangup[l + 1] = 0;
-                modemConfig_hangup[l] = key;
+                modemConfig_hangup[l] = static_cast<char>(key);
             }
         }
     }
@@ -2177,7 +2177,7 @@ void M_Menu_LanConfig_f(void)
     }
 
     lanConfig_port = DEFAULTnet_hostport;
-    sprintf(lanConfig_portname, "%u", lanConfig_port);
+    sprintf_s(lanConfig_portname, sizeof(lanConfig_portname), "%u", lanConfig_port);
 
     m_return_onerror = false;
     m_return_reason[0] = 0;
@@ -2330,7 +2330,7 @@ void M_LanConfig_Key(int key)
             l = (int)strlen(lanConfig_joinname);
             if (l < 21) {
                 lanConfig_joinname[l + 1] = 0;
-                lanConfig_joinname[l] = key;
+                lanConfig_joinname[l] = static_cast<char>(key);
             }
         }
 
@@ -2342,7 +2342,7 @@ void M_LanConfig_Key(int key)
             l = (int)strlen(lanConfig_portname);
             if (l < 5) {
                 lanConfig_portname[l + 1] = 0;
-                lanConfig_portname[l] = key;
+                lanConfig_portname[l] = static_cast<char>(key);
             }
         }
     }
@@ -2360,7 +2360,7 @@ void M_LanConfig_Key(int key)
         lanConfig_port = l;
     }
 
-    sprintf(lanConfig_portname, "%u", lanConfig_port);
+    sprintf_s(lanConfig_portname, sizeof(lanConfig_portname), "%u", lanConfig_port);
 }
 
 //=============================================================================
@@ -2678,7 +2678,7 @@ void M_NetStart_Change(int dir)
         break;
 
     case 2:
-        Cvar::SetValue("coop", coop.value ? 0 : 1);
+        Cvar::SetValue("coop", static_cast<float>(coop.value ? 0 : 1));
         break;
 
     case 3:
@@ -2688,11 +2688,11 @@ void M_NetStart_Change(int dir)
             count = 2;
         }
 
-        Cvar::SetValue("teamplay", teamplay.value + dir);
+        Cvar::SetValue("teamplay", static_cast<float>(teamplay.value + dir));
         if (teamplay.value > count) {
-            Cvar::SetValue("teamplay", 0);
+            Cvar::SetValue("teamplay", static_cast<float>(0));
         } else if (teamplay.value < 0) {
-            Cvar::SetValue("teamplay", count);
+            Cvar::SetValue("teamplay", static_cast<float>(count));
         }
 
         break;
@@ -2700,23 +2700,23 @@ void M_NetStart_Change(int dir)
     case 4:
         Cvar::SetValue("skill", skill.value + dir);
         if (skill.value > 3) {
-            Cvar::SetValue("skill", 0);
+            Cvar::SetValue("skill", static_cast<float>(0));
         }
 
         if (skill.value < 0) {
-            Cvar::SetValue("skill", 3);
+            Cvar::SetValue("skill", static_cast<float>(3));
         }
 
         break;
 
     case 5:
-        Cvar::SetValue("fraglimit", fraglimit.value + dir * 10);
+        Cvar::SetValue("fraglimit", static_cast<float>(fraglimit.value + dir * 10));
         if (fraglimit.value > 100) {
-            Cvar::SetValue("fraglimit", 0);
+            Cvar::SetValue("fraglimit", static_cast<float>(0));
         }
 
         if (fraglimit.value < 0) {
-            Cvar::SetValue("fraglimit", 100);
+            Cvar::SetValue("fraglimit", static_cast<float>(100));
         }
 
         break;
@@ -2724,11 +2724,11 @@ void M_NetStart_Change(int dir)
     case 6:
         Cvar::SetValue("timelimit", timelimit.value + dir * 5);
         if (timelimit.value > 60) {
-            Cvar::SetValue("timelimit", 0);
+            Cvar::SetValue("timelimit", static_cast<float>(0));
         }
 
         if (timelimit.value < 0) {
-            Cvar::SetValue("timelimit", 60);
+            Cvar::SetValue("timelimit", static_cast<float>(60));
         }
 
         break;
@@ -2965,10 +2965,10 @@ void M_ServerList_Draw(void)
     M_DrawPic((320 - p->width) / 2, 4, p);
     for (n = 0; n < hostCacheCount; n++) {
         if (hostcache[n].maxusers) {
-            sprintf(string, "%-15.15s %-15.15s %2u/%2u\n", hostcache[n].name,
+            sprintf_s(string, sizeof(string), "%-15.15s %-15.15s %2u/%2u\n", hostcache[n].name,
                 hostcache[n].map, hostcache[n].users, hostcache[n].maxusers);
         } else {
-            sprintf(string, "%-15.15s %-15.15s\n", hostcache[n].name,
+            sprintf_s(string, sizeof(string), "%-15.15s %-15.15s\n", hostcache[n].name,
                 hostcache[n].map);
         }
 

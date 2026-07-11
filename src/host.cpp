@@ -77,7 +77,7 @@ Host_EndGame
     char string[1024];
 
     va_start(argptr, message);
-    vsprintf(string, message, argptr);
+    vsprintf_s(string, sizeof(string), message, argptr);
     va_end(argptr);
     Con_DPrintf("Host_EndGame: %s\n", string);
 
@@ -120,7 +120,7 @@ This shuts down both the client and server
     SCR_EndLoadingPlaque(); // reenable screen updates
 
     va_start(argptr, error);
-    vsprintf(string, error, argptr);
+    vsprintf_s(string, sizeof(string), error, argptr);
     va_end(argptr);
     Con_Printf("Host_Error: %s\n", string);
 
@@ -244,7 +244,7 @@ void Host_WriteConfiguration(void)
     // dedicated servers initialize the host but don't parse and set the
     // config.cfg cvars
     if (host_initialized & !isDedicated) {
-        f = fopen(va("%s/config.cfg", com_gamedir), "w");
+        fopen_s(&f, va("%s/config.cfg", com_gamedir), "w");
         if (!f) {
             Con_Printf("Couldn't write config.cfg.\n");
 
@@ -278,7 +278,7 @@ void SV_ClientPrintf(const char* fmt, ...)
     char string[1024];
 
     va_start(argptr, fmt);
-    vsprintf(string, fmt, argptr);
+    vsprintf_s(string, sizeof(string), fmt, argptr);
     va_end(argptr);
 
     MSG_WriteByte(&host_client->message, svc_print);
@@ -299,7 +299,7 @@ void SV_BroadcastPrintf(const char* fmt, ...)
     int i;
 
     va_start(argptr, fmt);
-    vsprintf(string, fmt, argptr);
+    vsprintf_s(string, sizeof(string), fmt, argptr);
     va_end(argptr);
 
     for (i = 0; i < svs.maxclients; i++) {
@@ -337,7 +337,7 @@ void SV_DropClient(qboolean crash)
             // call the prog function for removing a client
             // this will set the body to a dead frame, among other things
             saveSelf = pr_global_struct->self;
-            pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
+            pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(host_client->edict));
             PR_ExecuteProgram(pr_global_struct->ClientDisconnect);
             pr_global_struct->self = saveSelf;
         }
@@ -362,13 +362,13 @@ void SV_DropClient(qboolean crash)
         }
 
         MSG_WriteByte(&client->message, svc_updatename);
-        MSG_WriteByte(&client->message, host_client - svs.clients);
+        MSG_WriteByte(&client->message, static_cast<int>(host_client - svs.clients));
         MSG_WriteString(&client->message, "");
         MSG_WriteByte(&client->message, svc_updatefrags);
-        MSG_WriteByte(&client->message, host_client - svs.clients);
+        MSG_WriteByte(&client->message, static_cast<int>(host_client - svs.clients));
         MSG_WriteShort(&client->message, 0);
         MSG_WriteByte(&client->message, svc_updatecolors);
-        MSG_WriteByte(&client->message, host_client - svs.clients);
+        MSG_WriteByte(&client->message, static_cast<int>(host_client - svs.clients));
         MSG_WriteByte(&client->message, 0);
     }
 }
@@ -390,7 +390,7 @@ void Host_ClientCommands(const char* fmt, ...)
     char string[1024];
 
     va_start(argptr, fmt);
-    vsprintf(string, fmt, argptr);
+    vsprintf_s(string, sizeof(string), fmt, argptr);
     va_end(argptr);
 
     MSG_WriteByte(&host_client->message, svc_stufftext);
@@ -608,7 +608,7 @@ void Host_ServerFrame(void)
 void Host_ServerFrame(void)
 {
     // run the world state
-    pr_global_struct->frametime = host_frametime;
+    pr_global_struct->frametime = static_cast<float>(host_frametime);
 
     // set the time and clear the general datagram
     SZ_Clear(&sv.datagram);
@@ -724,10 +724,10 @@ void _Host_Frame(float time)
         CDAudio_Update();
 
         if (host_speeds.value) {
-            pass1 = (time1 - time3) * 1000;
+            pass1 = static_cast<int>((time1 - time3) * 1000);
             time3 = Sys_FloatTime();
-            pass2 = (time2 - time1) * 1000;
-            pass3 = (time3 - time2) * 1000;
+            pass2 = static_cast<int>((time2 - time1) * 1000);
+            pass3 = static_cast<int>((time3 - time2) * 1000);
             Con_Printf("%3i tot %3i server %3i gfx %3i snd\n", pass1 + pass2 + pass3,
                 pass1, pass2, pass3);
         }
@@ -762,7 +762,7 @@ void Host_Frame(float time)
         return;
     }
 
-    m = timetotal * 1000 / timecount;
+    m = static_cast<int>(timetotal * 1000 / timecount);
     timecount = 0;
     timetotal = 0;
     c = 0;

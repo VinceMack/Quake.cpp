@@ -379,7 +379,7 @@ void R_AnimateLight(void)
     //
     // light animations
     // 'm' is normal light, 'a' is no light, 'z' is double bright
-    i = (int)(cl.time * 10);
+    i = static_cast<int>(cl.time * 10);
     for (j = 0; j < MAX_LIGHTSTYLES; j++) {
         if (!cl_lightstyle[j].length) {
             d_lightstylevalue[j] = 256;
@@ -532,8 +532,8 @@ int RecursiveLightPoint(mnode_t* node, const Vector3& start, const Vector3& end)
 
         tex = surf->texinfo;
 
-        s = mid.dot(tex->vecs[0]) + tex->vecs[0][3];
-        t = mid.dot(tex->vecs[1]) + tex->vecs[1][3];
+        s = static_cast<int>(mid.dot(tex->vecs[0]) + tex->vecs[0][3]);
+        t = static_cast<int>(mid.dot(tex->vecs[1]) + tex->vecs[1][3]);
         ;
 
         if (s < surf->texturemins[0] || t < surf->texturemins[1]) {
@@ -677,10 +677,10 @@ void R_EntityParticles(entity_t* ent)
     }
 
     for (i = 0; i < NUMVERTEXNORMALS; i++) {
-        angle = cl.time * avelocities[i].x;
+        angle = static_cast<float>(cl.time * avelocities[i].x);
         sy = sin(angle);
         cy = cos(angle);
-        angle = cl.time * avelocities[i].y;
+        angle = static_cast<float>(cl.time * avelocities[i].y);
         sp = sin(angle);
         cp = cos(angle);
 
@@ -697,8 +697,8 @@ void R_EntityParticles(entity_t* ent)
         p->next = active_particles;
         active_particles = p;
 
-        p->die = cl.time + 0.01;
-        p->color = 0x6f;
+        p->die = static_cast<float>(cl.time + 0.01);
+        p->color = static_cast<float>(0x6f);
         p->type = pt_explode;
 
         p->org = ent->origin + Vector3(r_avertexnormals[i][0], r_avertexnormals[i][1], r_avertexnormals[i][2]) * dist + forward * beamlength;
@@ -732,7 +732,7 @@ void R_ReadPointFile_f(void)
     particle_t* p;
     char name[MAX_OSPATH];
 
-    sprintf(name, "maps/%s.pts", sv.name);
+    sprintf_s(name, sizeof(name), "maps/%s.pts", sv.name);
 
     COM_FOpenFile(name, &f);
     if (!f) {
@@ -744,7 +744,7 @@ void R_ReadPointFile_f(void)
     Con_Printf("Reading %s...\n", name);
     c = 0;
     for (;;) {
-        r = fscanf(f, "%f %f %f\n", &org[0], &org[1], &org[2]);
+        r = fscanf_s(f, "%f %f %f\n", &org[0], &org[1], &org[2]);
         if (r != 3) {
             break;
         }
@@ -761,8 +761,8 @@ void R_ReadPointFile_f(void)
         p->next = active_particles;
         active_particles = p;
 
-        p->die = 99999;
-        p->color = (-c) & 15;
+        p->die = 99999.0f;
+        p->color = static_cast<float>((-c) & 15);
         p->type = pt_static;
         p->vel = vec3_origin;
         p->org = org;
@@ -825,16 +825,16 @@ void R_ParticleExplosion(const Vector3& org)
         p->next = active_particles;
         active_particles = p;
 
-        p->die = cl.time + 5;
-        p->color = ramp1[0];
-        p->ramp = rand() & 3;
+        p->die = static_cast<float>(cl.time + 5);
+        p->color = static_cast<float>(ramp1[0]);
+        p->ramp = static_cast<float>(rand() & 3);
         if (i & 1) {
             p->type = pt_explode;
         } else {
             p->type = pt_explode2;
         }
-        p->org = org + Vector3((rand() % 32) - 16, (rand() % 32) - 16, (rand() % 32) - 16);
-        p->vel = Vector3((rand() % 512) - 256, (rand() % 512) - 256, (rand() % 512) - 256);
+        p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
+        p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
     }
 }
 
@@ -860,13 +860,13 @@ void R_ParticleExplosion2(const Vector3& org, int colorStart, int colorLength)
         p->next = active_particles;
         active_particles = p;
 
-        p->die = cl.time + 0.3;
-        p->color = colorStart + (colorMod % colorLength);
+        p->die = static_cast<float>(cl.time + 0.3);
+        p->color = static_cast<float>(colorStart + (colorMod % colorLength));
         colorMod++;
 
         p->type = pt_blob;
-        p->org = org + Vector3((rand() % 32) - 16, (rand() % 32) - 16, (rand() % 32) - 16);
-        p->vel = Vector3((rand() % 512) - 256, (rand() % 512) - 256, (rand() % 512) - 256);
+        p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
+        p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
     }
 }
 
@@ -891,17 +891,17 @@ void R_BlobExplosion(const Vector3& org)
         p->next = active_particles;
         active_particles = p;
 
-        p->die = cl.time + 1 + (rand() & 8) * 0.05;
+        p->die = static_cast<float>(cl.time + 1 + (rand() & 8) * 0.05);
 
         if (i & 1) {
             p->type = pt_blob;
-            p->color = 66 + rand() % 6;
+            p->color = static_cast<float>(66 + rand() % 6);
         } else {
             p->type = pt_blob2;
-            p->color = 150 + rand() % 6;
+            p->color = static_cast<float>(150 + rand() % 6);
         }
-        p->org = org + Vector3((rand() % 32) - 16, (rand() % 32) - 16, (rand() % 32) - 16);
-        p->vel = Vector3((rand() % 512) - 256, (rand() % 512) - 256, (rand() % 512) - 256);
+        p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
+        p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
     }
 }
 
@@ -927,21 +927,21 @@ void R_RunParticleEffect(const Vector3& org, const Vector3& dir, int color, int 
         active_particles = p;
 
         if (count == 1024) { // rocket explosion
-            p->die = cl.time + 5;
-            p->color = ramp1[0];
-            p->ramp = rand() & 3;
+            p->die = static_cast<float>(cl.time + 5);
+            p->color = static_cast<float>(ramp1[0]);
+            p->ramp = static_cast<float>(rand() & 3);
             if (i & 1) {
                 p->type = pt_explode;
             } else {
                 p->type = pt_explode2;
             }
-            p->org = org + Vector3((rand() % 32) - 16, (rand() % 32) - 16, (rand() % 32) - 16);
-            p->vel = Vector3((rand() % 512) - 256, (rand() % 512) - 256, (rand() % 512) - 256);
+            p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
+            p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
         } else {
-            p->die = cl.time + 0.1 * (rand() % 5);
-            p->color = (color & ~7) + (rand() & 7);
+            p->die = static_cast<float>(cl.time + 0.1 * (rand() % 5));
+            p->color = static_cast<float>((color & ~7) + (rand() & 7));
             p->type = pt_slowgrav;
-            p->org = org + Vector3((rand() & 15) - 8, (rand() & 15) - 8, (rand() & 15) - 8);
+            p->org = org + Vector3(static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8));
             p->vel = dir * 15; // + (rand()%300)-150;
         }
     }
@@ -972,18 +972,18 @@ void R_LavaSplash(const Vector3& org)
                 p->next = active_particles;
                 active_particles = p;
 
-                p->die = cl.time + 2 + (rand() & 31) * 0.02;
-                p->color = 224 + (rand() & 7);
+                p->die = static_cast<float>(cl.time + 2 + (rand() & 31) * 0.02);
+                p->color = static_cast<float>(224 + (rand() & 7));
                 p->type = pt_slowgrav;
 
-                dir.x = j * 8 + (rand() & 7);
-                dir.y = i * 8 + (rand() & 7);
+                dir.x = static_cast<float>(j * 8 + (rand() & 7));
+                dir.y = static_cast<float>(i * 8 + (rand() & 7));
                 dir.z = 256;
 
-                p->org = org + Vector3(dir.x, dir.y, (float)(rand() & 63));
+                p->org = org + Vector3(dir.x, dir.y, static_cast<float>(rand() & 63));
 
                 dir.normalize();
-                vel = 50 + (rand() & 63);
+                vel = static_cast<float>(50 + (rand() & 63));
                 p->vel = dir * vel;
             }
         }
@@ -1015,16 +1015,16 @@ void R_TeleportSplash(const Vector3& org)
                 p->next = active_particles;
                 active_particles = p;
 
-                p->die = cl.time + 0.2 + (rand() & 7) * 0.02;
-                p->color = 7 + (rand() & 7);
+                p->die = static_cast<float>(cl.time + 0.2 + (rand() & 7) * 0.02);
+                p->color = static_cast<float>(7 + (rand() & 7));
                 p->type = pt_slowgrav;
 
-                dir = Vector3(j * 8, i * 8, k * 8);
+                dir = Vector3(static_cast<float>(j * 8), static_cast<float>(i * 8), static_cast<float>(k * 8));
 
-                p->org = org + Vector3(i + (rand() & 3), j + (rand() & 3), k + (rand() & 3));
+                p->org = org + Vector3(static_cast<float>(i + (rand() & 3)), static_cast<float>(j + (rand() & 3)), static_cast<float>(k + (rand() & 3)));
 
                 dir.normalize();
-                vel = 50 + (rand() & 63);
+                vel = static_cast<float>(50 + (rand() & 63));
                 p->vel = dir * vel;
             }
         }
@@ -1061,37 +1061,37 @@ void R_RocketTrail(Vector3 start, const Vector3& end, int type)
         active_particles = p;
 
         p->vel = vec3_origin;
-        p->die = cl.time + 2;
+        p->die = static_cast<float>(cl.time + 2);
 
         switch (type) {
         case 0: // rocket trail
-            p->ramp = (rand() & 3);
-            p->color = ramp3[(int)p->ramp];
+            p->ramp = static_cast<float>(rand() & 3);
+            p->color = static_cast<float>(ramp3[(int)p->ramp]);
             p->type = pt_fire;
-            p->org = start + Vector3((rand() % 6) - 3, (rand() % 6) - 3, (rand() % 6) - 3);
+            p->org = start + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3));
             break;
 
         case 1: // smoke smoke
-            p->ramp = (rand() & 3) + 2;
-            p->color = ramp3[(int)p->ramp];
+            p->ramp = static_cast<float>((rand() & 3) + 2);
+            p->color = static_cast<float>(ramp3[(int)p->ramp]);
             p->type = pt_fire;
-            p->org = start + Vector3((rand() % 6) - 3, (rand() % 6) - 3, (rand() % 6) - 3);
+            p->org = start + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3));
             break;
 
         case 2: // blood
             p->type = pt_grav;
-            p->color = 67 + (rand() & 3);
-            p->org = start + Vector3((rand() % 6) - 3, (rand() % 6) - 3, (rand() % 6) - 3);
+            p->color = static_cast<float>(67 + (rand() & 3));
+            p->org = start + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3));
             break;
 
         case 3:
         case 5: // tracer
-            p->die = cl.time + 0.5;
+            p->die = static_cast<float>(cl.time + 0.5);
             p->type = pt_static;
             if (type == 3) {
-                p->color = 52 + ((tracercount & 4) << 1);
+                p->color = static_cast<float>(52 + ((tracercount & 4) << 1));
             } else {
-                p->color = 230 + ((tracercount & 4) << 1);
+                p->color = static_cast<float>(230 + ((tracercount & 4) << 1));
             }
 
             tracercount++;
@@ -1111,16 +1111,16 @@ void R_RocketTrail(Vector3 start, const Vector3& end, int type)
 
         case 4: // slight blood
             p->type = pt_grav;
-            p->color = 67 + (rand() & 3);
-            p->org = start + Vector3((rand() % 6) - 3, (rand() % 6) - 3, (rand() % 6) - 3);
+            p->color = static_cast<float>(67 + (rand() & 3));
+            p->org = start + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3));
             len -= 3;
             break;
 
         case 6: // voor trail
-            p->color = 9 * 16 + 8 + (rand() & 3);
+            p->color = static_cast<float>(9 * 16 + 8 + (rand() & 3));
             p->type = pt_static;
-            p->die = cl.time + 0.3;
-            p->org = start + Vector3((rand() & 15) - 8, (rand() & 15) - 8, (rand() & 15) - 8);
+            p->die = static_cast<float>(cl.time + 0.3);
+            p->org = start + Vector3(static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8));
             break;
         }
 
@@ -1148,11 +1148,11 @@ void R_DrawParticles(void)
     VectorScale(vright, xscaleshrink, r_pright);
     VectorScale(vup, yscaleshrink, r_pup);
     VectorCopy(vpn, r_ppn);
-    frametime = cl.time - cl.oldtime;
+    frametime = static_cast<float>(cl.time - cl.oldtime);
     time3 = frametime * 15;
     time2 = frametime * 10; // 15;
     time1 = frametime * 5;
-    grav = frametime * sv_gravity.value * 0.05;
+    grav = static_cast<float>(frametime * sv_gravity.value * 0.05);
     dvel = 4 * frametime;
 
     for (;;) {
@@ -1193,7 +1193,7 @@ void R_DrawParticles(void)
             if (p->ramp >= 6) {
                 p->die = -1;
             } else {
-                p->color = ramp3[(int)p->ramp];
+                p->color = static_cast<float>(ramp3[(int)p->ramp]);
             }
 
             p->vel[2] += grav;
@@ -1204,7 +1204,7 @@ void R_DrawParticles(void)
             if (p->ramp >= 8) {
                 p->die = -1;
             } else {
-                p->color = ramp1[(int)p->ramp];
+                p->color = static_cast<float>(ramp1[(int)p->ramp]);
             }
 
             for (i = 0; i < 3; i++) {
@@ -1218,7 +1218,7 @@ void R_DrawParticles(void)
             if (p->ramp >= 8) {
                 p->die = -1;
             } else {
-                p->color = ramp2[(int)p->ramp];
+                p->color = static_cast<float>(ramp2[(int)p->ramp]);
             }
 
             for (i = 0; i < 3; i++) {
@@ -1326,8 +1326,8 @@ void R_MakeSky(void)
     unsigned* pnewsky;
     static int xlast = -1, ylast = -1;
 
-    xshift = skytime * skyspeed;
-    yshift = skytime * skyspeed;
+    xshift = static_cast<int>(skytime * skyspeed);
+    yshift = static_cast<int>(skytime * skyspeed);
 
     if ((xshift == xlast) && (yshift == ylast)) {
         return;
@@ -1379,15 +1379,15 @@ void R_SetSkyFrame(void)
     int g, s1, s2;
     float temp;
 
-    skyspeed = iskyspeed;
-    skyspeed2 = iskyspeed2;
+    skyspeed = static_cast<float>(iskyspeed);
+    skyspeed2 = static_cast<float>(iskyspeed2);
 
     g = GreatestCommonDivisor(iskyspeed, iskyspeed2);
     s1 = iskyspeed / g;
     s2 = iskyspeed2 / g;
-    temp = SKYSIZE * s1 * s2;
+    temp = static_cast<float>(SKYSIZE * s1 * s2);
 
-    skytime = cl.time - ((int)(cl.time / temp) * temp);
+    skytime = static_cast<float>(cl.time - ((int)(cl.time / temp) * temp));
 
     r_skymade = 0;
 }
@@ -1471,26 +1471,26 @@ void R_AddDynamicLights(void)
         local.y -= surf->texturemins[1];
 
         for (t = 0; t < tmax; t++) {
-            td = local.y - t * 16;
+            td = static_cast<int>(local.y - t * 16);
             if (td < 0) {
                 td = -td;
             }
 
             for (s = 0; s < smax; s++) {
-                sd = local.x - s * 16;
+                sd = static_cast<int>(local.x - s * 16);
                 if (sd < 0) {
                     sd = -sd;
                 }
 
                 if (sd > td) {
-                    dist = sd + (td >> 1);
+                    dist = static_cast<float>(sd + (td >> 1));
                 } else {
-                    dist = td + (sd >> 1);
+                    dist = static_cast<float>(td + (sd >> 1));
                 }
 
                 if (dist < minlight)
                 {
-                    blocklights[t * smax + s] += (rad - dist) * 256;
+                    blocklights[t * smax + s] += static_cast<unsigned int>((rad - dist) * 256);
                 }
             }
         }
@@ -1954,11 +1954,11 @@ void R_TimeRefresh_f(void)
     int startangle;
     vrect_t vr;
 
-    startangle = r_refdef.viewangles[1];
+    startangle = static_cast<int>(r_refdef.viewangles[1]);
 
-    start = Sys_FloatTime();
+    start = static_cast<float>(Sys_FloatTime());
     for (i = 0; i < 128; i++) {
-        r_refdef.viewangles[1] = i / 128.0 * 360.0;
+        r_refdef.viewangles[1] = static_cast<float>(i / 128.0 * 360.0);
 
         VID_LockBuffer();
 
@@ -1973,11 +1973,11 @@ void R_TimeRefresh_f(void)
         vr.pnext = NULL;
         VID_Update(&vr);
     }
-    stop = Sys_FloatTime();
+    stop = static_cast<float>(Sys_FloatTime());
     time = stop - start;
     Con_Printf("%f seconds (%f fps)\n", time, 128 / time);
 
-    r_refdef.viewangles[1] = startangle;
+    r_refdef.viewangles[1] = static_cast<float>(startangle);
 }
 
 /*
@@ -2000,7 +2000,7 @@ void R_LineGraph(int x, int y, int h)
 
     dest = vid.buffer + vid.rowbytes * y + x;
 
-    s = r_graphheight.value;
+    s = static_cast<int>(r_graphheight.value);
 
     if (h > s) {
         h = s;
@@ -2034,15 +2034,15 @@ void R_TimeGraph(void)
     static byte r_timings[MAX_TIMINGS];
     int x;
 
-    r_time2 = Sys_FloatTime();
+    r_time2 = static_cast<float>(Sys_FloatTime());
 
-    a = (r_time2 - r_time1) / 0.01;
+    a = static_cast<int>((r_time2 - r_time1) / 0.01);
     //a = fabs(mouse_y * 0.05);
     //a = (int)((r_refdef.vieworg[2] + 1024)/1)%(int)r_graphheight.value;
     //a = fabs(velocity[0])/20;
     //a = ((int)fabs(origin[0])/8)%20;
     //a = (cl.idealpitch + 30)/5;
-    r_timings[timex] = a;
+    r_timings[timex] = static_cast<byte>(a);
     a = timex;
 
     if (r_refdef.vrect.width <= MAX_TIMINGS) {
@@ -2087,9 +2087,9 @@ void R_PrintTimes(void)
     float r_time2;
     float ms;
 
-    r_time2 = Sys_FloatTime();
+    r_time2 = static_cast<float>(Sys_FloatTime());
 
-    ms = 1000 * (r_time2 - r_time1);
+    ms = static_cast<float>(1000 * (r_time2 - r_time1));
 
     Con_Printf("%5.1f ms %3i/%3i/%3i poly %3i surf\n", ms, c_faceclip,
         r_polycount, r_drawnpolycount, c_surf);
@@ -2105,9 +2105,9 @@ void R_PrintDSpeeds(void)
 {
     float ms, dp_time, r_time2, rw_time, db_time, se_time, de_time, dv_time;
 
-    r_time2 = Sys_FloatTime();
+    r_time2 = static_cast<float>(Sys_FloatTime());
 
-    dp_time = (dp_time2 - dp_time1) * 1000;
+    dp_time = static_cast<float>((dp_time2 - dp_time1) * 1000);
     rw_time = (rw_time2 - rw_time1) * 1000;
     db_time = (db_time2 - db_time1) * 1000;
     se_time = (se_time2 - se_time1) * 1000;
@@ -2201,7 +2201,7 @@ void R_SetupFrame(void)
 
     if (r_numsurfs.value) {
         if ((surface_p - surfaces) > r_maxsurfsseen) {
-            r_maxsurfsseen = surface_p - surfaces;
+            r_maxsurfsseen = static_cast<int>(surface_p - surfaces);
         }
 
         Con_Printf("Used %d of %d surfs; %d max\n", surface_p - surfaces,
@@ -2209,7 +2209,7 @@ void R_SetupFrame(void)
     }
 
     if (r_numedges.value) {
-        edgecount = edge_p - r_edges;
+        edgecount = static_cast<int>(edge_p - r_edges);
 
         if (edgecount > r_maxedgesseen) {
             r_maxedgesseen = edgecount;
@@ -2219,7 +2219,7 @@ void R_SetupFrame(void)
             r_maxedgesseen);
     }
 
-    r_refdef.ambientlight = r_ambient.value;
+    r_refdef.ambientlight = static_cast<int>(r_ambient.value);
 
     if (r_refdef.ambientlight < 0) {
         r_refdef.ambientlight = 0;
@@ -2260,17 +2260,17 @@ void R_SetupFrame(void)
 
                 R_ViewChanged(&vrect, sb_lines, vid.aspect);
             } else {
-                w = vid.width;
-                h = vid.height;
+                w = static_cast<float>(vid.width);
+                h = static_cast<float>(vid.height);
 
                 if (w > vid.maxwarpwidth) {
-                    h *= (float)vid.maxwarpwidth / w;
-                    w = vid.maxwarpwidth;
+                    h *= static_cast<float>(vid.maxwarpwidth) / w;
+                    w = static_cast<float>(vid.maxwarpwidth);
                 }
 
                 if (h > vid.maxwarpheight) {
-                    h = vid.maxwarpheight;
-                    w *= (float)vid.maxwarpheight / h;
+                    h = static_cast<float>(vid.maxwarpheight);
+                    w *= static_cast<float>(vid.maxwarpheight) / h;
                 }
 
                 vrect.x = 0;
@@ -2279,8 +2279,8 @@ void R_SetupFrame(void)
                 vrect.height = (int)h;
 
                 R_ViewChanged(
-                    &vrect, (int)((float)sb_lines * (h / (float)vid.height)),
-                    vid.aspect * (h / w) * ((float)vid.width / (float)vid.height));
+                    &vrect, static_cast<int>(static_cast<float>(sb_lines) * (h / static_cast<float>(vid.height))),
+                    vid.aspect * (h / w) * (static_cast<float>(vid.width) / static_cast<float>(vid.height)));
             }
         } else {
             vrect.x = 0;
@@ -2398,7 +2398,7 @@ void R_EmitEdge(mvertex_t* pv0, mvertex_t* pv1)
             transformed.z = (vec_t)NEAR_CLIP;
         }
 
-        lzi0 = 1.0 / transformed.z;
+        lzi0 = static_cast<float>(1.0 / transformed.z);
 
         // FIXME: build x/yscale into transform?
         scale = xscale * lzi0;
@@ -2434,7 +2434,7 @@ void R_EmitEdge(mvertex_t* pv0, mvertex_t* pv1)
         transformed.z = (vec_t)NEAR_CLIP;
     }
 
-    r_lzi1 = 1.0 / transformed.z;
+    r_lzi1 = static_cast<float>(1.0 / transformed.z);
 
     scale = xscale * r_lzi1;
     r_u1 = (xcenter + scale * transformed.x);
@@ -2496,7 +2496,7 @@ void R_EmitEdge(mvertex_t* pv0, mvertex_t* pv1)
         v = ceilv0;
         v2 = r_ceilv1 - 1;
 
-        edge->surfs[0] = surface_p - surfaces;
+        edge->surfs[0] = static_cast<unsigned short>(surface_p - surfaces);
         edge->surfs[1] = 0;
 
         u_step = ((r_u1 - u0) / (r_v1 - v0));
@@ -2507,14 +2507,14 @@ void R_EmitEdge(mvertex_t* pv0, mvertex_t* pv1)
         v = r_ceilv1;
 
         edge->surfs[0] = 0;
-        edge->surfs[1] = surface_p - surfaces;
+        edge->surfs[1] = static_cast<unsigned short>(surface_p - surfaces);
 
         u_step = ((u0 - r_u1) / (v0 - r_v1));
         u = r_u1 + ((float)v - r_v1) * u_step;
     }
 
-    edge->u_step = u_step * 0x100000;
-    edge->u = u * 0x100000 + 0xFFFFF;
+    edge->u_step = static_cast<int64_t>(u_step * 0x100000);
+    edge->u = static_cast<int64_t>(u * 0x100000 + 0xFFFFF);
 
     // we need to do this to avoid stepping off the edges if a very nearly
     // horizontal edge is less than epsilon above a scan, and numeric error causes
@@ -2650,9 +2650,9 @@ void R_EmitCachedEdge(void)
     pedge_t = (edge_t*)((size_t)r_edges + r_pedge->cachededgeoffset);
 
     if (!pedge_t->surfs[0]) {
-        pedge_t->surfs[0] = surface_p - surfaces;
+        pedge_t->surfs[0] = static_cast<unsigned short>(surface_p - surfaces);
     } else {
-        pedge_t->surfs[1] = surface_p - surfaces;
+        pedge_t->surfs[1] = static_cast<unsigned short>(surface_p - surfaces);
     }
 
     if (pedge_t->nearzi > r_nearzi) { // for mipmap finding
@@ -2735,7 +2735,7 @@ void R_RenderFace(msurface_t* fa, int clipflags)
             }
 
             // assume it's cacheable
-            cacheoffset = (byte*)edge_p - (byte*)r_edges;
+            cacheoffset = static_cast<unsigned int>((byte*)edge_p - (byte*)r_edges);
             r_leftclipped = r_rightclipped = false;
             R_ClipEdge(&r_pcurrentvertbase[r_pedge->v[0]],
                 &r_pcurrentvertbase[r_pedge->v[1]], pclip);
@@ -2772,7 +2772,7 @@ void R_RenderFace(msurface_t* fa, int clipflags)
             }
 
             // assume it's cacheable
-            cacheoffset = (byte*)edge_p - (byte*)r_edges;
+            cacheoffset = static_cast<unsigned int>((byte*)edge_p - (byte*)r_edges);
             r_leftclipped = r_rightclipped = false;
             R_ClipEdge(&r_pcurrentvertbase[r_pedge->v[1]],
                 &r_pcurrentvertbase[r_pedge->v[0]], pclip);
@@ -2827,7 +2827,7 @@ void R_RenderFace(msurface_t* fa, int clipflags)
     // FIXME: cache this?
     TransformVector(pplane->normal, p_normal);
     // FIXME: cache this?
-    distinv = 1.0 / (pplane->dist - modelorg.dot(pplane->normal));
+    distinv = static_cast<float>(1.0 / (pplane->dist - modelorg.dot(pplane->normal)));
 
     surface_p->d_zistepu = p_normal.x * xscaleinv * distinv;
     surface_p->d_zistepv = -p_normal.y * yscaleinv * distinv;
@@ -2938,7 +2938,7 @@ void R_RenderBmodelFace(bedge_t* pedges, msurface_t* psurf)
     // FIXME: cache this?
     TransformVector(pplane->normal, p_normal);
     // FIXME: cache this?
-    distinv = 1.0 / (pplane->dist - modelorg.dot(pplane->normal));
+    distinv = static_cast<float>(1.0 / (pplane->dist - modelorg.dot(pplane->normal)));
 
     surface_p->d_zistepu = p_normal.x * xscaleinv * distinv;
     surface_p->d_zistepv = -p_normal.y * yscaleinv * distinv;
@@ -3072,7 +3072,7 @@ void R_RenderPoly(msurface_t* fa, int clipflags)
             transformed.z = (vec_t)NEAR_CLIP;
         }
 
-        lzi = 1.0 / transformed.z;
+        lzi = static_cast<float>(1.0 / transformed.z);
 
         if (lzi > r_nearzi) { // for mipmap finding
             r_nearzi = lzi;
@@ -3402,7 +3402,7 @@ void R_CleanupSpan()
     // now that we've reached the right edge of the screen, we're done with any
     // unfinished surfaces, so emit a span for whatever's on top
     surf = surfaces[1].next;
-    iu = edge_tail_u_shift20;
+    iu = static_cast<int>(edge_tail_u_shift20);
     if (iu > surf->last_u) {
         span = span_p++;
         span->u = surf->last_u;
@@ -3472,7 +3472,7 @@ void R_LeadingEdgeBackwards(edge_t* edge)
 
     newtop:
         // emit a span (obscures current top)
-        iu = edge->u >> 20;
+        iu = static_cast<int>(edge->u >> 20);
 
         if (iu > surf2->last_u) {
             span = span_p++;
@@ -3515,7 +3515,7 @@ void R_TrailingEdge(surf_t* surf, edge_t* edge)
 
         if (surf == surfaces[1].next) {
             // emit a span (current top going away)
-            iu = edge->u >> 20;
+            iu = static_cast<int>(edge->u >> 20);
             if (iu > surf->last_u) {
                 span = span_p++;
                 span->u = surf->last_u;
@@ -3568,9 +3568,9 @@ void R_LeadingEdge(edge_t* edge)
             // active is in front, so keep going unless it's a bmodel
             if (surf->insubmodel && (surf->key == surf2->key)) {
                 // must be two bmodels in the same leaf; sort on 1/z
-                fu = (float)(edge->u - 0xFFFFF) * (1.0 / 0x100000);
+                fu = static_cast<float>(edge->u - 0xFFFFF) * (1.0f / 0x100000);
                 newzi = surf->d_ziorigin + edge_fv * surf->d_zistepv + fu * surf->d_zistepu;
-                newzibottom = newzi * 0.99;
+                newzibottom = newzi * 0.99f;
 
                 testzi = surf2->d_ziorigin + edge_fv * surf2->d_zistepv + fu * surf2->d_zistepu;
 
@@ -3600,9 +3600,9 @@ void R_LeadingEdge(edge_t* edge)
                 }
 
                 // must be two bmodels in the same leaf; sort on 1/z
-                fu = (float)(edge->u - 0xFFFFF) * (1.0 / 0x100000);
+                fu = static_cast<float>(edge->u - 0xFFFFF) * (1.0f / 0x100000);
                 newzi = surf->d_ziorigin + edge_fv * surf->d_zistepv + fu * surf->d_zistepu;
-                newzibottom = newzi * 0.99;
+                newzibottom = newzi * 0.99f;
 
                 testzi = surf2->d_ziorigin + edge_fv * surf2->d_zistepv + fu * surf2->d_zistepu;
 
@@ -3624,7 +3624,7 @@ void R_LeadingEdge(edge_t* edge)
 
         newtop:
             // emit a span (obscures current top)
-            iu = edge->u >> 20;
+            iu = static_cast<int>(edge->u >> 20);
 
             if (iu > surf2->last_u) {
                 span = span_p++;
@@ -3662,7 +3662,7 @@ void R_GenerateSpans(void)
 
     // clear active surfaces to just the background surface
     surfaces[1].next = surfaces[1].prev = &surfaces[1];
-    surfaces[1].last_u = edge_head_u_shift20;
+    surfaces[1].last_u = static_cast<int>(edge_head_u_shift20);
 
     // generate spans
     for (edge = edge_head.next; edge != &edge_tail; edge = edge->next) {
@@ -3696,7 +3696,7 @@ void R_GenerateSpansBackward(void)
 
     // clear active surfaces to just the background surface
     surfaces[1].next = surfaces[1].prev = &surfaces[1];
-    surfaces[1].last_u = edge_head_u_shift20;
+    surfaces[1].last_u = static_cast<int>(edge_head_u_shift20);
 
     // generate spans
     for (edge = edge_head.next; edge != &edge_tail; edge = edge->next) {
@@ -3894,7 +3894,7 @@ void R_RotateBmodel(void)
 
     // yaw
     angle = currententity->angles[YAW];
-    angle = angle * M_PI * 2 / 360;
+    angle = static_cast<float>(angle * M_PI * 2 / 360);
     s = sin(angle);
     c = cos(angle);
 
@@ -3910,7 +3910,7 @@ void R_RotateBmodel(void)
 
     // pitch
     angle = currententity->angles[PITCH];
-    angle = angle * M_PI * 2 / 360;
+    angle = static_cast<float>(angle * M_PI * 2 / 360);
     s = sin(angle);
     c = cos(angle);
 
@@ -3928,7 +3928,7 @@ void R_RotateBmodel(void)
 
     // roll
     angle = currententity->angles[ROLL];
-    angle = angle * M_PI * 2 / 360;
+    angle = static_cast<float>(angle * M_PI * 2 / 360);
     s = sin(angle);
     c = cos(angle);
 
@@ -4544,20 +4544,20 @@ void R_SetupAndDrawSprite()
     pverts[1][0] = r_entorigin.x + up.x + right.x;
     pverts[1][1] = r_entorigin.y + up.y + right.y;
     pverts[1][2] = r_entorigin.z + up.z + right.z;
-    pverts[1][3] = sprite_width;
+    pverts[1][3] = static_cast<float>(sprite_width);
     pverts[1][4] = 0;
 
     pverts[2][0] = r_entorigin.x + down.x + right.x;
     pverts[2][1] = r_entorigin.y + down.y + right.y;
     pverts[2][2] = r_entorigin.z + down.z + right.z;
-    pverts[2][3] = sprite_width;
-    pverts[2][4] = sprite_height;
+    pverts[2][3] = static_cast<float>(sprite_width);
+    pverts[2][4] = static_cast<float>(sprite_height);
 
     pverts[3][0] = r_entorigin.x + down.x + left.x;
     pverts[3][1] = r_entorigin.y + down.y + left.y;
     pverts[3][2] = r_entorigin.z + down.z + left.z;
     pverts[3][3] = 0;
-    pverts[3][4] = sprite_height;
+    pverts[3][4] = static_cast<float>(sprite_height);
 
     // clip to the frustum in worldspace
     nump = 4;
@@ -4587,7 +4587,7 @@ void R_SetupAndDrawSprite()
         }
 
         pout = &outverts[i];
-        pout->zi = 1.0 / transformed.z;
+        pout->zi = static_cast<float>(1.0 / transformed.z);
         if (pout->zi > r_spritedesc.nearzi) {
             r_spritedesc.nearzi = pout->zi;
         }
@@ -4637,7 +4637,7 @@ mspriteframe_t* R_GetSpriteframe(msprite_t* psprite)
         numframes = pspritegroup->numframes;
         fullinterval = pintervals[numframes - 1];
 
-        time = cl.time + currententity->syncbase;
+        time = static_cast<float>(cl.time + currententity->syncbase);
 
         // when loading in Mod_LoadSpriteGroup, we guaranteed all interval values
         // are positive, so we don't have to worry about division by 0
@@ -4729,7 +4729,7 @@ void R_DrawSprite(void)
         // generate the sprite's axes, parallel to the viewplane, but rotated in
         // that plane around the center according to the sprite entity's roll
         // angle. So vpn stays the same, but vright and vup rotate
-        angle = currententity->angles[ROLL] * (M_PI * 2 / 360);
+        angle = static_cast<float>(currententity->angles[ROLL] * (M_PI * 2 / 360));
         sr = sin(angle);
         cr = cos(angle);
 
@@ -4975,7 +4975,7 @@ qboolean R_AliasCheckBBox(void)
             zclipped = true;
         } else {
             if (viewaux[i].fv[2] < minz) {
-                minz = viewaux[i].fv[2];
+                minz = static_cast<int>(viewaux[i].fv[2]);
             }
 
             viewpts[i].flags = 0;
@@ -5022,7 +5022,7 @@ qboolean R_AliasCheckBBox(void)
             continue;
         }
 
-        zi = 1.0 / viewaux[i].fv[2];
+        zi = static_cast<float>(1.0 / viewaux[i].fv[2]);
 
         // FIXME: do with chop mode in ASM, or convert to float
         v0 = (viewaux[i].fv[0] * xscale * zi) + xcenter;
@@ -5212,9 +5212,9 @@ void R_AliasSetUpTransform(int trivial_accept)
     // FIXME: make this work for clipped case too?
     if (trivial_accept) {
         for (i = 0; i < 4; i++) {
-            aliastransform[0][i] *= aliasxscale * (1.0 / ((float)0x8000 * 0x10000));
-            aliastransform[1][i] *= aliasyscale * (1.0 / ((float)0x8000 * 0x10000));
-            aliastransform[2][i] *= 1.0 / ((float)0x8000 * 0x10000);
+            aliastransform[0][i] *= aliasxscale * static_cast<float>(1.0 / ((float)0x8000 * 0x10000));
+            aliastransform[1][i] *= aliasyscale * static_cast<float>(1.0 / ((float)0x8000 * 0x10000));
+            aliastransform[2][i] *= static_cast<float>(1.0 / ((float)0x8000 * 0x10000));
         }
     }
 }
@@ -5274,15 +5274,15 @@ void R_AliasTransformAndProjectFinalVerts(finalvert_t* fv, stvert_t* pstverts)
 
     for (i = 0; i < r_anumverts; i++, fv++, pverts++, pstverts++) {
         // transform and project
-        zi = 1.0 / (DotProduct(pverts->v, aliastransform[2]) + aliastransform[2][3]);
+        zi = static_cast<float>(1.0 / (DotProduct(pverts->v, aliastransform[2]) + aliastransform[2][3]));
 
         // x, y, and z are scaled down by 1/2**31 in the transform, so 1/z is
         // scaled up by 1/2**31, and the scaling cancels out for x and y in the
         // projection
-        fv->v[5] = zi;
+        fv->v[5] = static_cast<int>(zi);
 
-        fv->v[0] = ((DotProduct(pverts->v, aliastransform[0]) + aliastransform[0][3]) * zi) + aliasxcenter;
-        fv->v[1] = ((DotProduct(pverts->v, aliastransform[1]) + aliastransform[1][3]) * zi) + aliasycenter;
+        fv->v[0] = static_cast<int>(((DotProduct(pverts->v, aliastransform[0]) + aliastransform[0][3]) * zi) + aliasxcenter);
+        fv->v[1] = static_cast<int>(((DotProduct(pverts->v, aliastransform[1]) + aliastransform[1][3]) * zi) + aliasycenter);
 
         fv->v[2] = pstverts->s;
         fv->v[3] = pstverts->t;
@@ -5317,12 +5317,12 @@ void R_AliasProjectFinalVert(finalvert_t* fv, auxvert_t* av)
     float zi;
 
     // project points
-    zi = 1.0 / av->fv[2];
+    zi = static_cast<float>(1.0 / av->fv[2]);
 
-    fv->v[5] = zi * ziscale;
+    fv->v[5] = static_cast<int>(zi * ziscale);
 
-    fv->v[0] = (av->fv[0] * aliasxscale * zi) + aliasxcenter;
-    fv->v[1] = (av->fv[1] * aliasyscale * zi) + aliasycenter;
+    fv->v[0] = static_cast<int>((av->fv[0] * aliasxscale * zi) + aliasxcenter);
+    fv->v[1] = static_cast<int>((av->fv[1] * aliasyscale * zi) + aliasycenter);
 }
 
 /*
@@ -5381,7 +5381,7 @@ void R_AliasSetupSkin(void)
         numskins = paliasskingroup->numskins;
         fullskininterval = pskinintervals[numskins - 1];
 
-        skintime = cl.time + currententity->syncbase;
+        skintime = static_cast<float>(cl.time + currententity->syncbase);
 
         // when loading in Mod_LoadAliasSkinGroup, we guaranteed all interval
         // values are positive, so we don't have to worry about division by 0
@@ -5424,7 +5424,7 @@ void R_AliasSetupLighting(alight_t* plighting)
         r_ambientlight = LIGHT_MIN;
     }
 
-    r_shadelight = plighting->shadelight;
+    r_shadelight = static_cast<float>(plighting->shadelight);
 
     if (r_shadelight < 0) {
         r_shadelight = 0;
@@ -5469,7 +5469,7 @@ void R_AliasSetupFrame(void)
     numframes = paliasgroup->numframes;
     fullinterval = pintervals[numframes - 1];
 
-    time = cl.time + currententity->syncbase;
+    time = static_cast<float>(cl.time + currententity->syncbase);
 
     //
     // when loading in Mod_LoadAliasGroup, we guaranteed all interval values
@@ -5576,9 +5576,9 @@ void R_Alias_clip_z(finalvert_t* pfv0, finalvert_t* pfv1, finalvert_t* out)
         avout.fv[1] = pav0->fv[1] + (pav1->fv[1] - pav0->fv[1]) * scale;
         avout.fv[2] = ALIAS_Z_CLIP_PLANE;
 
-        out->v[2] = pfv0->v[2] + (pfv1->v[2] - pfv0->v[2]) * scale;
-        out->v[3] = pfv0->v[3] + (pfv1->v[3] - pfv0->v[3]) * scale;
-        out->v[4] = pfv0->v[4] + (pfv1->v[4] - pfv0->v[4]) * scale;
+        out->v[2] = static_cast<int>(pfv0->v[2] + (pfv1->v[2] - pfv0->v[2]) * scale);
+        out->v[3] = static_cast<int>(pfv0->v[3] + (pfv1->v[3] - pfv0->v[3]) * scale);
+        out->v[4] = static_cast<int>(pfv0->v[4] + (pfv1->v[4] - pfv0->v[4]) * scale);
     } else {
         scale = (ALIAS_Z_CLIP_PLANE - pav1->fv[2]) / (pav0->fv[2] - pav1->fv[2]);
 
@@ -5586,9 +5586,9 @@ void R_Alias_clip_z(finalvert_t* pfv0, finalvert_t* pfv1, finalvert_t* out)
         avout.fv[1] = pav1->fv[1] + (pav0->fv[1] - pav1->fv[1]) * scale;
         avout.fv[2] = ALIAS_Z_CLIP_PLANE;
 
-        out->v[2] = pfv1->v[2] + (pfv0->v[2] - pfv1->v[2]) * scale;
-        out->v[3] = pfv1->v[3] + (pfv0->v[3] - pfv1->v[3]) * scale;
-        out->v[4] = pfv1->v[4] + (pfv0->v[4] - pfv1->v[4]) * scale;
+        out->v[2] = static_cast<int>(pfv1->v[2] + (pfv0->v[2] - pfv1->v[2]) * scale);
+        out->v[3] = static_cast<int>(pfv1->v[3] + (pfv0->v[3] - pfv1->v[3]) * scale);
+        out->v[4] = static_cast<int>(pfv1->v[4] + (pfv0->v[4] - pfv1->v[4]) * scale);
     }
 
     R_AliasProjectFinalVert(out, &avout);
@@ -5616,14 +5616,14 @@ void R_Alias_clip_left(finalvert_t* pfv0, finalvert_t* pfv1, finalvert_t* out)
     int i;
 
     if (pfv0->v[1] >= pfv1->v[1]) {
-        scale = (float)(r_refdef.aliasvrect.x - pfv0->v[0]) / (pfv1->v[0] - pfv0->v[0]);
+        scale = static_cast<float>(r_refdef.aliasvrect.x - pfv0->v[0]) / (pfv1->v[0] - pfv0->v[0]);
         for (i = 0; i < 6; i++) {
-            out->v[i] = pfv0->v[i] + (pfv1->v[i] - pfv0->v[i]) * scale + 0.5;
+            out->v[i] = static_cast<int>(pfv0->v[i] + (pfv1->v[i] - pfv0->v[i]) * scale + 0.5);
         }
     } else {
-        scale = (float)(r_refdef.aliasvrect.x - pfv1->v[0]) / (pfv0->v[0] - pfv1->v[0]);
+        scale = static_cast<float>(r_refdef.aliasvrect.x - pfv1->v[0]) / (pfv0->v[0] - pfv1->v[0]);
         for (i = 0; i < 6; i++) {
-            out->v[i] = pfv1->v[i] + (pfv0->v[i] - pfv1->v[i]) * scale + 0.5;
+            out->v[i] = static_cast<int>(pfv1->v[i] + (pfv0->v[i] - pfv1->v[i]) * scale + 0.5);
         }
     }
 }
@@ -5636,14 +5636,14 @@ void R_Alias_clip_right(finalvert_t* pfv0,
     int i;
 
     if (pfv0->v[1] >= pfv1->v[1]) {
-        scale = (float)(r_refdef.aliasvrectright - pfv0->v[0]) / (pfv1->v[0] - pfv0->v[0]);
+        scale = static_cast<float>(r_refdef.aliasvrectright - pfv0->v[0]) / (pfv1->v[0] - pfv0->v[0]);
         for (i = 0; i < 6; i++) {
-            out->v[i] = pfv0->v[i] + (pfv1->v[i] - pfv0->v[i]) * scale + 0.5;
+            out->v[i] = static_cast<int>(pfv0->v[i] + (pfv1->v[i] - pfv0->v[i]) * scale + 0.5);
         }
     } else {
-        scale = (float)(r_refdef.aliasvrectright - pfv1->v[0]) / (pfv0->v[0] - pfv1->v[0]);
+        scale = static_cast<float>(r_refdef.aliasvrectright - pfv1->v[0]) / (pfv0->v[0] - pfv1->v[0]);
         for (i = 0; i < 6; i++) {
-            out->v[i] = pfv1->v[i] + (pfv0->v[i] - pfv1->v[i]) * scale + 0.5;
+            out->v[i] = static_cast<int>(pfv1->v[i] + (pfv0->v[i] - pfv1->v[i]) * scale + 0.5);
         }
     }
 }
@@ -5654,14 +5654,14 @@ void R_Alias_clip_top(finalvert_t* pfv0, finalvert_t* pfv1, finalvert_t* out)
     int i;
 
     if (pfv0->v[1] >= pfv1->v[1]) {
-        scale = (float)(r_refdef.aliasvrect.y - pfv0->v[1]) / (pfv1->v[1] - pfv0->v[1]);
+        scale = static_cast<float>(r_refdef.aliasvrect.y - pfv0->v[1]) / (pfv1->v[1] - pfv0->v[1]);
         for (i = 0; i < 6; i++) {
-            out->v[i] = pfv0->v[i] + (pfv1->v[i] - pfv0->v[i]) * scale + 0.5;
+            out->v[i] = static_cast<int>(pfv0->v[i] + (pfv1->v[i] - pfv0->v[i]) * scale + 0.5);
         }
     } else {
-        scale = (float)(r_refdef.aliasvrect.y - pfv1->v[1]) / (pfv0->v[1] - pfv1->v[1]);
+        scale = static_cast<float>(r_refdef.aliasvrect.y - pfv1->v[1]) / (pfv0->v[1] - pfv1->v[1]);
         for (i = 0; i < 6; i++) {
-            out->v[i] = pfv1->v[i] + (pfv0->v[i] - pfv1->v[i]) * scale + 0.5;
+            out->v[i] = static_cast<int>(pfv1->v[i] + (pfv0->v[i] - pfv1->v[i]) * scale + 0.5);
         }
     }
 }
@@ -5674,16 +5674,16 @@ void R_Alias_clip_bottom(finalvert_t* pfv0,
     int i;
 
     if (pfv0->v[1] >= pfv1->v[1]) {
-        scale = (float)(r_refdef.aliasvrectbottom - pfv0->v[1]) / (pfv1->v[1] - pfv0->v[1]);
+        scale = static_cast<float>(r_refdef.aliasvrectbottom - pfv0->v[1]) / (pfv1->v[1] - pfv0->v[1]);
 
         for (i = 0; i < 6; i++) {
-            out->v[i] = pfv0->v[i] + (pfv1->v[i] - pfv0->v[i]) * scale + 0.5;
+            out->v[i] = static_cast<int>(pfv0->v[i] + (pfv1->v[i] - pfv0->v[i]) * scale + 0.5);
         }
     } else {
-        scale = (float)(r_refdef.aliasvrectbottom - pfv1->v[1]) / (pfv0->v[1] - pfv1->v[1]);
+        scale = static_cast<float>(r_refdef.aliasvrectbottom - pfv1->v[1]) / (pfv0->v[1] - pfv1->v[1]);
 
         for (i = 0; i < 6; i++) {
-            out->v[i] = pfv1->v[i] + (pfv0->v[i] - pfv1->v[i]) * scale + 0.5;
+            out->v[i] = static_cast<int>(pfv1->v[i] + (pfv0->v[i] - pfv1->v[i]) * scale + 0.5);
         }
     }
 }
@@ -6037,7 +6037,7 @@ void R_NewMap(void)
     r_viewleaf = NULL;
     R_ClearParticles();
 
-    r_cnumsurfs = r_maxsurfs.value;
+    r_cnumsurfs = static_cast<int>(r_maxsurfs.value);
 
     if (r_cnumsurfs <= MINSURFACES) {
         r_cnumsurfs = MINSURFACES;
@@ -6058,7 +6058,7 @@ void R_NewMap(void)
     r_maxedgesseen = 0;
     r_maxsurfsseen = 0;
 
-    r_numallocatededges = r_maxedges.value;
+    r_numallocatededges = static_cast<int>(r_maxedges.value);
 
     if (r_numallocatededges < MINEDGES) {
         r_numallocatededges = MINEDGES;
@@ -6093,14 +6093,14 @@ void R_SetVrect(vrect_t* pvrectin, vrect_t* pvrect, int lineadj)
     size /= 100;
 
     h = pvrectin->height - lineadj;
-    pvrect->width = pvrectin->width * size;
+    pvrect->width = static_cast<int>(pvrectin->width * size);
     if (pvrect->width < 96) {
-        size = 96.0 / pvrectin->width;
+        size = static_cast<float>(96.0 / pvrectin->width);
         pvrect->width = 96; // min for icons
     }
 
     pvrect->width &= ~7;
-    pvrect->height = pvrectin->height * size;
+    pvrect->height = static_cast<int>(pvrectin->height * size);
     if (pvrect->height > pvrectin->height - lineadj) {
         pvrect->height = pvrectin->height - lineadj;
     }
@@ -6135,20 +6135,20 @@ void R_ViewChanged(vrect_t* pvrect, int lineadj, float aspect)
 
     R_SetVrect(pvrect, &r_refdef.vrect, lineadj);
 
-    r_refdef.horizontalFieldOfView = 2.0 * tan(r_refdef.fov_x / 360 * M_PI);
-    r_refdef.fvrectx = (float)r_refdef.vrect.x;
-    r_refdef.fvrectx_adj = (float)r_refdef.vrect.x - 0.5;
+    r_refdef.horizontalFieldOfView = static_cast<float>(2.0 * tan(r_refdef.fov_x / 360 * M_PI));
+    r_refdef.fvrectx = static_cast<float>(r_refdef.vrect.x);
+    r_refdef.fvrectx_adj = static_cast<float>(r_refdef.vrect.x) - 0.5f;
     r_refdef.vrect_x_adj_shift20 = ((int64_t)r_refdef.vrect.x << 20) + (1 << 19) - 1;
-    r_refdef.fvrecty = (float)r_refdef.vrect.y;
-    r_refdef.fvrecty_adj = (float)r_refdef.vrect.y - 0.5;
+    r_refdef.fvrecty = static_cast<float>(r_refdef.vrect.y);
+    r_refdef.fvrecty_adj = static_cast<float>(r_refdef.vrect.y) - 0.5f;
     r_refdef.vrectright = r_refdef.vrect.x + r_refdef.vrect.width;
     r_refdef.vrectright_adj_shift20 = ((int64_t)r_refdef.vrectright << 20) + (1 << 19) - 1;
-    r_refdef.fvrectright = (float)r_refdef.vrectright;
-    r_refdef.fvrectright_adj = (float)r_refdef.vrectright - 0.5;
-    r_refdef.vrectrightedge = (float)r_refdef.vrectright - 0.99;
+    r_refdef.fvrectright = static_cast<float>(r_refdef.vrectright);
+    r_refdef.fvrectright_adj = static_cast<float>(r_refdef.vrectright) - 0.5f;
+    r_refdef.vrectrightedge = static_cast<float>(r_refdef.vrectright) - 0.99f;
     r_refdef.vrectbottom = r_refdef.vrect.y + r_refdef.vrect.height;
-    r_refdef.fvrectbottom = (float)r_refdef.vrectbottom;
-    r_refdef.fvrectbottom_adj = (float)r_refdef.vrectbottom - 0.5;
+    r_refdef.fvrectbottom = static_cast<float>(r_refdef.vrectbottom);
+    r_refdef.fvrectbottom_adj = static_cast<float>(r_refdef.vrectbottom) - 0.5f;
 
     r_refdef.aliasvrect.x = (int)(r_refdef.vrect.x * r_aliasuvscale);
     r_refdef.aliasvrect.y = (int)(r_refdef.vrect.y * r_aliasuvscale);
@@ -6174,41 +6174,41 @@ void R_ViewChanged(vrect_t* pvrect, int lineadj, float aspect)
     // the polygon rasterization will never render in the first row or column
     // but will definately render in the [range] row and column, so adjust the
     // buffer origin to get an exact edge to edge fill
-    xcenter = ((float)r_refdef.vrect.width * XCENTERING) + r_refdef.vrect.x - 0.5;
+    xcenter = (static_cast<float>(r_refdef.vrect.width) * static_cast<float>(XCENTERING)) + static_cast<float>(r_refdef.vrect.x) - 0.5f;
     aliasxcenter = xcenter * r_aliasuvscale;
-    ycenter = ((float)r_refdef.vrect.height * YCENTERING) + r_refdef.vrect.y - 0.5;
+    ycenter = (static_cast<float>(r_refdef.vrect.height) * static_cast<float>(YCENTERING)) + static_cast<float>(r_refdef.vrect.y) - 0.5f;
     aliasycenter = ycenter * r_aliasuvscale;
 
-    xscale = r_refdef.vrect.width / r_refdef.horizontalFieldOfView;
+    xscale = static_cast<float>(r_refdef.vrect.width) / r_refdef.horizontalFieldOfView;
     aliasxscale = xscale * r_aliasuvscale;
-    xscaleinv = 1.0 / xscale;
+    xscaleinv = 1.0f / xscale;
     yscale = xscale * pixelAspect;
     aliasyscale = yscale * r_aliasuvscale;
-    yscaleinv = 1.0 / yscale;
-    xscaleshrink = (r_refdef.vrect.width - 6) / r_refdef.horizontalFieldOfView;
+    yscaleinv = 1.0f / yscale;
+    xscaleshrink = static_cast<float>(r_refdef.vrect.width - 6) / r_refdef.horizontalFieldOfView;
     yscaleshrink = xscaleshrink * pixelAspect;
 
     // left side clip
-    screenedge[0].normal[0] = -1.0 / (xOrigin * r_refdef.horizontalFieldOfView);
+    screenedge[0].normal[0] = static_cast<float>(-1.0 / (xOrigin * r_refdef.horizontalFieldOfView));
     screenedge[0].normal[1] = 0;
     screenedge[0].normal[2] = 1;
     screenedge[0].type = PLANE_ANYZ;
 
     // right side clip
-    screenedge[1].normal[0] = 1.0 / ((1.0 - xOrigin) * r_refdef.horizontalFieldOfView);
+    screenedge[1].normal[0] = static_cast<float>(1.0 / ((1.0 - xOrigin) * r_refdef.horizontalFieldOfView));
     screenedge[1].normal[1] = 0;
     screenedge[1].normal[2] = 1;
     screenedge[1].type = PLANE_ANYZ;
 
     // top side clip
     screenedge[2].normal[0] = 0;
-    screenedge[2].normal[1] = -1.0 / (yOrigin * verticalFieldOfView);
+    screenedge[2].normal[1] = static_cast<float>(-1.0 / (yOrigin * verticalFieldOfView));
     screenedge[2].normal[2] = 1;
     screenedge[2].type = PLANE_ANYZ;
 
     // bottom side clip
     screenedge[3].normal[0] = 0;
-    screenedge[3].normal[1] = 1.0 / ((1.0 - yOrigin) * verticalFieldOfView);
+    screenedge[3].normal[1] = static_cast<float>(1.0 / ((1.0 - yOrigin) * verticalFieldOfView));
     screenedge[3].normal[2] = 1;
     screenedge[3].type = PLANE_ANYZ;
 
@@ -6216,7 +6216,7 @@ void R_ViewChanged(vrect_t* pvrect, int lineadj, float aspect)
         VectorNormalize(screenedge[i].normal);
     }
 
-    res_scale = sqrt((double)(r_refdef.vrect.width * r_refdef.vrect.height) / (320.0 * 152.0)) * (2.0 / r_refdef.horizontalFieldOfView);
+    res_scale = static_cast<float>(sqrt(static_cast<double>(r_refdef.vrect.width * r_refdef.vrect.height) / (320.0 * 152.0)) * (2.0 / r_refdef.horizontalFieldOfView));
     r_aliastransition = r_aliastransbase.value * res_scale;
     r_resfudge = r_aliastransadj.value * res_scale;
 
@@ -6317,7 +6317,7 @@ void R_DrawEntitiesOnList(void)
                         add = cl_dlights[lnum].radius - dist.length();
 
                         if (add > 0) {
-                            lighting.ambientlight += add;
+                            lighting.ambientlight += static_cast<int>(add);
                         }
                     }
                 }
@@ -6406,7 +6406,7 @@ void R_DrawViewModel(void)
         dist = currententity->origin - dl->origin;
         add = dl->radius - dist.length();
         if (add > 0) {
-            r_viewlighting.ambientlight += add;
+            r_viewlighting.ambientlight += static_cast<int>(add);
         }
     }
 
@@ -6623,7 +6623,7 @@ void R_EdgeDrawing(void)
     R_BeginEdgeFrame();
 
     if (r_dspeeds.value) {
-        rw_time1 = Sys_FloatTime();
+        rw_time1 = static_cast<float>(Sys_FloatTime());
     }
 
     R_RenderWorld();
@@ -6637,14 +6637,14 @@ void R_EdgeDrawing(void)
     D_TurnZOn();
 
     if (r_dspeeds.value) {
-        rw_time2 = Sys_FloatTime();
+        rw_time2 = static_cast<float>(Sys_FloatTime());
         db_time1 = rw_time2;
     }
 
     R_DrawBEntitiesOnList();
 
     if (r_dspeeds.value) {
-        db_time2 = Sys_FloatTime();
+        db_time2 = static_cast<float>(Sys_FloatTime());
         se_time1 = db_time2;
     }
 
@@ -6673,7 +6673,7 @@ void R_RenderView_(void)
     r_warpbuffer = warpbuffer;
 
     if (r_timegraph.value || r_speeds.value || r_dspeeds.value) {
-        r_time1 = Sys_FloatTime();
+        r_time1 = static_cast<float>(Sys_FloatTime());
     }
 
     R_SetupFrame();
@@ -6705,28 +6705,28 @@ void R_RenderView_(void)
     }
 
     if (r_dspeeds.value) {
-        se_time2 = Sys_FloatTime();
+        se_time2 = static_cast<float>(Sys_FloatTime());
         de_time1 = se_time2;
     }
 
     R_DrawEntitiesOnList();
 
     if (r_dspeeds.value) {
-        de_time2 = Sys_FloatTime();
+        de_time2 = static_cast<float>(Sys_FloatTime());
         dv_time1 = de_time2;
     }
 
     R_DrawViewModel();
 
     if (r_dspeeds.value) {
-        dv_time2 = Sys_FloatTime();
-        dp_time1 = Sys_FloatTime();
+        dv_time2 = static_cast<float>(Sys_FloatTime());
+        dp_time1 = static_cast<float>(Sys_FloatTime());
     }
 
     R_DrawParticles();
 
     if (r_dspeeds.value) {
-        dp_time2 = Sys_FloatTime();
+        dp_time2 = static_cast<float>(Sys_FloatTime());
     }
 
     if (r_dowarp) {
@@ -6768,7 +6768,7 @@ void R_RenderView(void)
     int dummy;
     int delta;
 
-    delta = (byte*)&dummy - r_stack_start;
+    delta = static_cast<int>((byte*)&dummy - r_stack_start);
     if (delta < -10000 || delta > 10000) {
         Sys_Error("R_RenderView: called without enough stack");
     }
@@ -6798,8 +6798,8 @@ void R_InitTurb(void)
     int i;
 
     for (i = 0; i < (SIN_BUFFER_SIZE); i++) {
-        sintable[i] = AMP + sin(i * 3.14159 * 2 / CYCLE) * AMP;
-        intsintable[i] = AMP2 + sin(i * 3.14159 * 2 / CYCLE) * AMP2; // AMP2, not 20
+        sintable[i] = static_cast<int>(AMP + sin(i * 3.14159 * 2 / CYCLE) * AMP);
+        intsintable[i] = static_cast<int>(AMP2 + sin(i * 3.14159 * 2 / CYCLE) * AMP2); // AMP2, not 20
     }
 }
 

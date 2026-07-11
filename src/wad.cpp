@@ -61,11 +61,11 @@ void W_CleanupName(const char* in, char* out)
             c += ('a' - 'A');
         }
 
-        out[i] = c;
+        out[i] = static_cast<char>(c);
     }
 
     for (; i < 16; i++) {
-        out[i] = 0;
+        out[i] = static_cast<char>(0);
     }
 }
 

@@ -237,7 +237,7 @@ model_t* Mod_FindName(const char* name)
             mod_numknown++;
         }
 
-        strcpy(mod->name, name);
+        strcpy_s(mod->name, sizeof(mod->name), name);
         mod->needload = NL_NEEDS_LOADED;
     }
 
@@ -772,11 +772,11 @@ void CalcSurfaceExtents(msurface_t* s)
     }
 
     for (i = 0; i < 2; i++) {
-        bmins[i] = floor(mins[i] / 16);
-        bmaxs[i] = ceil(maxs[i] / 16);
+        bmins[i] = static_cast<int>(floor(mins[i] / 16));
+        bmaxs[i] = static_cast<int>(ceil(maxs[i] / 16));
 
-        s->texturemins[i] = bmins[i] * 16;
-        s->extents[i] = (bmaxs[i] - bmins[i]) * 16;
+        s->texturemins[i] = static_cast<short>(bmins[i] * 16);
+        s->extents[i] = static_cast<short>((bmaxs[i] - bmins[i]) * 16);
         if (!(tex->flags & TEX_SPECIAL) && s->extents[i] > 256) {
             Sys_Error("Bad surface extents");
         }
@@ -1046,13 +1046,13 @@ void Mod_MakeHull0(void)
     hull->planes = loadmodel->planes;
 
     for (i = 0; i < count; i++, out++, in++) {
-        out->planenum = in->plane - loadmodel->planes;
+        out->planenum = static_cast<int>(in->plane - loadmodel->planes);
         for (j = 0; j < 2; j++) {
             child = in->children[j];
             if (child->contents < 0) {
-                out->children[j] = child->contents;
+                out->children[j] = static_cast<short>(child->contents);
             } else {
-                out->children[j] = child - loadmodel->nodes;
+                out->children[j] = static_cast<short>(child - loadmodel->nodes);
             }
         }
     }
@@ -1149,9 +1149,9 @@ void Mod_LoadPlanes(lump_t* l)
             }
         }
 
-        out->dist = LittleFloat(in->dist);
-        out->type = LittleLong(in->type);
-        out->signbits = bits;
+        out->dist = static_cast<float>(LittleFloat(in->dist));
+        out->type = static_cast<byte>(LittleLong(in->type));
+        out->signbits = static_cast<byte>(bits);
     }
 }
 
@@ -1247,10 +1247,10 @@ void Mod_LoadBrushModel(model_t* mod, void* buffer)
         if (i < mod->numsubmodels - 1) { // duplicate the basic information
             char name[10];
 
-            sprintf(name, "*%i", i + 1);
+            sprintf_s(name, sizeof(name), "*%i", i + 1);
             loadmodel = Mod_FindName(name);
             *loadmodel = *mod;
-            strcpy(loadmodel->name, name);
+            strcpy_s(loadmodel->name, sizeof(loadmodel->name), name);
             mod = loadmodel;
         }
     }
@@ -1283,7 +1283,7 @@ void* Mod_LoadAliasFrame(void* pin,
 
     pdaliasframe = (daliasframe_t*)pin;
 
-    strcpy(name, pdaliasframe->name);
+    strcpy_s(name, 16, pdaliasframe->name);
 
     for (i = 0; i < 3; i++) {
         // these are byte values, so we don't have to worry about
@@ -1295,7 +1295,7 @@ void* Mod_LoadAliasFrame(void* pin,
     pinframe = (trivertx_t*)(pdaliasframe + 1);
     pframe = (trivertx_t *) Hunk_Alloc(numv * sizeof(*pframe), loadname);
 
-    *pframeindex = (byte*)pframe - (byte*)pheader;
+    *pframeindex = static_cast<int>((byte*)pframe - (byte*)pheader);
 
     for (j = 0; j < numv; j++) {
         int k;
@@ -1349,13 +1349,13 @@ void* Mod_LoadAliasGroup(void* pin,
         pbboxmax->v[i] = pingroup->bboxmax.v[i];
     }
 
-    *pframeindex = (byte*)paliasgroup - (byte*)pheader;
+    *pframeindex = static_cast<int>((byte*)paliasgroup - (byte*)pheader);
 
     pin_intervals = (daliasinterval_t*)(pingroup + 1);
 
     poutintervals = (float *) Hunk_Alloc(numframes * sizeof(float), loadname);
 
-    paliasgroup->intervals = (byte*)poutintervals - (byte*)pheader;
+    paliasgroup->intervals = static_cast<int>((byte*)poutintervals - (byte*)pheader);
 
     for (i = 0; i < numframes; i++) {
         *poutintervals = LittleFloat(pin_intervals->interval);
@@ -1394,7 +1394,7 @@ void* Mod_LoadAliasSkin(void* pin,
 
     pskin = (byte *) Hunk_Alloc(skinsize * r_pixbytes, loadname);
     pinskin = (byte*)pin;
-    *pskinindex = (byte*)pskin - (byte*)pheader;
+    *pskinindex = static_cast<int>((byte*)pskin - (byte*)pheader);
 
     if (r_pixbytes == 1) {
         Q_memcpy(pskin, pinskin, skinsize);
@@ -1440,13 +1440,13 @@ void* Mod_LoadAliasSkinGroup(void* pin,
 
     paliasskingroup->numskins = numskins;
 
-    *pskinindex = (byte*)paliasskingroup - (byte*)pheader;
+    *pskinindex = static_cast<int>((byte*)paliasskingroup - (byte*)pheader);
 
     pinskinintervals = (daliasskininterval_t*)(pinskingroup + 1);
 
     poutskinintervals = (float *) Hunk_Alloc(numskins * sizeof(float), loadname);
 
-    paliasskingroup->intervals = (byte*)poutskinintervals - (byte*)pheader;
+    paliasskingroup->intervals = static_cast<int>((byte*)poutskinintervals - (byte*)pheader);
 
     for (i = 0; i < numskins; i++) {
         *poutskinintervals = LittleFloat(pinskinintervals->interval);
@@ -1540,7 +1540,7 @@ void Mod_LoadAliasModel(model_t* mod, void* buffer)
     }
 
     pmodel->numframes = LittleLong(pinmodel->numframes);
-    pmodel->size = LittleFloat(pinmodel->size) * ALIAS_BASE_SIZE_RATIO;
+    pmodel->size = static_cast<float>(LittleFloat(pinmodel->size) * ALIAS_BASE_SIZE_RATIO);
     mod->synctype = (synctype_t)LittleLong(pinmodel->synctype);
     mod->numframes = pmodel->numframes;
 
@@ -1557,7 +1557,7 @@ void Mod_LoadAliasModel(model_t* mod, void* buffer)
         Sys_Error("Mod_LoadAliasModel: skinwidth not multiple of 4");
     }
 
-    pheader->model = (byte*)pmodel - (byte*)pheader;
+    pheader->model = static_cast<int>((byte*)pmodel - (byte*)pheader);
 
     //
     // load the skins
@@ -1572,7 +1572,7 @@ void Mod_LoadAliasModel(model_t* mod, void* buffer)
 
     pskindesc = (maliasskindesc_t *) Hunk_Alloc(numskins * sizeof(maliasskindesc_t), loadname);
 
-    pheader->skindesc = (byte*)pskindesc - (byte*)pheader;
+    pheader->skindesc = static_cast<int>((byte*)pskindesc - (byte*)pheader);
 
     for (i = 0; i < numskins; i++) {
         aliasskintype_t skintype;
@@ -1595,7 +1595,7 @@ void Mod_LoadAliasModel(model_t* mod, void* buffer)
     pstverts = (stvert_t*)&pmodel[1];
     pinstverts = (stvert_t*)pskintype;
 
-    pheader->stverts = (byte*)pstverts - (byte*)pheader;
+    pheader->stverts = static_cast<int>((byte*)pstverts - (byte*)pheader);
 
     for (i = 0; i < pmodel->numverts; i++) {
         pstverts[i].onseam = LittleLong(pinstverts[i].onseam);
@@ -1610,7 +1610,7 @@ void Mod_LoadAliasModel(model_t* mod, void* buffer)
     ptri = (mtriangle_t*)&pstverts[pmodel->numverts];
     pintriangles = (dtriangle_t*)&pinstverts[pmodel->numverts];
 
-    pheader->triangles = (byte*)ptri - (byte*)pheader;
+    pheader->triangles = static_cast<int>((byte*)ptri - (byte*)pheader);
 
     for (i = 0; i < pmodel->numtris; i++) {
         int j;
@@ -1703,10 +1703,10 @@ void* Mod_LoadSpriteFrame(void* pin, mspriteframe_t** ppframe)
     origin[0] = LittleLong(pinframe->origin[0]);
     origin[1] = LittleLong(pinframe->origin[1]);
 
-    pspriteframe->up = origin[1];
-    pspriteframe->down = origin[1] - height;
-    pspriteframe->left = origin[0];
-    pspriteframe->right = width + origin[0];
+    pspriteframe->up = static_cast<short>(origin[1]);
+    pspriteframe->down = static_cast<short>(origin[1] - height);
+    pspriteframe->left = static_cast<short>(origin[0]);
+    pspriteframe->right = static_cast<short>(width + origin[0]);
 
     if (r_pixbytes == 1) {
         Q_memcpy(&pspriteframe->pixels[0], (byte*)(pinframe + 1), size);
@@ -1814,10 +1814,10 @@ void Mod_LoadSpriteModel(model_t* mod, void* buffer)
     mod->synctype = (synctype_t)LittleLong(pin->synctype);
     psprite->numframes = numframes;
 
-    mod->mins[0] = mod->mins[1] = -psprite->maxwidth / 2;
-    mod->maxs[0] = mod->maxs[1] = psprite->maxwidth / 2;
-    mod->mins[2] = -psprite->maxheight / 2;
-    mod->maxs[2] = psprite->maxheight / 2;
+    mod->mins[0] = mod->mins[1] = static_cast<float>(-psprite->maxwidth) / 2.0f;
+    mod->maxs[0] = mod->maxs[1] = static_cast<float>(psprite->maxwidth) / 2.0f;
+    mod->mins[2] = static_cast<float>(-psprite->maxheight) / 2.0f;
+    mod->maxs[2] = static_cast<float>(psprite->maxheight) / 2.0f;
 
     //
     // load the frames
