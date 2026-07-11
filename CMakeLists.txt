@@ -68,7 +68,6 @@ if(MSVC)
         /W4 
         /Z7
         /w14702      # Force C4702 (Unreachable code) to be a Level 1 Warning
-        /wd4996 /wd4244 /wd4113 /wd4047 /wd4024
         # --- NEW FLAGS ---
         /Gy          # Function-level linking (puts each function in its own section)
         /Gw          # Optimize global data (puts each variable in its own section)
