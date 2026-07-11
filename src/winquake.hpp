@@ -13,14 +13,6 @@
 extern HINSTANCE global_hInstance;
 extern int global_nCmdShow;
 
-
-typedef enum { MS_WINDOWED,
-    MS_FULLSCREEN,
-    MS_FULLDIB,
-    MS_UNINIT } modestate_t;
-
-extern modestate_t modestate;
-
 extern HWND mainwindow;
 extern qboolean ActiveApp, Minimized;
 

@@ -51,20 +51,20 @@ client_t* host_client; // current client
 byte* host_basepal;
 byte* host_colormap;
 
-cvar_t host_framerate = { "host_framerate", "0" }; // set for slow motion
-cvar_t host_speeds = { "host_speeds", "0" };       // set for running times
+cvar_t host_framerate = { "host_framerate", "0", {}, {}, {}, {} }; // set for slow motion
+cvar_t host_speeds = { "host_speeds", "0", {}, {}, {}, {} };       // set for running times
 
-cvar_t sys_ticrate = { "sys_ticrate", "0.05" };
-cvar_t serverprofile = { "serverprofile", "0" };
+cvar_t sys_ticrate = { "sys_ticrate", "0.05", {}, {}, {}, {} };
+cvar_t serverprofile = { "serverprofile", "0", {}, {}, {}, {} };
 
-cvar_t samelevel = { "samelevel", "0" };
-cvar_t noexit = { "noexit", "0", false, true };
+cvar_t samelevel = { "samelevel", "0", {}, {}, {}, {} };
+cvar_t noexit = { "noexit", "0", false, true, {}, {} };
 
-cvar_t developer = { "developer", "0" };
+cvar_t developer = { "developer", "0", {}, {}, {}, {} };
 
-cvar_t pausable = { "pausable", "1" };
+cvar_t pausable = { "pausable", "1", {}, {}, {}, {} };
 
-cvar_t temp1 = { "temp1", "0" };
+cvar_t temp1 = { "temp1", "0", {}, {}, {}, {} };
 
 /*
 ================
@@ -466,7 +466,9 @@ void Host_ShutdownServer(qboolean crash)
     // clear structures
     //
     memset(&sv, 0, sizeof(sv));
-    memset(svs.clients, 0, svs.maxclientslimit * sizeof(client_t));
+    for (i = 0; i < svs.maxclientslimit; i++) {
+        svs.clients[i] = {};
+    }
 }
 
 /*
@@ -488,7 +490,7 @@ void Host_ClearMemory(void)
 
     cls.signon = 0;
     memset(&sv, 0, sizeof(sv));
-    memset(&cl, 0, sizeof(cl));
+    cl = {};
 }
 
 //============================================================================

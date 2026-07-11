@@ -142,12 +142,12 @@ net_driver_t net_drivers[MAX_NET_DRIVERS] = {
     { "Loopback", false, Loop_Init, Loop_Listen, Loop_SearchForHosts,
         Loop_Connect, Loop_CheckNewConnections, Loop_GetMessage, Loop_SendMessage,
         Loop_SendUnreliableMessage, Loop_CanSendMessage,
-        Loop_CanSendUnreliableMessage, Loop_Close, Loop_Shutdown },
+        Loop_CanSendUnreliableMessage, Loop_Close, Loop_Shutdown, {} },
     { "Datagram", false, Datagram_Init, Datagram_Listen, Datagram_SearchForHosts,
         Datagram_Connect, Datagram_CheckNewConnections, Datagram_GetMessage,
         Datagram_SendMessage, Datagram_SendUnreliableMessage,
         Datagram_CanSendMessage, Datagram_CanSendUnreliableMessage, Datagram_Close,
-        Datagram_Shutdown }
+        Datagram_Shutdown, {} }
 };
 
 int net_numdrivers = 2;
@@ -864,14 +864,14 @@ static int testDriver;
 static int testSocket;
 
 static void Test_Poll(void);
-PollProcedure testPollProcedure = { NULL, 0.0, Test_Poll };
+PollProcedure testPollProcedure = { NULL, 0.0, Test_Poll, {} };
 
 static qboolean test2InProgress = false;
 static int test2Driver;
 static int test2Socket;
 
 static void Test2_Poll(void);
-PollProcedure test2PollProcedure = { NULL, 0.0, Test2_Poll };
+PollProcedure test2PollProcedure = { NULL, 0.0, Test2_Poll, {} };
 
 #ifdef DEBUG
 char* StrAddr(struct qsockaddr* addr)
@@ -1074,7 +1074,7 @@ int Datagram_GetMessage(qsocket_t* sock)
             break;
         }
 
-        if (length == -1) {
+        if (static_cast<int>(length) == -1) {
             Con_Printf("Read error\n");
 
             return -1;
@@ -1260,14 +1260,12 @@ static void Test_Poll(void)
     int colors;
     int frags;
     int connectTime;
-    byte playerNumber;
-
     net_landriverlevel = testDriver;
 
     while (1) {
         len = dfunc.Read(testSocket, net_message.data, net_message.maxsize,
             &clientaddr);
-        if (len < sizeof(int)) {
+        if (len < static_cast<int>(sizeof(int))) {
             break;
         }
 
@@ -1280,7 +1278,7 @@ static void Test_Poll(void)
             break;
         }
 
-        if ((control & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL) {
+        if ((static_cast<unsigned int>(control) & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL) {
             break;
         }
 
@@ -1292,7 +1290,7 @@ static void Test_Poll(void)
             Sys_Error("Unexpected repsonse to Player Info request\n");
         }
 
-        playerNumber = MSG_ReadByte();
+        MSG_ReadByte();
         Q_strcpy(name, MSG_ReadString());
         colors = MSG_ReadLong();
         frags = MSG_ReadLong();
@@ -1394,7 +1392,7 @@ static void Test2_Poll(void)
 
     len = dfunc.Read(test2Socket, net_message.data, net_message.maxsize,
         &clientaddr);
-    if (len < sizeof(int)) {
+    if (len < static_cast<int>(sizeof(int))) {
         goto Reschedule;
     }
 
@@ -1407,7 +1405,7 @@ static void Test2_Poll(void)
         goto Error;
     }
 
-    if ((control & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL) {
+    if ((static_cast<unsigned int>(control) & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL) {
         goto Error;
     }
 
@@ -1596,7 +1594,7 @@ static qsocket_t* _Datagram_CheckNewConnections(void)
 
     len = dfunc.Read(acceptsock, net_message.data, net_message.maxsize,
         &clientaddr);
-    if (len < sizeof(int)) {
+    if (len < static_cast<int>(sizeof(int))) {
         return NULL;
     }
 
@@ -1609,7 +1607,7 @@ static qsocket_t* _Datagram_CheckNewConnections(void)
         return NULL;
     }
 
-    if ((control & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL) {
+    if ((static_cast<unsigned int>(control) & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL) {
         return NULL;
     }
 
@@ -1873,7 +1871,7 @@ static void _Datagram_SearchForHosts(qboolean xmit)
     while ((ret = dfunc.Read(dfunc.controlSock, net_message.data,
                 net_message.maxsize, &readaddr))
         > 0) {
-        if (ret < sizeof(int)) {
+        if (ret < static_cast<int>(sizeof(int))) {
             continue;
         }
 
@@ -1896,7 +1894,7 @@ static void _Datagram_SearchForHosts(qboolean xmit)
             continue;
         }
 
-        if ((control & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL) {
+        if ((static_cast<unsigned int>(control) & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL) {
             continue;
         }
 
@@ -2040,7 +2038,7 @@ static qsocket_t* _Datagram_Connect(const char* host)
                     continue;
                 }
 
-                if (ret < sizeof(int)) {
+                if (ret < static_cast<int>(sizeof(int))) {
                     ret = 0;
                     continue;
                 }
@@ -2055,7 +2053,7 @@ static qsocket_t* _Datagram_Connect(const char* host)
                     continue;
                 }
 
-                if ((control & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL) {
+                if ((static_cast<unsigned int>(control) & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL) {
                     ret = 0;
                     continue;
                 }
@@ -2344,8 +2342,8 @@ static int slistLastShown;
 
 static void Slist_Send(void);
 static void Slist_Poll(void);
-PollProcedure slistSendProcedure = { NULL, 0.0, Slist_Send };
-PollProcedure slistPollProcedure = { NULL, 0.0, Slist_Poll };
+PollProcedure slistSendProcedure = { NULL, 0.0, Slist_Send, {} };
+PollProcedure slistPollProcedure = { NULL, 0.0, Slist_Poll, {} };
 
 sizebuf_t net_message;
 int net_activeconnections = 0;
@@ -2355,18 +2353,18 @@ int messagesReceived = 0;
 int unreliableMessagesSent = 0;
 int unreliableMessagesReceived = 0;
 
-cvar_t net_messagetimeout = { "net_messagetimeout", "300" };
-cvar_t hostname = { "hostname", "UNNAMED" };
+cvar_t net_messagetimeout = { "net_messagetimeout", "300", {}, {}, {}, {} };
+cvar_t hostname = { "hostname", "UNNAMED", {}, {}, {}, {} };
 
 qboolean configRestored = false;
-cvar_t config_com_port = { "_config_com_port", "0x3f8", true };
-cvar_t config_com_irq = { "_config_com_irq", "4", true };
-cvar_t config_com_baud = { "_config_com_baud", "57600", true };
-cvar_t config_com_modem = { "_config_com_modem", "1", true };
-cvar_t config_modem_dialtype = { "_config_modem_dialtype", "T", true };
-cvar_t config_modem_clear = { "_config_modem_clear", "ATZ", true };
-cvar_t config_modem_init = { "_config_modem_init", "", true };
-cvar_t config_modem_hangup = { "_config_modem_hangup", "AT H", true };
+cvar_t config_com_port = { "_config_com_port", "0x3f8", true, {}, {}, {} };
+cvar_t config_com_irq = { "_config_com_irq", "4", true, {}, {}, {} };
+cvar_t config_com_baud = { "_config_com_baud", "57600", true, {}, {}, {} };
+cvar_t config_com_modem = { "_config_com_modem", "1", true, {}, {}, {} };
+cvar_t config_modem_dialtype = { "_config_modem_dialtype", "T", true, {}, {}, {} };
+cvar_t config_modem_clear = { "_config_modem_clear", "ATZ", true, {}, {}, {} };
+cvar_t config_modem_init = { "_config_modem_init", "", true, {}, {}, {} };
+cvar_t config_modem_hangup = { "_config_modem_hangup", "AT H", true, {}, {}, {} };
 
 
 int net_driverlevel;

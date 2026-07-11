@@ -4,12 +4,12 @@
 #include <cstdio>
 
 typedef struct cvar_s {
-    const char* name;
-    const char* string;
-    qboolean archive; // set to true to cause it to be saved to vars.rc
-    qboolean server;  // notifies players when changed
-    float value;
-    struct cvar_s* next;
+    const char* name = nullptr;
+    const char* string = nullptr;
+    qboolean archive = false; // set to true to cause it to be saved to vars.rc
+    qboolean server = false;  // notifies players when changed
+    float value = 0.0f;
+    struct cvar_s* next = nullptr;
 } cvar_t;
 
 namespace Cvar {

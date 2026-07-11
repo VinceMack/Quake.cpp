@@ -512,7 +512,7 @@ Draw_ConsoleBackground
 */
 void Draw_ConsoleBackground(int lines)
 {
-    int x, y, v;
+    int y, v, x;
     byte *src, *dest;
     unsigned short* pusdest;
     int f, fstep;
@@ -525,7 +525,7 @@ void Draw_ConsoleBackground(int lines)
     dest = conback->data + 320 - 43 + 320 * 186;
     sprintf(ver, "%4.2f", VERSION);
 
-    for (x = 0; x < strlen(ver); x++) {
+    for (x = 0; x < static_cast<int>(strlen(ver)); x++) {
         Draw_CharToConback(ver[x], dest + (x << 3));
     }
 

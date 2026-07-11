@@ -440,7 +440,6 @@ void Mod_LoadTextures(lump_t* l)
         memset(altanims, 0, sizeof(altanims));
 
         max = tx->name[1];
-        altmax = 0;
         if (max >= 'a' && max <= 'z') {
             max -= 'a' - 'A';
         }
@@ -1197,7 +1196,7 @@ void Mod_LoadBrushModel(model_t* mod, void* buffer)
     // swap all the lumps
     mod_base = (byte*)header;
 
-    for (i = 0; i < sizeof(dheader_t) / 4; i++) {
+    for (i = 0; i < static_cast<int>(sizeof(dheader_t) / 4); i++) {
         ((int*)header)[i] = LittleLong(((int*)header)[i]);
     }
 

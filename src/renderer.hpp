@@ -118,7 +118,6 @@ void R_PushDlights(void);
 //
 // surface cache related
 //
-extern int reinit_surfcache;
 extern qboolean r_cache_thrash;
 
 int D_SurfaceCacheForRes(int width, int height);

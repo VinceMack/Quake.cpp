@@ -42,7 +42,6 @@ public:
     std::string_view Args(void);
     void TokenizeString(std::string_view text);
     void ExecuteString(std::string_view text, Source src);
-    void Print(std::string_view text);
 
     State& GetState() { return state_; }
     const State& GetState() const { return state_; }
@@ -90,12 +89,8 @@ int Argc(void);
 std::string_view Argv(int arg);
 std::string_view Args(void);
 
-void TokenizeString(std::string_view text);
-
 void ExecuteString(std::string_view text, Source src);
 
 void ForwardToServer(void);
-
-void Print(std::string_view text);
 
 } // namespace Cmd

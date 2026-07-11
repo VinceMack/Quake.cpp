@@ -75,18 +75,18 @@ int desired_bits = 16;
 
 int sound_started = 0;
 
-cvar_t bgmvolume = { "bgmvolume", "1", true };
-cvar_t volume = { "volume", "0.7", true };
+cvar_t bgmvolume = { "bgmvolume", "1", true, {}, {}, {} };
+cvar_t volume = { "volume", "0.7", true, {}, {}, {} };
 
-cvar_t nosound = { "nosound", "0" };
-cvar_t precache = { "precache", "1" };
-cvar_t loadas8bit = { "loadas8bit", "0" };
-cvar_t bgmbuffer = { "bgmbuffer", "4096" };
-cvar_t ambient_level = { "ambient_level", "0.3" };
-cvar_t ambient_fade = { "ambient_fade", "100" };
-cvar_t snd_noextraupdate = { "snd_noextraupdate", "0" };
-cvar_t snd_show = { "snd_show", "0" };
-cvar_t _snd_mixahead = { "_snd_mixahead", "0.1", true };
+cvar_t nosound = { "nosound", "0", {}, {}, {}, {} };
+cvar_t precache = { "precache", "1", {}, {}, {}, {} };
+cvar_t loadas8bit = { "loadas8bit", "0", {}, {}, {}, {} };
+cvar_t bgmbuffer = { "bgmbuffer", "4096", {}, {}, {}, {} };
+cvar_t ambient_level = { "ambient_level", "0.3", {}, {}, {}, {} };
+cvar_t ambient_fade = { "ambient_fade", "100", {}, {}, {}, {} };
+cvar_t snd_noextraupdate = { "snd_noextraupdate", "0", {}, {}, {}, {} };
+cvar_t snd_show = { "snd_show", "0", {}, {}, {}, {} };
+cvar_t _snd_mixahead = { "_snd_mixahead", "0.1", true, {}, {}, {} };
 
 // ====================================================================
 // User-setable variables
@@ -202,7 +202,7 @@ void S_Init(void)
         shm->soundalive = true;
         shm->gamealive = true;
         shm->submission_chunk = 1;
-        shm->buffer = (unsigned char *volatile ) Hunk_Alloc(1 << 16, "shmbuf");
+        shm->buffer = (unsigned char *) Hunk_Alloc(1 << 16, "shmbuf");
     }
 
     if (shm) {
@@ -378,7 +378,6 @@ void SND_Spatialize(channel_t* ch)
     vec_t dist;
     vec_t lscale, rscale, scale;
     Vector3 source_vec;
-    sfx_t* snd;
 
     // anything coming from the view entity will allways be full volume
     if (ch->entnum == cl.viewentity) {
@@ -390,7 +389,6 @@ void SND_Spatialize(channel_t* ch)
 
     // calculate stereo seperation and distance attenuation
 
-    snd = ch->sfx;
     source_vec = ch->origin - listener_origin;
 
     dist = source_vec.normalize() * ch->dist_mult;
@@ -457,7 +455,7 @@ void S_StartSound(int entnum,
     }
 
     // spatialize
-    memset(target_chan, 0, sizeof(*target_chan));
+    *target_chan = {};
     target_chan->origin = origin;
     target_chan->dist_mult = attenuation / sound_nominal_clip_dist;
     target_chan->master_vol = vol;

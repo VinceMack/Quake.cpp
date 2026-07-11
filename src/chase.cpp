@@ -29,16 +29,12 @@ using namespace Cmd;
 
 namespace Client {
 
-cvar_t chase_back = { "chase_back", "100" };
-cvar_t chase_up = { "chase_up", "16" };
-cvar_t chase_right = { "chase_right", "0" };
-cvar_t chase_active = { "chase_active", "0" };
-
-Vector3 chase_pos;
-Vector3 chase_angles;
+cvar_t chase_back = { "chase_back", "100", {}, {}, {}, {} };
+cvar_t chase_up = { "chase_up", "16", {}, {}, {}, {} };
+cvar_t chase_right = { "chase_right", "0", {}, {}, {}, {} };
+cvar_t chase_active = { "chase_active", "0", {}, {}, {}, {} };
 
 Vector3 chase_dest;
-Vector3 chase_dest_angles;
 
 void Chase_Init(void)
 {
@@ -52,7 +48,7 @@ void TraceLine(const Vector3& start, const Vector3& end, Vector3& impact)
 {
     trace_t trace;
 
-    memset(&trace, 0, sizeof(trace));
+    trace = {};
     SV_RecursiveHullCheck(cl.worldmodel->hulls, 0, 0, 1, start, end, &trace);
 
     impact = trace.endpos;
