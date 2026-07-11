@@ -27,7 +27,10 @@ using namespace Wad;
 using namespace Cvar;
 using namespace Cmd;
 #include "d_local.hpp"
+
+#ifdef _WIN32
 #include "winquake.hpp"
+#endif
 
 cvar_t _windowed_mouse = {"_windowed_mouse", "1", {}, {}, {}, {}};
 
