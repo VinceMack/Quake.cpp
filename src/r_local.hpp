@@ -53,7 +53,7 @@ extern cvar_t r_drawflat;
 
 // !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct clipplane_s {
-    vec3_t normal;
+    Vector3 normal;
     float dist;
     struct clipplane_s* next;
     byte leftedge;
@@ -67,7 +67,7 @@ void R_RenderWorld(void);
 
 //=============================================================================
 
-extern vec3_t r_origin;
+extern Vector3 r_origin;
 
 //=============================================================================
 
@@ -165,7 +165,7 @@ void R_PrintAliasStats(void);
 void R_PrintTimes(void);
 void R_PrintDSpeeds(void);
 void R_AnimateLight(void);
-int R_LightPoint(vec3_t p);
+int R_LightPoint(const Vector3& p);
 void R_SetupFrame(void);
 void R_cshift_f(void);
 void R_EmitEdge(mvertex_t* pv0, mvertex_t* pv1);

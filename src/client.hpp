@@ -2,7 +2,7 @@
 #pragma once
 
 typedef struct {
-    vec3_t viewangles;
+    Vector3 viewangles;
 
     // intended velocities
     float forwardmove;
@@ -45,7 +45,7 @@ typedef struct {
 #define MAX_DLIGHTS 32
 
 typedef struct {
-    vec3_t origin;
+    Vector3 origin;
     float radius;
     float die;      // stop lighting after this time
     float decay;    // drop this each second
@@ -59,7 +59,7 @@ typedef struct {
     int entity;
     struct model_s* model;
     float endtime;
-    vec3_t start, end;
+    Vector3 start, end;
 } beam_t;
 
 #define MAX_EFRAGS 640
@@ -109,8 +109,6 @@ typedef struct {
 
 namespace Client {
 
-extern client_static_t cls;
-
 //
 // the client_state_t structure is wiped completely at every
 // server signon
@@ -135,15 +133,15 @@ typedef struct {
     // sent to the server each frame.  The server sets punchangle when
     // the view is temporarliy offset, and an angle reset commands at the start
     // of each level and after teleporting.
-    vec3_t mviewangles[2]; // during demo playback viewangles is lerped
+    Vector3 mviewangles[2]; // during demo playback viewangles is lerped
     // between these
-    vec3_t viewangles;
+    Vector3 viewangles;
 
-    vec3_t mvelocity[2]; // update by server, used for lean+bob
+    Vector3 mvelocity[2]; // update by server, used for lean+bob
     // (0 is newest)
-    vec3_t velocity; // lerped between mvelocity[0] and [1]
+    Vector3 velocity; // lerped between mvelocity[0] and [1]
 
-    vec3_t punchangle; // temporary offset
+    Vector3 punchangle; // temporary offset
 
     // pitch drifting vars
     float idealpitch;
@@ -232,16 +230,53 @@ extern cvar_t m_side;
 #define MAX_TEMP_ENTITIES 64    // lightning bolts, etc
 #define MAX_STATIC_ENTITIES 128 // torches, etc
 
-extern client_state_t cl;
+using EfragArray = efrag_t[MAX_EFRAGS];
+using EntityArray = entity_t[MAX_EDICTS];
+using StaticEntityArray = entity_t[MAX_STATIC_ENTITIES];
+using LightstyleArray = lightstyle_t[MAX_LIGHTSTYLES];
+using DlightArray = dlight_t[MAX_DLIGHTS];
+using TempEntityArray = entity_t[MAX_TEMP_ENTITIES];
+using BeamArray = beam_t[MAX_BEAMS];
 
-// FIXME, allocate dynamically
-extern efrag_t cl_efrags[MAX_EFRAGS];
-extern entity_t cl_entities[MAX_EDICTS];
-extern entity_t cl_static_entities[MAX_STATIC_ENTITIES];
-extern lightstyle_t cl_lightstyle[MAX_LIGHTSTYLES];
-extern dlight_t cl_dlights[MAX_DLIGHTS];
-extern entity_t cl_temp_entities[MAX_TEMP_ENTITIES];
-extern beam_t cl_beams[MAX_BEAMS];
+class ClientSubsystem {
+public:
+    client_static_t& GetStaticState() { return cls_; }
+    const client_static_t& GetStaticState() const { return cls_; }
+
+    client_state_t& GetState() { return cl_; }
+    const client_state_t& GetState() const { return cl_; }
+
+    EfragArray& GetEfrags() { return cl_efrags_; }
+    EntityArray& GetEntities() { return cl_entities_; }
+    StaticEntityArray& GetStaticEntities() { return cl_static_entities_; }
+    LightstyleArray& GetLightstyles() { return cl_lightstyle_; }
+    DlightArray& GetDlights() { return cl_dlights_; }
+    TempEntityArray& GetTempEntities() { return cl_temp_entities_; }
+    BeamArray& GetBeams() { return cl_beams_; }
+
+private:
+    client_static_t cls_;
+    client_state_t cl_;
+    efrag_t cl_efrags_[MAX_EFRAGS];
+    entity_t cl_entities_[MAX_EDICTS];
+    entity_t cl_static_entities_[MAX_STATIC_ENTITIES];
+    lightstyle_t cl_lightstyle_[MAX_LIGHTSTYLES];
+    dlight_t cl_dlights_[MAX_DLIGHTS];
+    entity_t cl_temp_entities_[MAX_TEMP_ENTITIES];
+    beam_t cl_beams_[MAX_BEAMS];
+};
+
+ClientSubsystem& GetClientSubsystem();
+
+inline client_static_t& cls = GetClientSubsystem().GetStaticState();
+inline client_state_t& cl = GetClientSubsystem().GetState();
+inline EfragArray& cl_efrags = GetClientSubsystem().GetEfrags();
+inline EntityArray& cl_entities = GetClientSubsystem().GetEntities();
+inline StaticEntityArray& cl_static_entities = GetClientSubsystem().GetStaticEntities();
+inline LightstyleArray& cl_lightstyle = GetClientSubsystem().GetLightstyles();
+inline DlightArray& cl_dlights = GetClientSubsystem().GetDlights();
+inline TempEntityArray& cl_temp_entities = GetClientSubsystem().GetTempEntities();
+inline BeamArray& cl_beams = GetClientSubsystem().GetBeams();
 
 //=============================================================================
 

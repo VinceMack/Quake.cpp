@@ -43,10 +43,10 @@ typedef enum { ALIAS_SKIN_SINGLE = 0,
 typedef struct {
     int ident;
     int version;
-    vec3_t scale;
-    vec3_t scale_origin;
+    Vector3 scale;
+    Vector3 scale_origin;
     float boundingradius;
-    vec3_t eyeposition;
+    Vector3 eyeposition;
     int numskins;
     int skinwidth;
     int skinheight;

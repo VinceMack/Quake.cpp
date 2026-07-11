@@ -84,7 +84,7 @@ float scale_for_mip;
 int ubasestep, errorterm, erroradjustup, erroradjustdown;
 int vstartscan;
 
-vec3_t transformed_modelorg;
+Vector3 transformed_modelorg;
 
 // d_surf.cpp
 float surfscale;
@@ -120,14 +120,7 @@ typedef struct {
     int* prightedgevert2;
 } edgetable;
 
-typedef struct {
-    int quotient;
-    int remainder;
-} adivtab_t;
 
-static adivtab_t adivtab[32 * 32] = {
-#include "adivtab.hpp"
-};
 
 typedef struct {
     void* pdest;
@@ -385,8 +378,8 @@ void D_CalcGradients(msurface_t* pface)
 {
     mplane_t* pplane;
     float mipscale;
-    vec3_t p_temp1;
-    vec3_t p_saxis, p_taxis;
+    Vector3 p_temp1;
+    Vector3 p_saxis, p_taxis;
     float t;
 
     pplane = pface->plane;
@@ -397,21 +390,21 @@ void D_CalcGradients(msurface_t* pface)
     TransformVector(pface->texinfo->vecs[1], p_taxis);
 
     t = xscaleinv * mipscale;
-    d_sdivzstepu = p_saxis[0] * t;
-    d_tdivzstepu = p_taxis[0] * t;
+    d_sdivzstepu = p_saxis.x * t;
+    d_tdivzstepu = p_taxis.x * t;
 
     t = yscaleinv * mipscale;
-    d_sdivzstepv = -p_saxis[1] * t;
-    d_tdivzstepv = -p_taxis[1] * t;
+    d_sdivzstepv = -p_saxis.y * t;
+    d_tdivzstepv = -p_taxis.y * t;
 
-    d_sdivzorigin = p_saxis[2] * mipscale - xcenter * d_sdivzstepu - ycenter * d_sdivzstepv;
-    d_tdivzorigin = p_taxis[2] * mipscale - xcenter * d_tdivzstepu - ycenter * d_tdivzstepv;
+    d_sdivzorigin = p_saxis.z * mipscale - xcenter * d_sdivzstepu - ycenter * d_sdivzstepv;
+    d_tdivzorigin = p_taxis.z * mipscale - xcenter * d_tdivzstepu - ycenter * d_tdivzstepv;
 
-    VectorScale(transformed_modelorg, mipscale, p_temp1);
+    p_temp1 = transformed_modelorg * mipscale;
 
     t = 0x10000 * mipscale;
-    sadjust = ((fixed16_t)(DotProduct(p_temp1, p_saxis) * 0x10000 + 0.5)) - ((pface->texturemins[0] << 16) >> miplevel) + pface->texinfo->vecs[0][3] * t;
-    tadjust = ((fixed16_t)(DotProduct(p_temp1, p_taxis) * 0x10000 + 0.5)) - ((pface->texturemins[1] << 16) >> miplevel) + pface->texinfo->vecs[1][3] * t;
+    sadjust = ((fixed16_t)(p_temp1.dot(p_saxis) * 0x10000 + 0.5)) - ((pface->texturemins[0] << 16) >> miplevel) + pface->texinfo->vecs[0][3] * t;
+    tadjust = ((fixed16_t)(p_temp1.dot(p_taxis) * 0x10000 + 0.5)) - ((pface->texturemins[1] << 16) >> miplevel) + pface->texinfo->vecs[1][3] * t;
 
     bbextents = ((pface->extents[0] << 16) >> miplevel) - 1;
     bbextentt = ((pface->extents[1] << 16) >> miplevel) - 1;
@@ -422,12 +415,12 @@ void D_DrawSurfaces(void)
     surf_t* s;
     msurface_t* pface;
     surfcache_t* pcurrentcache;
-    vec3_t world_transformed_modelorg;
-    vec3_t local_modelorg;
+    Vector3 world_transformed_modelorg;
+    Vector3 local_modelorg;
 
     currententity = &cl_entities[0];
     TransformVector(modelorg, transformed_modelorg);
-    VectorCopy(transformed_modelorg, world_transformed_modelorg);
+    world_transformed_modelorg = transformed_modelorg;
 
     if (r_drawflat.value) {
         for (s = &surfaces[1]; s < surface_p; s++) {
@@ -476,7 +469,7 @@ void D_DrawSurfaces(void)
 
                 if (s->insubmodel) {
                     currententity = s->entity;
-                    VectorSubtract(r_origin, currententity->origin, local_modelorg);
+                    local_modelorg = r_origin - currententity->origin;
                     TransformVector(local_modelorg, transformed_modelorg);
 
                     R_RotateBmodel();
@@ -488,17 +481,17 @@ void D_DrawSurfaces(void)
 
                 if (s->insubmodel) {
                     currententity = &cl_entities[0];
-                    VectorCopy(world_transformed_modelorg, transformed_modelorg);
-                    VectorCopy(base_vpn, vpn);
-                    VectorCopy(base_vup, vup);
-                    VectorCopy(base_vright, vright);
-                    VectorCopy(base_modelorg, modelorg);
+                    transformed_modelorg = world_transformed_modelorg;
+                    vpn = base_vpn;
+                    vup = base_vup;
+                    vright = base_vright;
+                    modelorg = base_modelorg;
                     R_TransformFrustum();
                 }
             } else {
                 if (s->insubmodel) {
                     currententity = s->entity;
-                    VectorSubtract(r_origin, currententity->origin, local_modelorg);
+                    local_modelorg = r_origin - currententity->origin;
                     TransformVector(local_modelorg, transformed_modelorg);
 
                     R_RotateBmodel();
@@ -520,11 +513,11 @@ void D_DrawSurfaces(void)
 
                 if (s->insubmodel) {
                     currententity = &cl_entities[0];
-                    VectorCopy(world_transformed_modelorg, transformed_modelorg);
-                    VectorCopy(base_vpn, vpn);
-                    VectorCopy(base_vup, vup);
-                    VectorCopy(base_vright, vright);
-                    VectorCopy(base_modelorg, modelorg);
+                    transformed_modelorg = world_transformed_modelorg;
+                    vpn = base_vpn;
+                    vup = base_vup;
+                    vright = base_vright;
+                    modelorg = base_modelorg;
                     R_TransformFrustum();
                 }
             }
@@ -877,7 +870,7 @@ void D_DrawZSpans(espan_t* pspan)
 void D_Sky_uv_To_st(int u, int v, fixed16_t* s, fixed16_t* t)
 {
     float wu, wv, temp;
-    vec3_t end;
+    Vector3 end;
 
     if (r_refdef.vrect.width >= r_refdef.vrect.height) {
         temp = (float)r_refdef.vrect.width;
@@ -888,15 +881,13 @@ void D_Sky_uv_To_st(int u, int v, fixed16_t* s, fixed16_t* t)
     wu = 8192.0 * (float)(u - ((int)vid.width >> 1)) / temp;
     wv = 8192.0 * (float)(((int)vid.height >> 1) - v) / temp;
 
-    end[0] = 4096 * vpn[0] + wu * vright[0] + wv * vup[0];
-    end[1] = 4096 * vpn[1] + wu * vright[1] + wv * vup[1];
-    end[2] = 4096 * vpn[2] + wu * vright[2] + wv * vup[2];
-    end[2] *= 3;
-    VectorNormalize(end);
+    end = vpn * 4096.0f + vright * wu + vup * wv;
+    end.z *= 3.0f;
+    end.normalize();
 
     temp = skytime * skyspeed;
-    *s = (int)((temp + 6 * (SKYSIZE / 2 - 1) * end[0]) * 0x10000);
-    *t = (int)((temp + 6 * (SKYSIZE / 2 - 1) * end[1]) * 0x10000);
+    *s = (int)((temp + 6 * (SKYSIZE / 2 - 1) * end.x) * 0x10000);
+    *t = (int)((temp + 6 * (SKYSIZE / 2 - 1) * end.y) * 0x10000);
 }
 
 void D_DrawSkyScans8(espan_t* pspan)
@@ -1127,7 +1118,7 @@ surfcache_t* D_SCAlloc(int width, int size)
     return new_surf;
 }
 
-surfcache_t* D_CacheSurface(msurface_t* surface, int miplevel)
+surfcache_t* D_CacheSurface(msurface_t* surface, int mip_level)
 {
     surfcache_t* cache;
 
@@ -1137,23 +1128,23 @@ surfcache_t* D_CacheSurface(msurface_t* surface, int miplevel)
     r_drawsurf.lightadj[2] = d_lightstylevalue[surface->styles[2]];
     r_drawsurf.lightadj[3] = d_lightstylevalue[surface->styles[3]];
 
-    cache = surface->cachespots[miplevel];
+    cache = surface->cachespots[mip_level];
 
     if (cache && !cache->dlight && surface->dlightframe != r_framecount && cache->texture == r_drawsurf.texture && cache->lightadj[0] == r_drawsurf.lightadj[0] && cache->lightadj[1] == r_drawsurf.lightadj[1] && cache->lightadj[2] == r_drawsurf.lightadj[2] && cache->lightadj[3] == r_drawsurf.lightadj[3]) {
         return cache;
     }
 
-    surfscale = 1.0 / (1 << miplevel);
-    r_drawsurf.surfmip = miplevel;
-    r_drawsurf.surfwidth = surface->extents[0] >> miplevel;
+    surfscale = 1.0 / (1 << mip_level);
+    r_drawsurf.surfmip = mip_level;
+    r_drawsurf.surfwidth = surface->extents[0] >> mip_level;
     r_drawsurf.rowbytes = r_drawsurf.surfwidth;
-    r_drawsurf.surfheight = surface->extents[1] >> miplevel;
+    r_drawsurf.surfheight = surface->extents[1] >> mip_level;
 
     if (!cache) {
         cache = D_SCAlloc(r_drawsurf.surfwidth,
             r_drawsurf.surfwidth * r_drawsurf.surfheight);
-        surface->cachespots[miplevel] = cache;
-        cache->owner = &surface->cachespots[miplevel];
+        surface->cachespots[mip_level] = cache;
+        cache->owner = &surface->cachespots[mip_level];
         cache->mipscale = surfscale;
     }
 
@@ -1176,7 +1167,7 @@ surfcache_t* D_CacheSurface(msurface_t* surface, int miplevel)
     c_surf++;
     R_DrawSurface();
 
-    return surface->cachespots[miplevel];
+    return surface->cachespots[mip_level];
 }
 
 // ==============================================================
@@ -1462,33 +1453,33 @@ void D_SpriteScanRightEdge(void)
 
 void D_SpriteCalculateGradients(void)
 {
-    vec3_t p_normal, p_saxis, p_taxis, p_temp1;
+    Vector3 p_normal, p_saxis, p_taxis, p_temp1;
     float distinv;
 
     TransformVector(r_spritedesc.vpn, p_normal);
     TransformVector(r_spritedesc.vright, p_saxis);
     TransformVector(r_spritedesc.vup, p_taxis);
-    VectorInverse(p_taxis);
+    p_taxis = -p_taxis;
 
-    distinv = 1.0 / (-DotProduct(modelorg, r_spritedesc.vpn));
+    distinv = 1.0 / (-modelorg.dot(r_spritedesc.vpn));
 
-    d_sdivzstepu = p_saxis[0] * xscaleinv;
-    d_tdivzstepu = p_taxis[0] * xscaleinv;
+    d_sdivzstepu = p_saxis.x * xscaleinv;
+    d_tdivzstepu = p_taxis.x * xscaleinv;
 
-    d_sdivzstepv = -p_saxis[1] * yscaleinv;
-    d_tdivzstepv = -p_taxis[1] * yscaleinv;
+    d_sdivzstepv = -p_saxis.y * yscaleinv;
+    d_tdivzstepv = -p_taxis.y * yscaleinv;
 
-    d_zistepu = p_normal[0] * xscaleinv * distinv;
-    d_zistepv = -p_normal[1] * yscaleinv * distinv;
+    d_zistepu = p_normal.x * xscaleinv * distinv;
+    d_zistepv = -p_normal.y * yscaleinv * distinv;
 
-    d_sdivzorigin = p_saxis[2] - xcenter * d_sdivzstepu - ycenter * d_sdivzstepv;
-    d_tdivzorigin = p_taxis[2] - xcenter * d_tdivzstepu - ycenter * d_tdivzstepv;
-    d_ziorigin = p_normal[2] * distinv - xcenter * d_zistepu - ycenter * d_zistepv;
+    d_sdivzorigin = p_saxis.z - xcenter * d_sdivzstepu - ycenter * d_sdivzstepv;
+    d_tdivzorigin = p_taxis.z - xcenter * d_tdivzstepu - ycenter * d_tdivzstepv;
+    d_ziorigin = p_normal.z * distinv - xcenter * d_zistepu - ycenter * d_zistepv;
 
     TransformVector(modelorg, p_temp1);
 
-    sadjust = ((fixed16_t)(DotProduct(p_temp1, p_saxis) * 0x10000 + 0.5)) - (-(cachewidth >> 1) << 16);
-    tadjust = ((fixed16_t)(DotProduct(p_temp1, p_taxis) * 0x10000 + 0.5)) - (-(sprite_height >> 1) << 16);
+    sadjust = ((fixed16_t)(p_temp1.dot(p_saxis) * 0x10000 + 0.5)) - (-(cachewidth >> 1) << 16);
+    tadjust = ((fixed16_t)(p_temp1.dot(p_taxis) * 0x10000 + 0.5)) - (-(sprite_height >> 1) << 16);
 
     bbextents = (cachewidth << 16) - 1;
     bbextentt = (sprite_height << 16) - 1;
@@ -1857,26 +1848,18 @@ void D_PolysetSetUpForLineScan(fixed8_t startvertu,
 {
     double dm, dn;
     int tm, tn;
-    adivtab_t* ptemp;
 
     errorterm = -1;
 
     tm = endvertu - startvertu;
     tn = endvertv - startvertv;
 
-    if (((tm <= 16) && (tm >= -15)) && ((tn <= 16) && (tn >= -15))) {
-        ptemp = &adivtab[((tm + 15) << 5) + (tn + 15)];
-        ubasestep = ptemp->quotient;
-        erroradjustup = ptemp->remainder;
-        erroradjustdown = tn;
-    } else {
-        dm = (double)tm;
-        dn = (double)tn;
+    dm = (double)tm;
+    dn = (double)tn;
 
-        FloorDivMod(dm, dn, &ubasestep, &erroradjustup);
+    FloorDivMod(dm, dn, &ubasestep, &erroradjustup);
 
-        erroradjustdown = dn;
-    }
+    erroradjustdown = tn;
 }
 
 void D_PolysetCalcGradients(int s_width)
@@ -2210,25 +2193,25 @@ void D_StartParticles(void)
 
 void D_DrawParticle(particle_t* pparticle)
 {
-    vec3_t local, transformed;
+    Vector3 local, transformed;
     float zi;
     byte* pdest;
     short* pz;
     int i, izi, pix, count, u, v;
 
-    VectorSubtract(pparticle->org, r_origin, local);
+    local = pparticle->org - r_origin;
 
-    transformed[0] = DotProduct(local, r_pright);
-    transformed[1] = DotProduct(local, r_pup);
-    transformed[2] = DotProduct(local, r_ppn);
+    transformed.x = local.dot(r_pright);
+    transformed.y = local.dot(r_pup);
+    transformed.z = local.dot(r_ppn);
 
-    if (transformed[2] < PARTICLE_Z_CLIP) {
+    if (transformed.z < PARTICLE_Z_CLIP) {
         return;
     }
 
-    zi = 1.0 / transformed[2];
-    u = (int)(xcenter + zi * transformed[0] + 0.5);
-    v = (int)(ycenter - zi * transformed[1] + 0.5);
+    zi = 1.0 / transformed.z;
+    u = (int)(xcenter + zi * transformed.x + 0.5);
+    v = (int)(ycenter - zi * transformed.y + 0.5);
 
     if ((v > d_vrectbottom_particle) || (u > d_vrectright_particle) || (v < d_vrecty) || (u < d_vrectx)) {
         return;

@@ -1,8 +1,8 @@
-// sound.h -- client sound i/o functions
+// audio.hpp -- client sound i/o functions
 #pragma once
 
-#ifndef __SOUND__
-#define __SOUND__
+#ifndef __AUDIO__
+#define __AUDIO__
 
 #define DEFAULT_SOUND_PACKET_VOLUME 255
 #define DEFAULT_SOUND_PACKET_ATTENUATION 1.0
@@ -51,7 +51,7 @@ typedef struct {
     int looping;     // where to loop, -1 = no looping
     int entnum;      // to allow overriding a specific sound
     int entchannel;  //
-    vec3_t origin;   // origin of sound effect
+    Vector3 origin;   // origin of sound effect
     vec_t dist_mult; // distance multiplier (attenuation/clipK)
     int master_vol;  // 0-255 master volume
 } channel_t;
@@ -73,14 +73,14 @@ void S_Shutdown(void);
 void S_StartSound(int entnum,
     int entchannel,
     sfx_t* sfx,
-    vec3_t origin,
+    const Vector3& origin,
     float fvol,
     float attenuation);
-void S_StaticSound(sfx_t* sfx, vec3_t origin, float vol, float attenuation);
+void S_StaticSound(sfx_t* sfx, const Vector3& origin, float vol, float attenuation);
 void S_StopSound(int entnum, int entchannel);
 void S_StopAllSounds(qboolean clear);
 void S_ClearBuffer(void);
-void S_Update(vec3_t origin, vec3_t v_forward, vec3_t v_right, vec3_t v_up);
+void S_Update(const Vector3& origin, const Vector3& v_forward, const Vector3& v_right, const Vector3& v_up);
 void S_ExtraUpdate(void);
 
 sfx_t* S_PrecacheSound(const char* sample);
@@ -126,10 +126,10 @@ extern int total_channels;
 
 extern qboolean fakedma;
 extern int paintedtime;
-extern vec3_t listener_origin;
-extern vec3_t listener_forward;
-extern vec3_t listener_right;
-extern vec3_t listener_up;
+extern Vector3 listener_origin;
+extern Vector3 listener_forward;
+extern Vector3 listener_right;
+extern Vector3 listener_up;
 extern volatile dma_t* shm;
 extern volatile dma_t sn;
 extern vec_t sound_nominal_clip_dist;
@@ -151,7 +151,5 @@ void SND_InitScaletable(void);
 void SNDDMA_Submit(void);
 
 } // namespace Audio
-
-
 
 #endif

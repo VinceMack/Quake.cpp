@@ -83,16 +83,16 @@ V_CalcRoll
 Used by view and sv_user
 ===============
 */
-vec3_t forward, right, up;
+Vector3 forward, right, up;
 
-float V_CalcRoll(vec3_t angles, vec3_t velocity)
+float V_CalcRoll(const Vector3& angles, const Vector3& velocity)
 {
     float sign;
     float side;
     float value;
 
     AngleVectors(angles, forward, right, up);
-    side = DotProduct(velocity, right);
+    side = velocity.dot(right);
     sign = side < 0 ? -1 : 1;
     side = fabs(side);
 
@@ -312,18 +312,17 @@ V_ParseDamage
 void V_ParseDamage(void)
 {
     int armor, blood;
-    vec3_t from;
-    int i;
-    vec3_t v_forward, v_right, v_up;
+    Vector3 from;
+    Vector3 v_forward, v_right, v_up;
     entity_t* ent;
     float side;
     float count;
 
     armor = MSG_ReadByte();
     blood = MSG_ReadByte();
-    for (i = 0; i < 3; i++) {
-        from[i] = MSG_ReadCoord();
-    }
+    from.x = MSG_ReadCoord();
+    from.y = MSG_ReadCoord();
+    from.z = MSG_ReadCoord();
 
     count = blood * 0.5 + armor * 0.5;
     if (count < 10) {
@@ -360,15 +359,15 @@ void V_ParseDamage(void)
     //
     ent = &cl_entities[cl.viewentity];
 
-    VectorSubtract(from, ent->origin, from);
-    VectorNormalize(from);
+    from = from - ent->origin;
+    from.normalize();
 
     AngleVectors(ent->angles, v_forward, v_right, v_up);
 
-    side = DotProduct(from, v_right);
+    side = from.dot(v_right);
     v_dmg_roll = count * side * v_kickroll.value;
 
-    side = DotProduct(from, v_forward);
+    side = from.dot(v_forward);
     v_dmg_pitch = count * side * v_kickpitch.value;
 
     v_dmg_time = v_kicktime.value;
@@ -730,9 +729,8 @@ V_CalcRefdef
 void V_CalcRefdef(void)
 {
     entity_t *ent, *view;
-    int i;
-    vec3_t v_forward, v_right, v_up;
-    vec3_t angles;
+    Vector3 v_forward, v_right, v_up;
+    Vector3 angles;
     float bob;
     static float oldz = 0;
 
@@ -753,17 +751,15 @@ void V_CalcRefdef(void)
     bob = V_CalcBob();
 
     // refresh position
-    VectorCopy(ent->origin, r_refdef.vieworg);
-    r_refdef.vieworg[2] += cl.viewheight + bob;
+    r_refdef.vieworg = ent->origin;
+    r_refdef.vieworg.z += cl.viewheight + bob;
 
     // never let it sit exactly on a node line, because a water plane can
     // dissapear when viewed with the eye exactly on it.
     // the server protocol only specifies to 1/16 pixel, so add 1/32 in each axis
-    r_refdef.vieworg[0] += 1.0 / 32;
-    r_refdef.vieworg[1] += 1.0 / 32;
-    r_refdef.vieworg[2] += 1.0 / 32;
+    r_refdef.vieworg += Vector3(1.0f / 32.0f, 1.0f / 32.0f, 1.0f / 32.0f);
 
-    VectorCopy(cl.viewangles, r_refdef.viewangles);
+    r_refdef.viewangles = cl.viewangles;
     V_CalcViewRoll();
     V_AddIdle();
 
@@ -775,26 +771,20 @@ void V_CalcRefdef(void)
 
     AngleVectors(angles, v_forward, v_right, v_up);
 
-    for (i = 0; i < 3; i++) {
-        r_refdef.vieworg[i] += scr_ofsx.value * v_forward[i] + scr_ofsy.value * v_right[i] + scr_ofsz.value * v_up[i];
-    }
+    r_refdef.vieworg += v_forward * scr_ofsx.value + v_right * scr_ofsy.value + v_up * scr_ofsz.value;
 
     V_BoundOffsets();
 
     // set up gun position
-    VectorCopy(cl.viewangles, view->angles);
+    view->angles = cl.viewangles;
 
     CalcGunAngle();
 
-    VectorCopy(ent->origin, view->origin);
-    view->origin[2] += cl.viewheight;
+    view->origin = ent->origin;
+    view->origin.z += cl.viewheight;
 
-    for (i = 0; i < 3; i++) {
-        view->origin[i] += forward[i] * bob * 0.4;
-        //		view->origin[i] += right[i]*bob*0.4;
-        //		view->origin[i] += up[i]*bob*0.8;
-    }
-    view->origin[2] += bob;
+    view->origin += forward * (bob * 0.4f);
+    view->origin.z += bob;
 
     // fudge position around to keep amount of weapon visible
     // roughly equal with different FOV

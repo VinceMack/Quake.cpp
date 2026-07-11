@@ -34,7 +34,7 @@ namespace Render {
 namespace {
     int r_bmodelactive;
     mnode_t* r_pefragtopnode;
-    vec3_t r_emins, r_emaxs;
+    Vector3 r_emins, r_emaxs;
     int r_dlightframecount;
     int c_faceclip;
     clipplane_t view_clipplanes[4];
@@ -46,9 +46,9 @@ namespace {
     edge_t edge_head;
     edge_t edge_tail;
     edge_t edge_aftertail;
-    vec3_t r_entorigin;
+    Vector3 r_entorigin;
     float entity_rotation[3][3];
-    vec3_t r_worldmodelorg;
+    Vector3 r_worldmodelorg;
     int r_currentbkey;
     mtriangle_t* ptriangles;
     mdl_t* pmdl;
@@ -478,13 +478,13 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-int RecursiveLightPoint(mnode_t* node, vec3_t start, vec3_t end)
+int RecursiveLightPoint(mnode_t* node, const Vector3& start, const Vector3& end)
 {
     int r;
     float front, back, frac;
     int side;
     mplane_t* plane;
-    vec3_t mid;
+    Vector3 mid;
     msurface_t* surf;
     int s, t, ds, dt;
     int i;
@@ -501,8 +501,8 @@ int RecursiveLightPoint(mnode_t* node, vec3_t start, vec3_t end)
 
     // FIXME: optimize for axial
     plane = node->plane;
-    front = DotProduct(start, plane->normal) - plane->dist;
-    back = DotProduct(end, plane->normal) - plane->dist;
+    front = start.dot(plane->normal) - plane->dist;
+    back = end.dot(plane->normal) - plane->dist;
     side = front < 0;
 
     if ((back < 0) == side) {
@@ -510,9 +510,7 @@ int RecursiveLightPoint(mnode_t* node, vec3_t start, vec3_t end)
     }
 
     frac = front / (front - back);
-    mid[0] = start[0] + (end[0] - start[0]) * frac;
-    mid[1] = start[1] + (end[1] - start[1]) * frac;
-    mid[2] = start[2] + (end[2] - start[2]) * frac;
+    mid = start + (end - start) * frac;
 
     // go down front side
     r = RecursiveLightPoint(node->children[side], start, mid);
@@ -534,8 +532,8 @@ int RecursiveLightPoint(mnode_t* node, vec3_t start, vec3_t end)
 
         tex = surf->texinfo;
 
-        s = DotProduct(mid, tex->vecs[0]) + tex->vecs[0][3];
-        t = DotProduct(mid, tex->vecs[1]) + tex->vecs[1][3];
+        s = mid.dot(tex->vecs[0]) + tex->vecs[0][3];
+        t = mid.dot(tex->vecs[1]) + tex->vecs[1][3];
         ;
 
         if (s < surf->texturemins[0] || t < surf->texturemins[1]) {
@@ -577,18 +575,16 @@ int RecursiveLightPoint(mnode_t* node, vec3_t start, vec3_t end)
     return RecursiveLightPoint(node->children[!side], mid, end);
 }
 
-int R_LightPoint(vec3_t p)
+int R_LightPoint(const Vector3& p)
 {
-    vec3_t end;
+    Vector3 end;
     int r;
 
     if (!cl.worldmodel->lightdata) {
         return 255;
     }
 
-    end[0] = p[0];
-    end[1] = p[1];
-    end[2] = p[2] - 2048;
+    end = p - Vector3(0.0f, 0.0f, 2048.0f);
 
     r = RecursiveLightPoint(cl.worldmodel->nodes, p, end);
 
@@ -623,7 +619,7 @@ particle_t *active_particles, *free_particles;
 particle_t* particles;
 int r_numparticles;
 
-vec3_t r_pright, r_pup, r_ppn;
+Vector3 r_pright, r_pup, r_ppn;
 
 /*
 ===============
@@ -657,8 +653,8 @@ R_EntityParticles
 */
 
 #define NUMVERTEXNORMALS 162
-extern float r_avertexnormals[NUMVERTEXNORMALS][3];
-vec3_t avelocities[NUMVERTEXNORMALS];
+float r_avertexnormals[NUMVERTEXNORMALS][3];
+Vector3 avelocities[NUMVERTEXNORMALS];
 float beamlength = 16;
 
 void R_EntityParticles(entity_t* ent)
@@ -668,13 +664,13 @@ void R_EntityParticles(entity_t* ent)
     particle_t* p;
     float angle;
     float sr, sp, sy, cr, cp, cy;
-    vec3_t forward;
+    Vector3 forward;
     float dist;
 
     dist = 64;
     count = 50;
 
-    if (!avelocities[0][0]) {
+    if (!avelocities[0].x) {
         for (int j = 0; j < NUMVERTEXNORMALS; j++) {
             for (i = 0; i < 3; i++) {
                 avelocities[j][i] = (rand() & 255) * 0.01f;
@@ -683,19 +679,19 @@ void R_EntityParticles(entity_t* ent)
     }
 
     for (i = 0; i < NUMVERTEXNORMALS; i++) {
-        angle = cl.time * avelocities[i][0];
+        angle = cl.time * avelocities[i].x;
         sy = sin(angle);
         cy = cos(angle);
-        angle = cl.time * avelocities[i][1];
+        angle = cl.time * avelocities[i].y;
         sp = sin(angle);
         cp = cos(angle);
-        angle = cl.time * avelocities[i][2];
+        angle = cl.time * avelocities[i].z;
         sr = sin(angle);
         cr = cos(angle);
 
-        forward[0] = cp * cy;
-        forward[1] = cp * sy;
-        forward[2] = -sp;
+        forward.x = cp * cy;
+        forward.y = cp * sy;
+        forward.z = -sp;
 
         if (!free_particles) {
             return;
@@ -710,9 +706,7 @@ void R_EntityParticles(entity_t* ent)
         p->color = 0x6f;
         p->type = pt_explode;
 
-        p->org[0] = ent->origin[0] + r_avertexnormals[i][0] * dist + forward[0] * beamlength;
-        p->org[1] = ent->origin[1] + r_avertexnormals[i][1] * dist + forward[1] * beamlength;
-        p->org[2] = ent->origin[2] + r_avertexnormals[i][2] * dist + forward[2] * beamlength;
+        p->org = ent->origin + Vector3(r_avertexnormals[i][0], r_avertexnormals[i][1], r_avertexnormals[i][2]) * dist + forward * beamlength;
     }
 }
 
@@ -737,7 +731,7 @@ void R_ClearParticles(void)
 void R_ReadPointFile_f(void)
 {
     FILE* f;
-    vec3_t org;
+    Vector3 org;
     int r;
     int c;
     particle_t* p;
@@ -775,8 +769,8 @@ void R_ReadPointFile_f(void)
         p->die = 99999;
         p->color = (-c) & 15;
         p->type = pt_static;
-        VectorCopy(vec3_origin, p->vel);
-        VectorCopy(org, p->org);
+        p->vel = vec3_origin;
+        p->org = org;
     }
 
     fclose(f);
@@ -792,15 +786,17 @@ Parse an effect out of the server message
 */
 void R_ParseParticleEffect(void)
 {
-    vec3_t org, dir;
-    int i, count, msgcount, color;
+    Vector3 org, dir;
+    int count, msgcount, color;
 
-    for (i = 0; i < 3; i++) {
-        org[i] = MSG_ReadCoord();
-    }
-    for (i = 0; i < 3; i++) {
-        dir[i] = MSG_ReadChar() * (1.0 / 16);
-    }
+    org.x = MSG_ReadCoord();
+    org.y = MSG_ReadCoord();
+    org.z = MSG_ReadCoord();
+
+    dir.x = MSG_ReadChar() * (1.0f / 16.0f);
+    dir.y = MSG_ReadChar() * (1.0f / 16.0f);
+    dir.z = MSG_ReadChar() * (1.0f / 16.0f);
+
     msgcount = MSG_ReadByte();
     color = MSG_ReadByte();
 
@@ -819,9 +815,9 @@ R_ParticleExplosion
 
 ===============
 */
-void R_ParticleExplosion(vec3_t org)
+void R_ParticleExplosion(const Vector3& org)
 {
-    int i, j;
+    int i;
     particle_t* p;
 
     for (i = 0; i < 1024; i++) {
@@ -839,17 +835,11 @@ void R_ParticleExplosion(vec3_t org)
         p->ramp = rand() & 3;
         if (i & 1) {
             p->type = pt_explode;
-            for (j = 0; j < 3; j++) {
-                p->org[j] = org[j] + ((rand() % 32) - 16);
-                p->vel[j] = (rand() % 512) - 256;
-            }
         } else {
             p->type = pt_explode2;
-            for (j = 0; j < 3; j++) {
-                p->org[j] = org[j] + ((rand() % 32) - 16);
-                p->vel[j] = (rand() % 512) - 256;
-            }
         }
+        p->org = org + Vector3((rand() % 32) - 16, (rand() % 32) - 16, (rand() % 32) - 16);
+        p->vel = Vector3((rand() % 512) - 256, (rand() % 512) - 256, (rand() % 512) - 256);
     }
 }
 
@@ -859,9 +849,9 @@ R_ParticleExplosion2
 
 ===============
 */
-void R_ParticleExplosion2(vec3_t org, int colorStart, int colorLength)
+void R_ParticleExplosion2(const Vector3& org, int colorStart, int colorLength)
 {
-    int i, j;
+    int i;
     particle_t* p;
     int colorMod = 0;
 
@@ -880,10 +870,8 @@ void R_ParticleExplosion2(vec3_t org, int colorStart, int colorLength)
         colorMod++;
 
         p->type = pt_blob;
-        for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((rand() % 32) - 16);
-            p->vel[j] = (rand() % 512) - 256;
-        }
+        p->org = org + Vector3((rand() % 32) - 16, (rand() % 32) - 16, (rand() % 32) - 16);
+        p->vel = Vector3((rand() % 512) - 256, (rand() % 512) - 256, (rand() % 512) - 256);
     }
 }
 
@@ -893,9 +881,9 @@ R_BlobExplosion
 
 ===============
 */
-void R_BlobExplosion(vec3_t org)
+void R_BlobExplosion(const Vector3& org)
 {
-    int i, j;
+    int i;
     particle_t* p;
 
     for (i = 0; i < 1024; i++) {
@@ -913,18 +901,12 @@ void R_BlobExplosion(vec3_t org)
         if (i & 1) {
             p->type = pt_blob;
             p->color = 66 + rand() % 6;
-            for (j = 0; j < 3; j++) {
-                p->org[j] = org[j] + ((rand() % 32) - 16);
-                p->vel[j] = (rand() % 512) - 256;
-            }
         } else {
             p->type = pt_blob2;
             p->color = 150 + rand() % 6;
-            for (j = 0; j < 3; j++) {
-                p->org[j] = org[j] + ((rand() % 32) - 16);
-                p->vel[j] = (rand() % 512) - 256;
-            }
         }
+        p->org = org + Vector3((rand() % 32) - 16, (rand() % 32) - 16, (rand() % 32) - 16);
+        p->vel = Vector3((rand() % 512) - 256, (rand() % 512) - 256, (rand() % 512) - 256);
     }
 }
 
@@ -934,9 +916,9 @@ R_RunParticleEffect
 
 ===============
 */
-void R_RunParticleEffect(vec3_t org, vec3_t dir, int color, int count)
+void R_RunParticleEffect(const Vector3& org, const Vector3& dir, int color, int count)
 {
-    int i, j;
+    int i;
     particle_t* p;
 
     for (i = 0; i < count; i++) {
@@ -955,25 +937,17 @@ void R_RunParticleEffect(vec3_t org, vec3_t dir, int color, int count)
             p->ramp = rand() & 3;
             if (i & 1) {
                 p->type = pt_explode;
-                for (j = 0; j < 3; j++) {
-                    p->org[j] = org[j] + ((rand() % 32) - 16);
-                    p->vel[j] = (rand() % 512) - 256;
-                }
             } else {
                 p->type = pt_explode2;
-                for (j = 0; j < 3; j++) {
-                    p->org[j] = org[j] + ((rand() % 32) - 16);
-                    p->vel[j] = (rand() % 512) - 256;
-                }
             }
+            p->org = org + Vector3((rand() % 32) - 16, (rand() % 32) - 16, (rand() % 32) - 16);
+            p->vel = Vector3((rand() % 512) - 256, (rand() % 512) - 256, (rand() % 512) - 256);
         } else {
             p->die = cl.time + 0.1 * (rand() % 5);
             p->color = (color & ~7) + (rand() & 7);
             p->type = pt_slowgrav;
-            for (j = 0; j < 3; j++) {
-                p->org[j] = org[j] + ((rand() & 15) - 8);
-                p->vel[j] = dir[j] * 15; // + (rand()%300)-150;
-            }
+            p->org = org + Vector3((rand() & 15) - 8, (rand() & 15) - 8, (rand() & 15) - 8);
+            p->vel = dir * 15; // + (rand()%300)-150;
         }
     }
 }
@@ -984,12 +958,12 @@ R_LavaSplash
 
 ===============
 */
-void R_LavaSplash(vec3_t org)
+void R_LavaSplash(const Vector3& org)
 {
     int i, j, k;
     particle_t* p;
     float vel;
-    vec3_t dir;
+    Vector3 dir;
 
     for (i = -16; i < 16; i++) {
         for (j = -16; j < 16; j++) {
@@ -1007,17 +981,15 @@ void R_LavaSplash(vec3_t org)
                 p->color = 224 + (rand() & 7);
                 p->type = pt_slowgrav;
 
-                dir[0] = j * 8 + (rand() & 7);
-                dir[1] = i * 8 + (rand() & 7);
-                dir[2] = 256;
+                dir.x = j * 8 + (rand() & 7);
+                dir.y = i * 8 + (rand() & 7);
+                dir.z = 256;
 
-                p->org[0] = org[0] + dir[0];
-                p->org[1] = org[1] + dir[1];
-                p->org[2] = org[2] + (rand() & 63);
+                p->org = org + Vector3(dir.x, dir.y, (float)(rand() & 63));
 
-                VectorNormalize(dir);
+                dir.normalize();
                 vel = 50 + (rand() & 63);
-                VectorScale(dir, vel, p->vel);
+                p->vel = dir * vel;
             }
         }
     }
@@ -1029,12 +1001,12 @@ R_TeleportSplash
 
 ===============
 */
-void R_TeleportSplash(vec3_t org)
+void R_TeleportSplash(const Vector3& org)
 {
     int i, j, k;
     particle_t* p;
     float vel;
-    vec3_t dir;
+    Vector3 dir;
 
     for (i = -16; i < 16; i += 4) {
         for (j = -16; j < 16; j += 4) {
@@ -1052,33 +1024,28 @@ void R_TeleportSplash(vec3_t org)
                 p->color = 7 + (rand() & 7);
                 p->type = pt_slowgrav;
 
-                dir[0] = j * 8;
-                dir[1] = i * 8;
-                dir[2] = k * 8;
+                dir = Vector3(j * 8, i * 8, k * 8);
 
-                p->org[0] = org[0] + i + (rand() & 3);
-                p->org[1] = org[1] + j + (rand() & 3);
-                p->org[2] = org[2] + k + (rand() & 3);
+                p->org = org + Vector3(i + (rand() & 3), j + (rand() & 3), k + (rand() & 3));
 
-                VectorNormalize(dir);
+                dir.normalize();
                 vel = 50 + (rand() & 63);
-                VectorScale(dir, vel, p->vel);
+                p->vel = dir * vel;
             }
         }
     }
 }
 
-void R_RocketTrail(vec3_t start, vec3_t end, int type)
+void R_RocketTrail(Vector3 start, const Vector3& end, int type)
 {
-    vec3_t vec;
+    Vector3 vec;
     float len;
-    int j;
     particle_t* p;
     int dec;
     static int tracercount;
 
-    VectorSubtract(end, start, vec);
-    len = VectorNormalize(vec);
+    vec = end - start;
+    len = vec.normalize();
     if (type < 128) {
         dec = 3;
     } else {
@@ -1098,7 +1065,7 @@ void R_RocketTrail(vec3_t start, vec3_t end, int type)
         p->next = active_particles;
         active_particles = p;
 
-        VectorCopy(vec3_origin, p->vel);
+        p->vel = vec3_origin;
         p->die = cl.time + 2;
 
         switch (type) {
@@ -1106,26 +1073,20 @@ void R_RocketTrail(vec3_t start, vec3_t end, int type)
             p->ramp = (rand() & 3);
             p->color = ramp3[(int)p->ramp];
             p->type = pt_fire;
-            for (j = 0; j < 3; j++) {
-                p->org[j] = start[j] + ((rand() % 6) - 3);
-            }
+            p->org = start + Vector3((rand() % 6) - 3, (rand() % 6) - 3, (rand() % 6) - 3);
             break;
 
         case 1: // smoke smoke
             p->ramp = (rand() & 3) + 2;
             p->color = ramp3[(int)p->ramp];
             p->type = pt_fire;
-            for (j = 0; j < 3; j++) {
-                p->org[j] = start[j] + ((rand() % 6) - 3);
-            }
+            p->org = start + Vector3((rand() % 6) - 3, (rand() % 6) - 3, (rand() % 6) - 3);
             break;
 
         case 2: // blood
             p->type = pt_grav;
             p->color = 67 + (rand() & 3);
-            for (j = 0; j < 3; j++) {
-                p->org[j] = start[j] + ((rand() % 6) - 3);
-            }
+            p->org = start + Vector3((rand() % 6) - 3, (rand() % 6) - 3, (rand() % 6) - 3);
             break;
 
         case 3:
@@ -1140,13 +1101,15 @@ void R_RocketTrail(vec3_t start, vec3_t end, int type)
 
             tracercount++;
 
-            VectorCopy(start, p->org);
+            p->org = start;
             if (tracercount & 1) {
-                p->vel[0] = 30 * vec[1];
-                p->vel[1] = 30 * -vec[0];
+                p->vel.x = 30 * vec.y;
+                p->vel.y = 30 * -vec.x;
+                p->vel.z = 0;
             } else {
-                p->vel[0] = 30 * -vec[1];
-                p->vel[1] = 30 * vec[0];
+                p->vel.x = 30 * -vec.y;
+                p->vel.y = 30 * vec.x;
+                p->vel.z = 0;
             }
 
             break;
@@ -1154,9 +1117,7 @@ void R_RocketTrail(vec3_t start, vec3_t end, int type)
         case 4: // slight blood
             p->type = pt_grav;
             p->color = 67 + (rand() & 3);
-            for (j = 0; j < 3; j++) {
-                p->org[j] = start[j] + ((rand() % 6) - 3);
-            }
+            p->org = start + Vector3((rand() % 6) - 3, (rand() % 6) - 3, (rand() % 6) - 3);
             len -= 3;
             break;
 
@@ -1164,13 +1125,11 @@ void R_RocketTrail(vec3_t start, vec3_t end, int type)
             p->color = 9 * 16 + 8 + (rand() & 3);
             p->type = pt_static;
             p->die = cl.time + 0.3;
-            for (j = 0; j < 3; j++) {
-                p->org[j] = start[j] + ((rand() & 15) - 8);
-            }
+            p->org = start + Vector3((rand() & 15) - 8, (rand() & 15) - 8, (rand() & 15) - 8);
             break;
         }
 
-        VectorAdd(start, vec, start);
+        start += vec;
     }
 }
 
@@ -1483,9 +1442,8 @@ void R_AddDynamicLights(void)
     int lnum;
     int sd, td;
     float dist, rad, minlight;
-    vec3_t impact, local;
+    Vector3 impact, local;
     int s, t;
-    int i;
     int smax, tmax;
     mtexinfo_t* tex;
 
@@ -1500,7 +1458,7 @@ void R_AddDynamicLights(void)
         }
 
         rad = cl_dlights[lnum].radius;
-        dist = DotProduct(cl_dlights[lnum].origin, surf->plane->normal) - surf->plane->dist;
+        dist = cl_dlights[lnum].origin.dot(surf->plane->normal) - surf->plane->dist;
         rad -= fabs(dist);
         minlight = cl_dlights[lnum].minlight;
         if (rad < minlight) {
@@ -1509,24 +1467,22 @@ void R_AddDynamicLights(void)
 
         minlight = rad - minlight;
 
-        for (i = 0; i < 3; i++) {
-            impact[i] = cl_dlights[lnum].origin[i] - surf->plane->normal[i] * dist;
-        }
+        impact = cl_dlights[lnum].origin - surf->plane->normal * dist;
 
-        local[0] = DotProduct(impact, tex->vecs[0]) + tex->vecs[0][3];
-        local[1] = DotProduct(impact, tex->vecs[1]) + tex->vecs[1][3];
+        local.x = impact.dot(tex->vecs[0]) + tex->vecs[0][3];
+        local.y = impact.dot(tex->vecs[1]) + tex->vecs[1][3];
 
-        local[0] -= surf->texturemins[0];
-        local[1] -= surf->texturemins[1];
+        local.x -= surf->texturemins[0];
+        local.y -= surf->texturemins[1];
 
         for (t = 0; t < tmax; t++) {
-            td = local[1] - t * 16;
+            td = local.y - t * 16;
             if (td < 0) {
                 td = -td;
             }
 
             for (s = 0; s < smax; s++) {
-                sd = local[0] - s * 16;
+                sd = local.x - s * 16;
                 if (sd < 0) {
                     sd = -sd;
                 }
@@ -2176,20 +2132,16 @@ R_TransformFrustum
 void R_TransformFrustum(void)
 {
     int i;
-    vec3_t v, v2;
+    Vector3 v, v2;
 
     for (i = 0; i < 4; i++) {
-        v[0] = screenedge[i].normal[2];
-        v[1] = -screenedge[i].normal[0];
-        v[2] = screenedge[i].normal[1];
+        v = Vector3(screenedge[i].normal.z, -screenedge[i].normal.x, screenedge[i].normal.y);
 
-        v2[0] = v[1] * vright[0] + v[2] * vup[0] + v[0] * vpn[0];
-        v2[1] = v[1] * vright[1] + v[2] * vup[1] + v[0] * vpn[1];
-        v2[2] = v[1] * vright[2] + v[2] * vup[2] + v[0] * vpn[2];
+        v2 = vright * v.y + vup * v.z + vpn * v.x;
 
-        VectorCopy(v2, view_clipplanes[i].normal);
+        view_clipplanes[i].normal = v2;
 
-        view_clipplanes[i].dist = DotProduct(modelorg, v2);
+        view_clipplanes[i].dist = modelorg.dot(v2);
     }
 }
 
@@ -2198,11 +2150,11 @@ void R_TransformFrustum(void)
 TransformVector
 ================
 */
-void TransformVector(vec3_t in, vec3_t out)
+void TransformVector(const Vector3& in, Vector3& out)
 {
-    out[0] = DotProduct(in, vright);
-    out[1] = DotProduct(in, vup);
-    out[2] = DotProduct(in, vpn);
+    out.x = in.dot(vright);
+    out.y = in.dot(vup);
+    out.z = in.dot(vpn);
 }
 
 /*
@@ -2430,7 +2382,7 @@ void R_EmitEdge(mvertex_t* pv0, mvertex_t* pv1)
     edge_t *edge, *pcheck;
     int64_t u_check; // Changed from int to int64_t
     float u, u_step;
-    vec3_t local, transformed;
+    Vector3 local, transformed;
     float* world;
     int v, v2, ceilv0;
     float scale, lzi0, u0, v0;
@@ -2445,18 +2397,18 @@ void R_EmitEdge(mvertex_t* pv0, mvertex_t* pv1)
         world = &pv0->position[0];
 
         // transform and project
-        VectorSubtract(world, modelorg, local);
+        local = Vector3(world) - modelorg;
         TransformVector(local, transformed);
 
-        if (transformed[2] < NEAR_CLIP) {
-            transformed[2] = (vec_t)NEAR_CLIP;
+        if (transformed.z < NEAR_CLIP) {
+            transformed.z = (vec_t)NEAR_CLIP;
         }
 
-        lzi0 = 1.0 / transformed[2];
+        lzi0 = 1.0 / transformed.z;
 
         // FIXME: build x/yscale into transform?
         scale = xscale * lzi0;
-        u0 = (xcenter + scale * transformed[0]);
+        u0 = (xcenter + scale * transformed.x);
         if (u0 < r_refdef.fvrectx_adj) {
             u0 = r_refdef.fvrectx_adj;
         }
@@ -2466,7 +2418,7 @@ void R_EmitEdge(mvertex_t* pv0, mvertex_t* pv1)
         }
 
         scale = yscale * lzi0;
-        v0 = (ycenter - scale * transformed[1]);
+        v0 = (ycenter - scale * transformed.y);
         if (v0 < r_refdef.fvrecty_adj) {
             v0 = r_refdef.fvrecty_adj;
         }
@@ -2481,17 +2433,17 @@ void R_EmitEdge(mvertex_t* pv0, mvertex_t* pv1)
     world = &pv1->position[0];
 
     // transform and project
-    VectorSubtract(world, modelorg, local);
+    local = Vector3(world) - modelorg;
     TransformVector(local, transformed);
 
-    if (transformed[2] < NEAR_CLIP) {
-        transformed[2] = (vec_t)NEAR_CLIP;
+    if (transformed.z < NEAR_CLIP) {
+        transformed.z = (vec_t)NEAR_CLIP;
     }
 
-    r_lzi1 = 1.0 / transformed[2];
+    r_lzi1 = 1.0 / transformed.z;
 
     scale = xscale * r_lzi1;
-    r_u1 = (xcenter + scale * transformed[0]);
+    r_u1 = (xcenter + scale * transformed.x);
     if (r_u1 < r_refdef.fvrectx_adj) {
         r_u1 = r_refdef.fvrectx_adj;
     }
@@ -2501,7 +2453,7 @@ void R_EmitEdge(mvertex_t* pv0, mvertex_t* pv1)
     }
 
     scale = yscale * r_lzi1;
-    r_v1 = (ycenter - scale * transformed[1]);
+    r_v1 = (ycenter - scale * transformed.y);
     if (r_v1 < r_refdef.fvrecty_adj) {
         r_v1 = r_refdef.fvrecty_adj;
     }
@@ -2727,7 +2679,7 @@ void R_RenderFace(msurface_t* fa, int clipflags)
     unsigned mask;
     mplane_t* pplane;
     float distinv;
-    vec3_t p_normal;
+    Vector3 p_normal;
     medge_t *pedges, tedge;
     clipplane_t* pclip;
 
@@ -2880,11 +2832,11 @@ void R_RenderFace(msurface_t* fa, int clipflags)
     // FIXME: cache this?
     TransformVector(pplane->normal, p_normal);
     // FIXME: cache this?
-    distinv = 1.0 / (pplane->dist - DotProduct(modelorg, pplane->normal));
+    distinv = 1.0 / (pplane->dist - modelorg.dot(pplane->normal));
 
-    surface_p->d_zistepu = p_normal[0] * xscaleinv * distinv;
-    surface_p->d_zistepv = -p_normal[1] * yscaleinv * distinv;
-    surface_p->d_ziorigin = p_normal[2] * distinv - xcenter * surface_p->d_zistepu - ycenter * surface_p->d_zistepv;
+    surface_p->d_zistepu = p_normal.x * xscaleinv * distinv;
+    surface_p->d_zistepv = -p_normal.y * yscaleinv * distinv;
+    surface_p->d_ziorigin = p_normal.z * distinv - xcenter * surface_p->d_zistepu - ycenter * surface_p->d_zistepv;
 
     //JDC	VectorCopy (r_worldmodelorg, surface_p->modelorg);
     surface_p++;
@@ -2901,7 +2853,7 @@ void R_RenderBmodelFace(bedge_t* pedges, msurface_t* psurf)
     unsigned mask;
     mplane_t* pplane;
     float distinv;
-    vec3_t p_normal;
+    Vector3 p_normal;
     medge_t tedge;
     clipplane_t* pclip;
 
@@ -2991,11 +2943,11 @@ void R_RenderBmodelFace(bedge_t* pedges, msurface_t* psurf)
     // FIXME: cache this?
     TransformVector(pplane->normal, p_normal);
     // FIXME: cache this?
-    distinv = 1.0 / (pplane->dist - DotProduct(modelorg, pplane->normal));
+    distinv = 1.0 / (pplane->dist - modelorg.dot(pplane->normal));
 
-    surface_p->d_zistepu = p_normal[0] * xscaleinv * distinv;
-    surface_p->d_zistepv = -p_normal[1] * yscaleinv * distinv;
-    surface_p->d_ziorigin = p_normal[2] * distinv - xcenter * surface_p->d_zistepu - ycenter * surface_p->d_zistepv;
+    surface_p->d_zistepu = p_normal.x * xscaleinv * distinv;
+    surface_p->d_zistepv = -p_normal.y * yscaleinv * distinv;
+    surface_p->d_ziorigin = p_normal.z * distinv - xcenter * surface_p->d_zistepu - ycenter * surface_p->d_zistepv;
 
     //JDC	VectorCopy (r_worldmodelorg, surface_p->modelorg);
     surface_p++;
@@ -3011,7 +2963,7 @@ void R_RenderPoly(msurface_t* fa, int clipflags)
     int i, lindex, lnumverts, s_axis, t_axis;
     float dist, lastdist, lzi, scale, u, v, frac;
     unsigned mask;
-    vec3_t local, transformed;
+    Vector3 local, transformed;
     clipplane_t* pclip;
     medge_t* pedges;
     mplane_t* pplane;
@@ -3056,20 +3008,21 @@ void R_RenderPoly(msurface_t* fa, int clipflags)
     // clip the polygon, done if not visible
     while (pclip) {
         lastvert = lnumverts - 1;
-        lastdist = DotProduct(verts[vertpage][lastvert].position, pclip->normal) - pclip->dist;
+        lastdist = Vector3(verts[vertpage][lastvert].position).dot(pclip->normal) - pclip->dist;
 
         visible = false;
         newverts = 0;
         newpage = vertpage ^ 1;
 
         for (i = 0; i < lnumverts; i++) {
-            dist = DotProduct(verts[vertpage][i].position, pclip->normal) - pclip->dist;
+            dist = Vector3(verts[vertpage][i].position).dot(pclip->normal) - pclip->dist;
 
             if ((lastdist > 0) != (dist > 0)) {
                 frac = dist / (dist - lastdist);
-                verts[newpage][newverts].position[0] = verts[vertpage][i].position[0] + ((verts[vertpage][lastvert].position[0] - verts[vertpage][i].position[0]) * frac);
-                verts[newpage][newverts].position[1] = verts[vertpage][i].position[1] + ((verts[vertpage][lastvert].position[1] - verts[vertpage][i].position[1]) * frac);
-                verts[newpage][newverts].position[2] = verts[vertpage][i].position[2] + ((verts[vertpage][lastvert].position[2] - verts[vertpage][i].position[2]) * frac);
+                Vector3 interp = Vector3(verts[vertpage][i].position) + (Vector3(verts[vertpage][lastvert].position) - Vector3(verts[vertpage][i].position)) * frac;
+                verts[newpage][newverts].position[0] = interp.x;
+                verts[newpage][newverts].position[1] = interp.y;
+                verts[newpage][newverts].position[2] = interp.z;
                 newverts++;
             }
 
@@ -3117,14 +3070,14 @@ void R_RenderPoly(msurface_t* fa, int clipflags)
 
     for (i = 0; i < lnumverts; i++) {
         // transform and project
-        VectorSubtract(verts[vertpage][i].position, modelorg, local);
+        local = Vector3(verts[vertpage][i].position) - modelorg;
         TransformVector(local, transformed);
 
-        if (transformed[2] < NEAR_CLIP) {
-            transformed[2] = (vec_t)NEAR_CLIP;
+        if (transformed.z < NEAR_CLIP) {
+            transformed.z = (vec_t)NEAR_CLIP;
         }
 
-        lzi = 1.0 / transformed[2];
+        lzi = 1.0 / transformed.z;
 
         if (lzi > r_nearzi) { // for mipmap finding
             r_nearzi = lzi;
@@ -3132,7 +3085,7 @@ void R_RenderPoly(msurface_t* fa, int clipflags)
 
         // FIXME: build x/yscale into transform?
         scale = xscale * lzi;
-        u = (xcenter + scale * transformed[0]);
+        u = (xcenter + scale * transformed.x);
         if (u < r_refdef.fvrectx_adj) {
             u = r_refdef.fvrectx_adj;
         }
@@ -3142,7 +3095,7 @@ void R_RenderPoly(msurface_t* fa, int clipflags)
         }
 
         scale = yscale * lzi;
-        v = (ycenter - scale * transformed[1]);
+        v = (ycenter - scale * transformed.y);
         if (v < r_refdef.fvrecty_adj) {
             v = r_refdef.fvrecty_adj;
         }
@@ -3896,7 +3849,7 @@ void R_ScanEdges(void)
 //
 qboolean insubmodel;
 entity_t* currententity;
-vec3_t modelorg, base_modelorg;
+Vector3 modelorg, base_modelorg;
 
 typedef enum { touchessolid,
     drawnode,
@@ -3920,14 +3873,14 @@ static qboolean makeclippededge;
 R_EntityRotate
 ================
 */
-void R_EntityRotate(vec3_t vec)
+void R_EntityRotate(Vector3& vec)
 {
-    vec3_t tvec;
+    Vector3 tvec;
 
-    VectorCopy(vec, tvec);
-    vec[0] = DotProduct(entity_rotation[0], tvec);
-    vec[1] = DotProduct(entity_rotation[1], tvec);
-    vec[2] = DotProduct(entity_rotation[2], tvec);
+    tvec = vec;
+    vec.x = Vector3(entity_rotation[0][0], entity_rotation[0][1], entity_rotation[0][2]).dot(tvec);
+    vec.y = Vector3(entity_rotation[1][0], entity_rotation[1][1], entity_rotation[1][2]).dot(tvec);
+    vec.z = Vector3(entity_rotation[2][0], entity_rotation[2][1], entity_rotation[2][2]).dot(tvec);
 }
 
 /*
@@ -4268,7 +4221,7 @@ R_RecursiveWorldNode
 void R_RecursiveWorldNode(mnode_t* node, int clipflags)
 {
     int i, c, side, *pindex;
-    vec3_t acceptpt, rejectpt;
+    Vector3 acceptpt, rejectpt;
     mplane_t* plane;
     msurface_t *surf, **mark;
     mleaf_t* pleaf;
@@ -4297,22 +4250,18 @@ void R_RecursiveWorldNode(mnode_t* node, int clipflags)
 
             pindex = pfrustum_indexes[i];
 
-            rejectpt[0] = (float)node->minmaxs[pindex[0]];
-            rejectpt[1] = (float)node->minmaxs[pindex[1]];
-            rejectpt[2] = (float)node->minmaxs[pindex[2]];
+            rejectpt = Vector3((float)node->minmaxs[pindex[0]], (float)node->minmaxs[pindex[1]], (float)node->minmaxs[pindex[2]]);
 
-            d = DotProduct(rejectpt, view_clipplanes[i].normal);
+            d = rejectpt.dot(view_clipplanes[i].normal);
             d -= view_clipplanes[i].dist;
 
             if (d <= 0) {
                 return;
             }
 
-            acceptpt[0] = (float)node->minmaxs[pindex[3 + 0]];
-            acceptpt[1] = (float)node->minmaxs[pindex[3 + 1]];
-            acceptpt[2] = (float)node->minmaxs[pindex[3 + 2]];
+            acceptpt = Vector3((float)node->minmaxs[pindex[3 + 0]], (float)node->minmaxs[pindex[3 + 1]], (float)node->minmaxs[pindex[3 + 2]]);
 
-            d = DotProduct(acceptpt, view_clipplanes[i].normal);
+            d = acceptpt.dot(view_clipplanes[i].normal);
             d -= view_clipplanes[i].dist;
 
             if (d >= 0) {
@@ -4475,17 +4424,17 @@ spritedesc_t r_spritedesc;
 R_RotateSprite
 ================
 */
-void R_RotateSprite(float beamlength)
+void R_RotateSprite(float beam_len)
 {
-    vec3_t vec;
+    Vector3 vec;
 
-    if (beamlength == 0.0) {
+    if (beam_len == 0.0) {
         return;
     }
 
-    VectorScale(r_spritedesc.vpn, -beamlength, vec);
-    VectorAdd(r_entorigin, vec, r_entorigin);
-    VectorSubtract(modelorg, vec, modelorg);
+    vec = r_spritedesc.vpn * -beam_len;
+    r_entorigin += vec;
+    modelorg -= vec;
 }
 
 /*
@@ -4573,10 +4522,10 @@ void R_SetupAndDrawSprite()
     int i, nump;
     float dot, scale, *pv;
     vec5_t* pverts;
-    vec3_t left, up, right, down, transformed, local;
+    Vector3 left, up, right, down, transformed, local;
     emitpoint_t outverts[MAXWORKINGVERTS + 1], *pout;
 
-    dot = DotProduct(r_spritedesc.vpn, modelorg);
+    dot = r_spritedesc.vpn.dot(modelorg);
 
     // backface cull
     if (dot >= 0) {
@@ -4584,34 +4533,34 @@ void R_SetupAndDrawSprite()
     }
 
     // build the sprite poster in worldspace
-    VectorScale(r_spritedesc.vright, r_spritedesc.pspriteframe->right, right);
-    VectorScale(r_spritedesc.vup, r_spritedesc.pspriteframe->up, up);
-    VectorScale(r_spritedesc.vright, r_spritedesc.pspriteframe->left, left);
-    VectorScale(r_spritedesc.vup, r_spritedesc.pspriteframe->down, down);
+    right = r_spritedesc.vright * r_spritedesc.pspriteframe->right;
+    up = r_spritedesc.vup * r_spritedesc.pspriteframe->up;
+    left = r_spritedesc.vright * r_spritedesc.pspriteframe->left;
+    down = r_spritedesc.vup * r_spritedesc.pspriteframe->down;
 
     pverts = clip_verts[0];
 
-    pverts[0][0] = r_entorigin[0] + up[0] + left[0];
-    pverts[0][1] = r_entorigin[1] + up[1] + left[1];
-    pverts[0][2] = r_entorigin[2] + up[2] + left[2];
+    pverts[0][0] = r_entorigin.x + up.x + left.x;
+    pverts[0][1] = r_entorigin.y + up.y + left.y;
+    pverts[0][2] = r_entorigin.z + up.z + left.z;
     pverts[0][3] = 0;
     pverts[0][4] = 0;
 
-    pverts[1][0] = r_entorigin[0] + up[0] + right[0];
-    pverts[1][1] = r_entorigin[1] + up[1] + right[1];
-    pverts[1][2] = r_entorigin[2] + up[2] + right[2];
+    pverts[1][0] = r_entorigin.x + up.x + right.x;
+    pverts[1][1] = r_entorigin.y + up.y + right.y;
+    pverts[1][2] = r_entorigin.z + up.z + right.z;
     pverts[1][3] = sprite_width;
     pverts[1][4] = 0;
 
-    pverts[2][0] = r_entorigin[0] + down[0] + right[0];
-    pverts[2][1] = r_entorigin[1] + down[1] + right[1];
-    pverts[2][2] = r_entorigin[2] + down[2] + right[2];
+    pverts[2][0] = r_entorigin.x + down.x + right.x;
+    pverts[2][1] = r_entorigin.y + down.y + right.y;
+    pverts[2][2] = r_entorigin.z + down.z + right.z;
     pverts[2][3] = sprite_width;
     pverts[2][4] = sprite_height;
 
-    pverts[3][0] = r_entorigin[0] + down[0] + left[0];
-    pverts[3][1] = r_entorigin[1] + down[1] + left[1];
-    pverts[3][2] = r_entorigin[2] + down[2] + left[2];
+    pverts[3][0] = r_entorigin.x + down.x + left.x;
+    pverts[3][1] = r_entorigin.y + down.y + left.y;
+    pverts[3][2] = r_entorigin.z + down.z + left.z;
     pverts[3][3] = 0;
     pverts[3][4] = sprite_height;
 
@@ -4635,15 +4584,15 @@ void R_SetupAndDrawSprite()
     r_spritedesc.nearzi = -999999;
 
     for (i = 0; i < nump; i++) {
-        VectorSubtract(pv, r_origin, local);
+        local = Vector3(pv[0], pv[1], pv[2]) - r_origin;
         TransformVector(local, transformed);
 
-        if (transformed[2] < NEAR_CLIP) {
-            transformed[2] = (vec_t)NEAR_CLIP;
+        if (transformed.z < NEAR_CLIP) {
+            transformed.z = (vec_t)NEAR_CLIP;
         }
 
         pout = &outverts[i];
-        pout->zi = 1.0 / transformed[2];
+        pout->zi = 1.0 / transformed.z;
         if (pout->zi > r_spritedesc.nearzi) {
             r_spritedesc.nearzi = pout->zi;
         }
@@ -4652,10 +4601,10 @@ void R_SetupAndDrawSprite()
         pout->t = pv[4];
 
         scale = xscale * pout->zi;
-        pout->u = (xcenter + scale * transformed[0]);
+        pout->u = (xcenter + scale * transformed.x);
 
         scale = yscale * pout->zi;
-        pout->v = (ycenter - scale * transformed[1]);
+        pout->v = (ycenter - scale * transformed.y);
 
         pv += sizeof(vec5_t) / sizeof(*pv);
     }
@@ -4718,9 +4667,8 @@ R_DrawSprite
 */
 void R_DrawSprite(void)
 {
-    int i;
     msprite_t* psprite;
-    vec3_t tvec;
+    Vector3 tvec;
     float dot, angle, sr, cr;
 
     psprite = (msprite_t*)currententity->model->cache.data;
@@ -4738,39 +4686,27 @@ void R_DrawSprite(void)
         // down, because the cross product will be between two nearly parallel
         // vectors and starts to approach an undefined state, so we don't draw if
         // the two vectors are less than 1 degree apart
-        tvec[0] = -modelorg[0];
-        tvec[1] = -modelorg[1];
-        tvec[2] = -modelorg[2];
-        VectorNormalize(tvec);
-        dot = tvec[2]; // same as DotProduct (tvec, r_spritedesc.vup) because
+        tvec = -modelorg;
+        tvec.normalize();
+        dot = tvec.z; // same as DotProduct (tvec, r_spritedesc.vup) because
         //  r_spritedesc.vup is 0, 0, 1
         if ((dot > 0.999848) || (dot < -0.999848)) { // cos(1 degree) = 0.999848
             return;
         }
 
-        r_spritedesc.vup[0] = 0;
-        r_spritedesc.vup[1] = 0;
-        r_spritedesc.vup[2] = 1;
-        r_spritedesc.vright[0] = tvec[1];
-        // CrossProduct(r_spritedesc.vup, -modelorg,
-        r_spritedesc.vright[1] = -tvec[0];
-        //              r_spritedesc.vright)
-        r_spritedesc.vright[2] = 0;
-        VectorNormalize(r_spritedesc.vright);
-        r_spritedesc.vpn[0] = -r_spritedesc.vright[1];
-        r_spritedesc.vpn[1] = r_spritedesc.vright[0];
-        r_spritedesc.vpn[2] = 0;
+        r_spritedesc.vup = Vector3(0, 0, 1);
+        r_spritedesc.vright = Vector3(tvec.y, -tvec.x, 0);
+        r_spritedesc.vright.normalize();
+        r_spritedesc.vpn = Vector3(-r_spritedesc.vright.y, r_spritedesc.vright.x, 0);
         // CrossProduct (r_spritedesc.vright, r_spritedesc.vup,
         //  r_spritedesc.vpn)
     } else if (psprite->type == SPR_VP_PARALLEL) {
         // generate the sprite's axes, completely parallel to the viewplane. There
         // are no problem situations, because the sprite is always in the same
         // position relative to the viewer
-        for (i = 0; i < 3; i++) {
-            r_spritedesc.vup[i] = vup[i];
-            r_spritedesc.vright[i] = vright[i];
-            r_spritedesc.vpn[i] = vpn[i];
-        }
+        r_spritedesc.vup = vup;
+        r_spritedesc.vright = vright;
+        r_spritedesc.vpn = vpn;
     } else if (psprite->type == SPR_VP_PARALLEL_UPRIGHT) {
         // generate the sprite's axes, with vup straight up in worldspace, and
         // r_spritedesc.vright parallel to the viewplane.
@@ -4778,23 +4714,16 @@ void R_DrawSprite(void)
         // down, because the cross product will be between two nearly parallel
         // vectors and starts to approach an undefined state, so we don't draw if
         // the two vectors are less than 1 degree apart
-        dot = vpn[2]; // same as DotProduct (vpn, r_spritedesc.vup) because
+        dot = vpn.z; // same as DotProduct (vpn, r_spritedesc.vup) because
         //  r_spritedesc.vup is 0, 0, 1
         if ((dot > 0.999848) || (dot < -0.999848)) { // cos(1 degree) = 0.999848
             return;
         }
 
-        r_spritedesc.vup[0] = 0;
-        r_spritedesc.vup[1] = 0;
-        r_spritedesc.vup[2] = 1;
-        r_spritedesc.vright[0] = vpn[1];
-        // CrossProduct (r_spritedesc.vup, vpn,
-        r_spritedesc.vright[1] = -vpn[0]; //  r_spritedesc.vright)
-        r_spritedesc.vright[2] = 0;
-        VectorNormalize(r_spritedesc.vright);
-        r_spritedesc.vpn[0] = -r_spritedesc.vright[1];
-        r_spritedesc.vpn[1] = r_spritedesc.vright[0];
-        r_spritedesc.vpn[2] = 0;
+        r_spritedesc.vup = Vector3(0, 0, 1);
+        r_spritedesc.vright = Vector3(vpn.y, -vpn.x, 0);
+        r_spritedesc.vright.normalize();
+        r_spritedesc.vpn = Vector3(-r_spritedesc.vright.y, r_spritedesc.vright.x, 0);
         // CrossProduct (r_spritedesc.vright, r_spritedesc.vup,
         //  r_spritedesc.vpn)
     } else if (psprite->type == SPR_ORIENTED) {
@@ -4809,11 +4738,9 @@ void R_DrawSprite(void)
         sr = sin(angle);
         cr = cos(angle);
 
-        for (i = 0; i < 3; i++) {
-            r_spritedesc.vpn[i] = vpn[i];
-            r_spritedesc.vright[i] = vright[i] * cr + vup[i] * sr;
-            r_spritedesc.vup[i] = vright[i] * -sr + vup[i] * cr;
-        }
+        r_spritedesc.vpn = vpn;
+        r_spritedesc.vright = vright * cr + vup * sr;
+        r_spritedesc.vup = vright * -sr + vup * cr;
     } else {
         Sys_Error("R_DrawSprite: Bad sprite type %d", psprite->type);
     }
@@ -4840,13 +4767,13 @@ void* acolormap; // FIXME: should go away
 
 trivertx_t* r_apverts;
 
-vec3_t r_plightvec;
+Vector3 r_plightvec;
 int r_ambientlight;
 float r_shadelight;
 static float ziscale;
 static model_t* pmodel;
 
-static vec3_t alias_forward, alias_right, alias_up;
+static Vector3 alias_forward, alias_right, alias_up;
 
 static maliasskindesc_t* pskindesc;
 int r_anumverts;
@@ -4861,18 +4788,131 @@ typedef struct {
 static aedge_t aedges[12] = { { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 }, { 4, 5 }, { 5, 6 },
     { 6, 7 }, { 7, 4 }, { 0, 5 }, { 1, 4 }, { 2, 7 }, { 3, 6 } };
 
-#define NUMVERTEXNORMALS 162
+/*
+================
+R_InitVertexNormals
 
-float r_avertexnormals[NUMVERTEXNORMALS][3] = {
-#pragma warning(push)
-#pragma warning(disable : 4305)
-#include "anorms.hpp"
-#pragma warning(pop)
-};
+Generate the 162 vertex normals by subdividing an icosahedron.
+This reproduces the exact set and ordering from the original
+Quake Pascal tool used to create anorms.h.
+================
+*/
+void R_InitVertexNormals(void)
+{
+    static bool initialized = false;
+    if (initialized) return;
+    initialized = true;
+
+    const float X = 0.525731112119133606f;
+    const float Z = 0.850650808352039932f;
+
+    const float verts[12][3] = {
+        {-X, 0.0f, Z}, {X, 0.0f, Z}, {-X, 0.0f, -Z}, {X, 0.0f, -Z},
+        {0.0f, Z, X}, {0.0f, Z, -X}, {0.0f, -Z, X}, {0.0f, -Z, -X},
+        {Z, X, 0.0f}, {-Z, X, 0.0f}, {Z, -X, 0.0f}, {-Z, -X, 0.0f},
+    };
+
+    const int faces[20][3] = {
+        {0, 4, 1}, {0, 9, 4}, {9, 5, 4}, {4, 5, 8}, {4, 8, 1},
+        {8, 10, 1}, {8, 3, 10}, {5, 3, 8}, {5, 2, 3}, {2, 7, 3},
+        {7, 10, 3}, {7, 6, 10}, {7, 11, 6}, {11, 0, 6}, {0, 1, 6},
+        {6, 1, 10}, {9, 0, 11}, {9, 11, 2}, {9, 2, 5}, {7, 2, 11}
+    };
+
+    const int subdiv = 4;
+    const int max_low_i = subdiv / 2 - 1;
+
+    float temp[400][3];
+    int num_temp = 0;
+
+    for (int f = 0; f < 20; f++) {
+        const float* a = verts[faces[f][0]];
+        const float* b = verts[faces[f][1]];
+        const float* c = verts[faces[f][2]];
+
+        // High i part (i >= n/2)
+        for (int i = subdiv; i >= subdiv / 2; i--) {
+            for (int j = subdiv - i; j >= 0; j--) {
+                int k = subdiv - i - j;
+                float px = (i * a[0] + j * b[0] + k * c[0]) / subdiv;
+                float py = (i * a[1] + j * b[1] + k * c[1]) / subdiv;
+                float pz = (i * a[2] + j * b[2] + k * c[2]) / subdiv;
+                float len = std::sqrt(px * px + py * py + pz * pz);
+                if (len > 0) {
+                    temp[num_temp][0] = px / len;
+                    temp[num_temp][1] = py / len;
+                    temp[num_temp][2] = pz / len;
+                    num_temp++;
+                }
+            }
+        }
+
+        // Low i part, high j (j >= n/2)
+        for (int j = subdiv; j >= subdiv / 2; j--) {
+            int max_i = (max_low_i < subdiv - j) ? max_low_i : (subdiv - j);
+            for (int i = max_i; i >= 0; i--) {
+                int k = subdiv - i - j;
+                float px = (i * a[0] + j * b[0] + k * c[0]) / subdiv;
+                float py = (i * a[1] + j * b[1] + k * c[1]) / subdiv;
+                float pz = (i * a[2] + j * b[2] + k * c[2]) / subdiv;
+                float len = std::sqrt(px * px + py * py + pz * pz);
+                if (len > 0) {
+                    temp[num_temp][0] = px / len;
+                    temp[num_temp][1] = py / len;
+                    temp[num_temp][2] = pz / len;
+                    num_temp++;
+                }
+            }
+        }
+
+        // Low i part, low j (j < n/2)
+        for (int j = 0; j < subdiv / 2; j++) {
+            int max_i = (max_low_i < subdiv - j) ? max_low_i : (subdiv - j);
+            for (int i = 0; i <= max_i; i++) {
+                int k = subdiv - i - j;
+                float px = (i * a[0] + j * b[0] + k * c[0]) / subdiv;
+                float py = (i * a[1] + j * b[1] + k * c[1]) / subdiv;
+                float pz = (i * a[2] + j * b[2] + k * c[2]) / subdiv;
+                float len = std::sqrt(px * px + py * py + pz * pz);
+                if (len > 0) {
+                    temp[num_temp][0] = px / len;
+                    temp[num_temp][1] = py / len;
+                    temp[num_temp][2] = pz / len;
+                    num_temp++;
+                }
+            }
+        }
+    }
+
+    // Dedup preserving first occurrence (order matches original)
+    int out_idx = 0;
+    for (int i = 0; i < num_temp && out_idx < NUMVERTEXNORMALS; i++) {
+        int key_x = (int)std::round(temp[i][0] * 10000.0f);
+        int key_y = (int)std::round(temp[i][1] * 10000.0f);
+        int key_z = (int)std::round(temp[i][2] * 10000.0f);
+
+        bool dup = false;
+        for (int j = 0; j < out_idx; j++) {
+            int jx = (int)std::round(r_avertexnormals[j][0] * 10000.0f);
+            int jy = (int)std::round(r_avertexnormals[j][1] * 10000.0f);
+            int jz = (int)std::round(r_avertexnormals[j][2] * 10000.0f);
+            if (jx == key_x && jy == key_y && jz == key_z) {
+                dup = true;
+                break;
+            }
+        }
+        if (!dup) {
+            r_avertexnormals[out_idx][0] = temp[i][0];
+            r_avertexnormals[out_idx][1] = temp[i][1];
+            r_avertexnormals[out_idx][2] = temp[i][2];
+            out_idx++;
+        }
+    }
+}
 
 void R_AliasTransformAndProjectFinalVerts(finalvert_t* fv, stvert_t* pstverts);
 void R_AliasSetUpTransform(int trivial_accept);
-void R_AliasTransformVector(vec3_t in, vec3_t out);
+void R_AliasTransformVector(const float* in, float* out);
 void R_AliasTransformFinalVert(finalvert_t* fv,
     auxvert_t* av,
     trivertx_t* pverts,
@@ -5035,7 +5075,7 @@ qboolean R_AliasCheckBBox(void)
 R_AliasTransformVector
 ================
 */
-void R_AliasTransformVector(vec3_t in, vec3_t out)
+void R_AliasTransformVector(const float* in, float* out)
 {
     out[0] = DotProduct(in, aliastransform[0]) + aliastransform[0][3];
     out[1] = DotProduct(in, aliastransform[1]) + aliastransform[1][3];
@@ -5124,7 +5164,7 @@ void R_AliasSetUpTransform(int trivial_accept)
     float rotationmatrix[3][4], t2matrix[3][4];
     static float tmatrix[3][4];
     static float viewmatrix[3][4];
-    vec3_t angles;
+    Vector3 angles;
 
     // TODO: should really be stored with the entity instead of being reconstructed
     // TODO: should use a look-up table
@@ -5830,7 +5870,7 @@ void R_AliasClipTriangle(mtriangle_t* ptri)
 //define	PASSAGES
 
 void* colormap;
-vec3_t viewlightvec;
+Vector3 viewlightvec;
 alight_t r_viewlighting = { 128, 192, viewlightvec };
 qboolean r_drawpolys;
 qboolean r_drawculledpolys;
@@ -5850,10 +5890,10 @@ byte* r_stack_start;
 //
 // view origin
 //
-vec3_t vup, base_vup;
-vec3_t vpn, base_vpn;
-vec3_t vright, base_vright;
-vec3_t r_origin;
+Vector3 vup, base_vup;
+Vector3 vpn, base_vpn;
+Vector3 vright, base_vright;
+Vector3 r_origin;
 
 //
 // screen size info
@@ -5943,6 +5983,7 @@ void R_Init(void)
     r_stack_start = (byte*)&dummy;
 
     R_InitTurb();
+    R_InitVertexNormals();
 
     Cmd::AddCommand("timerefresh", R_TimeRefresh_f);
     Cmd::AddCommand("pointfile", R_ReadPointFile_f);
@@ -6241,7 +6282,7 @@ void R_DrawEntitiesOnList(void)
     alight_t lighting;
     // FIXME: remove and do real lighting
     float lightvec[3] = { -1, 0, 0 };
-    vec3_t dist;
+    Vector3 dist;
     float add;
 
     if (!r_drawentities.value) {
@@ -6257,14 +6298,14 @@ void R_DrawEntitiesOnList(void)
 
         switch (currententity->model->type) {
         case mod_sprite:
-            VectorCopy(currententity->origin, r_entorigin);
-            VectorSubtract(r_origin, r_entorigin, modelorg);
+            r_entorigin = currententity->origin;
+            modelorg = r_origin - r_entorigin;
             R_DrawSprite();
             break;
 
         case mod_alias:
-            VectorCopy(currententity->origin, r_entorigin);
-            VectorSubtract(r_origin, r_entorigin, modelorg);
+            r_entorigin = currententity->origin;
+            modelorg = r_origin - r_entorigin;
 
             // see if the bounding box lets us trivially reject, also sets
             // trivial accept status
@@ -6278,9 +6319,8 @@ void R_DrawEntitiesOnList(void)
 
                 for (lnum = 0; lnum < MAX_DLIGHTS; lnum++) {
                     if (cl_dlights[lnum].die >= cl.time) {
-                        VectorSubtract(currententity->origin, cl_dlights[lnum].origin,
-                            dist);
-                        add = cl_dlights[lnum].radius - Length(dist);
+                        dist = currententity->origin - cl_dlights[lnum].origin;
+                        add = cl_dlights[lnum].radius - dist.length();
 
                         if (add > 0) {
                             lighting.ambientlight += add;
@@ -6319,7 +6359,7 @@ void R_DrawViewModel(void)
     float lightvec[3] = { -1, 0, 0 };
     int j;
     int lnum;
-    vec3_t dist;
+    Vector3 dist;
     float add;
     dlight_t* dl;
 
@@ -6340,11 +6380,10 @@ void R_DrawViewModel(void)
         return;
     }
 
-    VectorCopy(currententity->origin, r_entorigin);
-    VectorSubtract(r_origin, r_entorigin, modelorg);
+    r_entorigin = currententity->origin;
+    modelorg = r_origin - r_entorigin;
 
-    VectorCopy(vup, viewlightvec);
-    VectorInverse(viewlightvec);
+    viewlightvec = -vup;
 
     j = R_LightPoint(currententity->origin);
 
@@ -6370,8 +6409,8 @@ void R_DrawViewModel(void)
             continue;
         }
 
-        VectorSubtract(currententity->origin, dl->origin, dist);
-        add = dl->radius - Length(dist);
+        dist = currententity->origin - dl->origin;
+        add = dl->radius - dist.length();
         if (add > 0) {
             r_viewlighting.ambientlight += add;
         }
@@ -6400,14 +6439,14 @@ R_BmodelCheckBBox
 int R_BmodelCheckBBox(model_t* clmodel, float* minmaxs)
 {
     int i, *pindex, clipflags;
-    vec3_t acceptpt, rejectpt;
+    Vector3 acceptpt, rejectpt;
     double d;
 
     clipflags = 0;
 
     if (currententity->angles[0] || currententity->angles[1] || currententity->angles[2]) {
         for (i = 0; i < 4; i++) {
-            d = DotProduct(currententity->origin, view_clipplanes[i].normal);
+            d = currententity->origin.dot(view_clipplanes[i].normal);
             d -= view_clipplanes[i].dist;
 
             if (d <= -clmodel->radius) {
@@ -6426,22 +6465,18 @@ int R_BmodelCheckBBox(model_t* clmodel, float* minmaxs)
 
             pindex = pfrustum_indexes[i];
 
-            rejectpt[0] = minmaxs[pindex[0]];
-            rejectpt[1] = minmaxs[pindex[1]];
-            rejectpt[2] = minmaxs[pindex[2]];
+            rejectpt = Vector3(minmaxs[pindex[0]], minmaxs[pindex[1]], minmaxs[pindex[2]]);
 
-            d = DotProduct(rejectpt, view_clipplanes[i].normal);
+            d = rejectpt.dot(view_clipplanes[i].normal);
             d -= view_clipplanes[i].dist;
 
             if (d <= 0) {
                 return BMODEL_FULLY_CLIPPED;
             }
 
-            acceptpt[0] = minmaxs[pindex[3 + 0]];
-            acceptpt[1] = minmaxs[pindex[3 + 1]];
-            acceptpt[2] = minmaxs[pindex[3 + 2]];
+            acceptpt = Vector3(minmaxs[pindex[3 + 0]], minmaxs[pindex[3 + 1]], minmaxs[pindex[3 + 2]]);
 
-            d = DotProduct(acceptpt, view_clipplanes[i].normal);
+            d = acceptpt.dot(view_clipplanes[i].normal);
             d -= view_clipplanes[i].dist;
 
             if (d <= 0) {
@@ -6460,8 +6495,8 @@ R_DrawBEntitiesOnList
 */
 void R_DrawBEntitiesOnList(void)
 {
-    int i, j, k, clipflags;
-    vec3_t oldorigin;
+    int i, k, clipflags;
+    Vector3 oldorigin;
     model_t* clmodel;
     float minmaxs[6];
 
@@ -6469,7 +6504,7 @@ void R_DrawBEntitiesOnList(void)
         return;
     }
 
-    VectorCopy(modelorg, oldorigin);
+    oldorigin = modelorg;
     insubmodel = true;
     r_dlightframecount = r_framecount;
 
@@ -6483,18 +6518,20 @@ void R_DrawBEntitiesOnList(void)
 
             // see if the bounding box lets us trivially reject, also sets
             // trivial accept status
-            for (j = 0; j < 3; j++) {
-                minmaxs[j] = currententity->origin[j] + clmodel->mins[j];
-                minmaxs[3 + j] = currententity->origin[j] + clmodel->maxs[j];
-            }
+            minmaxs[0] = currententity->origin.x + clmodel->mins[0];
+            minmaxs[1] = currententity->origin.y + clmodel->mins[1];
+            minmaxs[2] = currententity->origin.z + clmodel->mins[2];
+            minmaxs[3] = currententity->origin.x + clmodel->maxs[0];
+            minmaxs[4] = currententity->origin.y + clmodel->maxs[1];
+            minmaxs[5] = currententity->origin.z + clmodel->maxs[2];
 
             clipflags = R_BmodelCheckBBox(clmodel, minmaxs);
 
             if (clipflags != BMODEL_FULLY_CLIPPED) {
-                VectorCopy(currententity->origin, r_entorigin);
-                VectorSubtract(r_origin, r_entorigin, modelorg);
+                r_entorigin = currententity->origin;
+                modelorg = r_origin - r_entorigin;
                 // FIXME: is this needed?
-                VectorCopy(modelorg, r_worldmodelorg);
+                r_worldmodelorg = modelorg;
 
                 r_pcurrentvertbase = clmodel->vertexes;
 
@@ -6522,10 +6559,8 @@ void R_DrawBEntitiesOnList(void)
                 } else {
                     r_pefragtopnode = NULL;
 
-                    for (j = 0; j < 3; j++) {
-                        r_emins[j] = minmaxs[j];
-                        r_emaxs[j] = minmaxs[3 + j];
-                    }
+                    r_emins = Vector3(minmaxs[0], minmaxs[1], minmaxs[2]);
+                    r_emaxs = Vector3(minmaxs[3], minmaxs[4], minmaxs[5]);
 
                     R_SplitEntityOnNode2(cl.worldmodel->nodes);
 
@@ -6549,11 +6584,11 @@ void R_DrawBEntitiesOnList(void)
 
                 // put back world rotation and frustum clipping
                 // FIXME: R_RotateBmodel should just work off base_vxx
-                VectorCopy(base_vpn, vpn);
-                VectorCopy(base_vup, vup);
-                VectorCopy(base_vright, vright);
-                VectorCopy(base_modelorg, modelorg);
-                VectorCopy(oldorigin, modelorg);
+                vpn = base_vpn;
+                vup = base_vup;
+                vright = base_vright;
+                modelorg = base_modelorg;
+                modelorg = oldorigin;
                 R_TransformFrustum();
             }
 

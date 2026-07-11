@@ -85,17 +85,17 @@ extern int r_drawnpolycount;
 extern int sintable[SIN_BUFFER_SIZE];
 extern int intsintable[SIN_BUFFER_SIZE];
 
-extern vec3_t vup, base_vup;
-extern vec3_t vpn, base_vpn;
-extern vec3_t vright, base_vright;
+extern Vector3 vup, base_vup;
+extern Vector3 vpn, base_vpn;
+extern Vector3 vright, base_vright;
 extern entity_t* currententity;
 
 extern surf_t *surfaces, *surface_p, *surf_max;
 
-extern vec3_t sxformaxis[4];
-extern vec3_t txformaxis[4];
+extern Vector3 sxformaxis[4];
+extern Vector3 txformaxis[4];
 
-extern vec3_t modelorg, base_modelorg;
+extern Vector3 modelorg, base_modelorg;
 
 extern float xcenter, ycenter;
 extern float xscale, yscale;
@@ -104,7 +104,7 @@ extern float xscaleshrink, yscaleshrink;
 
 extern int d_lightstylevalue[256];
 
-extern void TransformVector(vec3_t in, vec3_t out);
+extern void TransformVector(const Vector3& in, Vector3& out);
 extern void SetUpForLineScan(fixed8_t startvertu,
     fixed8_t startvertv,
     fixed8_t endvertu,

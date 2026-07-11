@@ -1,4 +1,4 @@
-// progs.h -- QuakeC program runtime structures
+// vm.hpp -- QuakeC program runtime structures
 #pragma once
 
 #include "pr_comp.hpp"  // defs shared with qcc

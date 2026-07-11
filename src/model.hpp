@@ -27,7 +27,7 @@ BRUSH MODELS
 //
 // !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct {
-    vec3_t position;
+    Vector3 position;
 } mvertex_t;
 
 #define SIDE_FRONT 0
@@ -37,7 +37,7 @@ typedef struct {
 // plane_t structure
 // !!! if this is changed, it must be changed in asm_i386.h too !!!
 typedef struct mplane_s {
-    vec3_t normal;
+    Vector3 normal;
     float dist;
     byte type;     // for texture axis selection and fast side tests
     byte signbits; // signx + signy<<1 + signz<<1
@@ -141,8 +141,8 @@ typedef struct {
     mplane_t* planes;
     int firstclipnode;
     int lastclipnode;
-    vec3_t clip_mins;
-    vec3_t clip_maxs;
+    Vector3 clip_mins;
+    Vector3 clip_maxs;
 } hull_t;
 
 /*
@@ -270,7 +270,7 @@ typedef struct model_s {
     //
     // volume occupied by the model
     //
-    vec3_t mins, maxs;
+    Vector3 mins, maxs;
     float radius;
 
     //
@@ -338,7 +338,7 @@ model_t* Mod_ForName(const char* name, qboolean crash);
 void* Mod_Extradata(model_t* mod);
 void Mod_TouchModel(char* name);
 
-mleaf_t* Mod_PointInLeaf(float* p, model_t* model);
+mleaf_t* Mod_PointInLeaf(const Vector3& p, model_t* model);
 byte* Mod_LeafPVS(mleaf_t* leaf, model_t* model);
 
 } // namespace Model

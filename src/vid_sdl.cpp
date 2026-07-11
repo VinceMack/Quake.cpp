@@ -35,8 +35,10 @@ viddef_t vid;
 
 unsigned short d_8to16table[256];
 
+#ifdef _MSC_VER
 #include "winquake.hpp"
 modestate_t modestate = MS_WINDOWED;
+#endif
 cvar_t _windowed_mouse = {"_windowed_mouse", "1"};
 
 void VID_HandlePause()

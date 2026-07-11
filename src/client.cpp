@@ -46,13 +46,11 @@ cvar_t m_yaw = { "m_yaw", "0.022", true };
 cvar_t m_forward = { "m_forward", "1", true };
 cvar_t m_side = { "m_side", "0.8", true };
 
-client_static_t cls;
-client_state_t cl;
-efrag_t cl_efrags[MAX_EFRAGS];
-entity_t cl_entities[MAX_EDICTS];
-entity_t cl_static_entities[MAX_STATIC_ENTITIES];
-lightstyle_t cl_lightstyle[MAX_LIGHTSTYLES];
-dlight_t cl_dlights[MAX_DLIGHTS];
+ClientSubsystem& GetClientSubsystem()
+{
+    static ClientSubsystem subsystem;
+    return subsystem;
+}
 
 int cl_numvisedicts;
 entity_t* cl_visedicts[MAX_VISEDICTS];
@@ -105,8 +103,7 @@ int bitcounts[16];
 
 // from cl_tent.cpp
 int num_temp_entities;
-entity_t cl_temp_entities[MAX_TEMP_ENTITIES];
-beam_t cl_beams[MAX_BEAMS];
+// cl_temp_entities and cl_beams are encapsulated in ClientSubsystem
 sfx_t* cl_sfx_wizhit;
 sfx_t* cl_sfx_knighthit;
 sfx_t* cl_sfx_tink1;
@@ -458,9 +455,9 @@ void CL_RelinkEntities(void)
     entity_t* ent;
     int i, j;
     float frac, f, d;
-    vec3_t delta;
+    Vector3 delta;
     float bobjrotate;
-    vec3_t oldorg;
+    Vector3 oldorg;
     dlight_t* dl;
 
     // determine partial update time
@@ -471,9 +468,7 @@ void CL_RelinkEntities(void)
     //
     // interpolate player info
     //
-    for (i = 0; i < 3; i++) {
-        cl.velocity[i] = cl.mvelocity[1][i] + frac * (cl.mvelocity[0][i] - cl.mvelocity[1][i]);
-    }
+    cl.velocity = cl.mvelocity[1] + (cl.mvelocity[0] - cl.mvelocity[1]) * frac;
 
     if (cls.demoplayback) {
         // interpolate the angles
@@ -507,25 +502,24 @@ void CL_RelinkEntities(void)
             continue;
         }
 
-        VectorCopy(ent->origin, oldorg);
+        oldorg = ent->origin;
 
         if (ent->forcelink) { // the entity was not updated in the last message
             // so move to the final spot
-            VectorCopy(ent->msg_origins[0], ent->origin);
-            VectorCopy(ent->msg_angles[0], ent->angles);
+            ent->origin = ent->msg_origins[0];
+            ent->angles = ent->msg_angles[0];
         } else { // if the delta is large, assume a teleport and don't lerp
             f = frac;
+            delta = ent->msg_origins[0] - ent->msg_origins[1];
             for (j = 0; j < 3; j++) {
-                delta[j] = ent->msg_origins[0][j] - ent->msg_origins[1][j];
                 if (delta[j] > 100 || delta[j] < -100) {
                     f = 1; // assume a teleportation, not a motion
                 }
             }
 
             // interpolate the origin and angles
+            ent->origin = ent->msg_origins[1] + delta * f;
             for (j = 0; j < 3; j++) {
-                ent->origin[j] = ent->msg_origins[1][j] + f * delta[j];
-
                 d = ent->msg_angles[0][j] - ent->msg_angles[1][j];
                 if (d > 180) {
                     d -= 360;
@@ -547,14 +541,14 @@ void CL_RelinkEntities(void)
         }
 
         if (ent->effects & EF_MUZZLEFLASH) {
-            vec3_t fv, rv, uv;
+            Vector3 fv, rv, uv;
 
             dl = CL_AllocDlight(i);
-            VectorCopy(ent->origin, dl->origin);
-            dl->origin[2] += 16;
+            dl->origin = ent->origin;
+            dl->origin.z += 16;
             AngleVectors(ent->angles, fv, rv, uv);
 
-            VectorMA(dl->origin, 18, fv, dl->origin);
+            dl->origin += fv * 18;
             dl->radius = 200 + (rand() & 31);
             dl->minlight = 32;
             dl->die = cl.time + 0.1;
@@ -1482,13 +1476,12 @@ CL_ParseStartSoundPacket
 */
 void CL_ParseStartSoundPacket(void)
 {
-    vec3_t pos;
+    Vector3 pos;
     int channel, ent;
     int sound_num;
     int packet_vol;
     int field_mask;
     float attenuation;
-    int i;
 
     field_mask = MSG_ReadByte();
 
@@ -1514,9 +1507,9 @@ void CL_ParseStartSoundPacket(void)
         Host_Error("CL_ParseStartSoundPacket: ent = %i", ent);
     }
 
-    for (i = 0; i < 3; i++) {
-        pos[i] = MSG_ReadCoord();
-    }
+    pos.x = MSG_ReadCoord();
+    pos.y = MSG_ReadCoord();
+    pos.z = MSG_ReadCoord();
 
     S_StartSound(ent, channel, cl.sound_precache[sound_num], pos, packet_vol / 255.0, attenuation);
 }
@@ -2090,13 +2083,13 @@ CL_ParseStaticSound
 */
 void CL_ParseStaticSound(void)
 {
-    vec3_t org;
+    Vector3 org;
     int sound_num, vol, atten;
-    int i;
 
-    for (i = 0; i < 3; i++) {
-        org[i] = MSG_ReadCoord();
-    }
+    org.x = MSG_ReadCoord();
+    org.y = MSG_ReadCoord();
+    org.z = MSG_ReadCoord();
+
     sound_num = MSG_ReadByte();
     vol = MSG_ReadByte();
     atten = MSG_ReadByte();
@@ -2396,19 +2389,19 @@ CL_ParseBeam
 void CL_ParseBeam(model_t* m)
 {
     int ent;
-    vec3_t start, end;
+    Vector3 start, end;
     beam_t* b;
     int i;
 
     ent = MSG_ReadShort();
 
-    start[0] = MSG_ReadCoord();
-    start[1] = MSG_ReadCoord();
-    start[2] = MSG_ReadCoord();
+    start.x = MSG_ReadCoord();
+    start.y = MSG_ReadCoord();
+    start.z = MSG_ReadCoord();
 
-    end[0] = MSG_ReadCoord();
-    end[1] = MSG_ReadCoord();
-    end[2] = MSG_ReadCoord();
+    end.x = MSG_ReadCoord();
+    end.y = MSG_ReadCoord();
+    end.z = MSG_ReadCoord();
 
     // override any beam with the same entity
     for (i = 0, b = cl_beams; i < MAX_BEAMS; i++, b++) {
@@ -2416,8 +2409,8 @@ void CL_ParseBeam(model_t* m)
             b->entity = ent;
             b->model = m;
             b->endtime = cl.time + 0.2;
-            VectorCopy(start, b->start);
-            VectorCopy(end, b->end);
+            b->start = start;
+            b->end = end;
 
             return;
         }
@@ -2429,8 +2422,8 @@ void CL_ParseBeam(model_t* m)
             b->entity = ent;
             b->model = m;
             b->endtime = cl.time + 0.2;
-            VectorCopy(start, b->start);
-            VectorCopy(end, b->end);
+            b->start = start;
+            b->end = end;
 
             return;
         }
@@ -2446,7 +2439,7 @@ CL_ParseTEnt
 void CL_ParseTEnt(void)
 {
     int type;
-    vec3_t pos;
+    Vector3 pos;
     dlight_t* dl;
     int rnd;
     int colorStart, colorLength;
@@ -2454,25 +2447,25 @@ void CL_ParseTEnt(void)
     type = MSG_ReadByte();
     switch (type) {
     case TE_WIZSPIKE: // spike hitting wall
-        pos[0] = MSG_ReadCoord();
-        pos[1] = MSG_ReadCoord();
-        pos[2] = MSG_ReadCoord();
+        pos.x = MSG_ReadCoord();
+        pos.y = MSG_ReadCoord();
+        pos.z = MSG_ReadCoord();
         R_RunParticleEffect(pos, vec3_origin, 20, 30);
         S_StartSound(-1, 0, cl_sfx_wizhit, pos, 1, 1);
         break;
 
     case TE_KNIGHTSPIKE: // spike hitting wall
-        pos[0] = MSG_ReadCoord();
-        pos[1] = MSG_ReadCoord();
-        pos[2] = MSG_ReadCoord();
+        pos.x = MSG_ReadCoord();
+        pos.y = MSG_ReadCoord();
+        pos.z = MSG_ReadCoord();
         R_RunParticleEffect(pos, vec3_origin, 226, 20);
         S_StartSound(-1, 0, cl_sfx_knighthit, pos, 1, 1);
         break;
 
     case TE_SPIKE: // spike hitting wall
-        pos[0] = MSG_ReadCoord();
-        pos[1] = MSG_ReadCoord();
-        pos[2] = MSG_ReadCoord();
+        pos.x = MSG_ReadCoord();
+        pos.y = MSG_ReadCoord();
+        pos.z = MSG_ReadCoord();
         R_RunParticleEffect(pos, vec3_origin, 0, 10);
         if (rand() % 5) {
             S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
@@ -2489,9 +2482,9 @@ void CL_ParseTEnt(void)
 
         break;
     case TE_SUPERSPIKE: // super spike hitting wall
-        pos[0] = MSG_ReadCoord();
-        pos[1] = MSG_ReadCoord();
-        pos[2] = MSG_ReadCoord();
+        pos.x = MSG_ReadCoord();
+        pos.y = MSG_ReadCoord();
+        pos.z = MSG_ReadCoord();
         R_RunParticleEffect(pos, vec3_origin, 0, 20);
 
         if (rand() % 5) {
@@ -2510,19 +2503,19 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_GUNSHOT: // bullet hitting wall
-        pos[0] = MSG_ReadCoord();
-        pos[1] = MSG_ReadCoord();
-        pos[2] = MSG_ReadCoord();
+        pos.x = MSG_ReadCoord();
+        pos.y = MSG_ReadCoord();
+        pos.z = MSG_ReadCoord();
         R_RunParticleEffect(pos, vec3_origin, 0, 20);
         break;
 
     case TE_EXPLOSION: // rocket explosion
-        pos[0] = MSG_ReadCoord();
-        pos[1] = MSG_ReadCoord();
-        pos[2] = MSG_ReadCoord();
+        pos.x = MSG_ReadCoord();
+        pos.y = MSG_ReadCoord();
+        pos.z = MSG_ReadCoord();
         R_ParticleExplosion(pos);
         dl = CL_AllocDlight(0);
-        VectorCopy(pos, dl->origin);
+        dl->origin = pos;
         dl->radius = 350;
         dl->die = cl.time + 0.5;
         dl->decay = 300;
@@ -2530,9 +2523,9 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_TAREXPLOSION: // tarbaby explosion
-        pos[0] = MSG_ReadCoord();
-        pos[1] = MSG_ReadCoord();
-        pos[2] = MSG_ReadCoord();
+        pos.x = MSG_ReadCoord();
+        pos.y = MSG_ReadCoord();
+        pos.z = MSG_ReadCoord();
         R_BlobExplosion(pos);
 
         S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
@@ -2557,28 +2550,28 @@ void CL_ParseTEnt(void)
         // PGM 01/21/97
 
     case TE_LAVASPLASH:
-        pos[0] = MSG_ReadCoord();
-        pos[1] = MSG_ReadCoord();
-        pos[2] = MSG_ReadCoord();
+        pos.x = MSG_ReadCoord();
+        pos.y = MSG_ReadCoord();
+        pos.z = MSG_ReadCoord();
         R_LavaSplash(pos);
         break;
 
     case TE_TELEPORT:
-        pos[0] = MSG_ReadCoord();
-        pos[1] = MSG_ReadCoord();
-        pos[2] = MSG_ReadCoord();
+        pos.x = MSG_ReadCoord();
+        pos.y = MSG_ReadCoord();
+        pos.z = MSG_ReadCoord();
         R_TeleportSplash(pos);
         break;
 
     case TE_EXPLOSION2: // color mapped explosion
-        pos[0] = MSG_ReadCoord();
-        pos[1] = MSG_ReadCoord();
-        pos[2] = MSG_ReadCoord();
+        pos.x = MSG_ReadCoord();
+        pos.y = MSG_ReadCoord();
+        pos.z = MSG_ReadCoord();
         colorStart = MSG_ReadByte();
         colorLength = MSG_ReadByte();
         R_ParticleExplosion2(pos, colorStart, colorLength);
         dl = CL_AllocDlight(0);
-        VectorCopy(pos, dl->origin);
+        dl->origin = pos;
         dl->radius = 350;
         dl->die = cl.time + 0.5;
         dl->decay = 300;
@@ -2628,7 +2621,7 @@ void CL_UpdateTEnts(void)
 {
     int i;
     beam_t* b;
-    vec3_t dist, org;
+    Vector3 dist, org;
     float d;
     entity_t* ent;
     float yaw, pitch;
@@ -2644,50 +2637,48 @@ void CL_UpdateTEnts(void)
 
         // if coming from the player, update the start position
         if (b->entity == cl.viewentity) {
-            VectorCopy(cl_entities[cl.viewentity].origin, b->start);
+            b->start = cl_entities[cl.viewentity].origin;
         }
 
         // calculate pitch and yaw
-        VectorSubtract(b->end, b->start, dist);
+        dist = b->end - b->start;
 
-        if (dist[1] == 0 && dist[0] == 0) {
+        if (dist.y == 0 && dist.x == 0) {
             yaw = 0;
-            if (dist[2] > 0) {
+            if (dist.z > 0) {
                 pitch = 90;
             } else {
                 pitch = 270;
             }
         } else {
-            yaw = (int)(atan2(dist[1], dist[0]) * 180 / M_PI);
+            yaw = (int)(atan2(dist.y, dist.x) * 180 / M_PI);
             if (yaw < 0) {
                 yaw += 360;
             }
 
-            forward = sqrt(dist[0] * dist[0] + dist[1] * dist[1]);
-            pitch = (int)(atan2(dist[2], forward) * 180 / M_PI);
+            forward = sqrt(dist.x * dist.x + dist.y * dist.y);
+            pitch = (int)(atan2(dist.z, forward) * 180 / M_PI);
             if (pitch < 0) {
                 pitch += 360;
             }
         }
 
         // add new entities for the lightning
-        VectorCopy(b->start, org);
-        d = VectorNormalize(dist);
+        org = b->start;
+        d = dist.normalize();
         while (d > 0) {
             ent = CL_NewTempEntity();
             if (!ent) {
                 return;
             }
 
-            VectorCopy(org, ent->origin);
+            ent->origin = org;
             ent->model = b->model;
             ent->angles[0] = pitch;
             ent->angles[1] = yaw;
             ent->angles[2] = rand() % 360;
 
-            for (i = 0; i < 3; i++) {
-                org[i] += dist[i] * 30;
-            }
+            org += dist * 30;
             d -= 30;
         }
     }

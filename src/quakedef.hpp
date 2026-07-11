@@ -13,12 +13,13 @@
 
 #define GAMENAME "id1"
 
-#include <math.h>
-#include <string.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <setjmp.h>
+#include <cmath>
+#include <cstring>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <exception>
+#include <stdexcept>
 #include "core_types.hpp"
 
 inline void VID_LockBuffer(void) {}
@@ -168,8 +169,8 @@ inline void VID_UnlockBuffer(void) {}
 #include "mathlib.hpp"
 
 typedef struct {
-    vec3_t origin;
-    vec3_t angles;
+    Vector3 origin;
+    Vector3 angles;
     int modelindex;
     int frame;
     int colormap;
@@ -181,17 +182,17 @@ typedef struct {
 #include "draw.hpp"
 #include "cvar.hpp"
 #include "screen.hpp"
-#include "net.hpp"
+#include "network.hpp"
 #include "protocol.hpp"
 #include "cmd.hpp"
 #include "sbar.hpp"
-#include "sound.hpp"
-#include "render.hpp"
+#include "audio.hpp"
+#include "renderer.hpp"
 #include "model.hpp"
 #include "client.hpp"
-#include "progs.hpp"
+#include "vm.hpp"
 #include "server.hpp"
-#include "d_iface.hpp"
+#include "rasterizer.hpp"
 
 #include "input.hpp"
 #include "world.hpp"

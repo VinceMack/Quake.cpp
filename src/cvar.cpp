@@ -29,14 +29,20 @@ using namespace Cmd;
 
 namespace Cvar {
 
+CvarRegistry& GetCvarRegistry()
+{
+    static CvarRegistry registry;
+    return registry;
+}
+
 /*
 ============
 FindVar
 ============
 */
-cvar_t* FindVar(std::string_view var_name)
+cvar_t* CvarRegistry::FindVar(std::string_view var_name)
 {
-    for (cvar_t* var = state.vars; var; var = var->next) {
+    for (cvar_t* var = state_.vars; var; var = var->next) {
         if (var_name == var->name) {
             return var;
         }
@@ -49,7 +55,7 @@ cvar_t* FindVar(std::string_view var_name)
 VariableValue
 ============
 */
-float VariableValue(std::string_view var_name)
+float CvarRegistry::VariableValue(std::string_view var_name)
 {
     cvar_t* var = FindVar(var_name);
     if (!var) {
@@ -63,7 +69,7 @@ float VariableValue(std::string_view var_name)
 VariableString
 ============
 */
-std::string_view VariableString(std::string_view var_name)
+std::string_view CvarRegistry::VariableString(std::string_view var_name)
 {
     cvar_t* var = FindVar(var_name);
     if (!var) {
@@ -77,13 +83,13 @@ std::string_view VariableString(std::string_view var_name)
 CompleteVariable
 ============
 */
-std::string_view CompleteVariable(std::string_view partial)
+std::string_view CvarRegistry::CompleteVariable(std::string_view partial)
 {
     if (partial.empty()) {
         return "";
     }
 
-    for (cvar_t* var = state.vars; var; var = var->next) {
+    for (cvar_t* var = state_.vars; var; var = var->next) {
         if (std::string_view(var->name).starts_with(partial)) {
             return var->name;
         }
@@ -96,7 +102,7 @@ std::string_view CompleteVariable(std::string_view partial)
 Set
 ============
 */
-void Set(std::string_view var_name, std::string_view value)
+void CvarRegistry::Set(std::string_view var_name, std::string_view value)
 {
     cvar_t* var = FindVar(var_name);
     if (!var) {
@@ -108,8 +114,8 @@ void Set(std::string_view var_name, std::string_view value)
 
     Z_Free(const_cast<char*>(var->string)); // free the old value string
 
-    char* new_str = (char *) Z_Malloc(value.length() + 1);
-    Q_memcpy(new_str, const_cast<char*>(value.data()), value.length());
+    char* new_str = (char *) Z_Malloc(static_cast<int>(value.length()) + 1);
+    Q_memcpy(new_str, const_cast<char*>(value.data()), static_cast<int>(value.length()));
     new_str[value.length()] = '\0';
     var->string = new_str;
     var->value = Q_atof(var->string);
@@ -125,7 +131,7 @@ void Set(std::string_view var_name, std::string_view value)
 SetValue
 ============
 */
-void SetValue(std::string_view var_name, float value)
+void CvarRegistry::SetValue(std::string_view var_name, float value)
 {
     char val[32];
     std::sprintf(val, "%f", value);
@@ -137,7 +143,7 @@ void SetValue(std::string_view var_name, float value)
 Register
 ============
 */
-void Register(cvar_t* variable)
+void CvarRegistry::Register(cvar_t* variable)
 {
     // check to see if it has allready been defined
     if (FindVar(variable->name)) {
@@ -159,8 +165,8 @@ void Register(cvar_t* variable)
     variable->value = Q_atof(variable->string);
 
     // link the variable in
-    variable->next = state.vars;
-    state.vars = variable;
+    variable->next = state_.vars;
+    state_.vars = variable;
 }
 
 /*
@@ -168,7 +174,7 @@ void Register(cvar_t* variable)
 Command
 ============
 */
-qboolean Command(void)
+qboolean CvarRegistry::Command(void)
 {
     cvar_t* v = FindVar(Cmd::Argv(0));
     if (!v) {
@@ -190,13 +196,59 @@ qboolean Command(void)
 WriteVariables
 ============
 */
-void WriteVariables(std::FILE* f)
+void CvarRegistry::WriteVariables(std::FILE* f)
 {
-    for (cvar_t* var = state.vars; var; var = var->next) {
+    for (cvar_t* var = state_.vars; var; var = var->next) {
         if (var->archive) {
             std::fprintf(f, "%s \"%s\"\n", var->name, var->string);
         }
     }
+}
+
+// Wrapper APIs forwarding to the singleton registry
+cvar_t* FindVar(std::string_view var_name)
+{
+    return GetCvarRegistry().FindVar(var_name);
+}
+
+float VariableValue(std::string_view var_name)
+{
+    return GetCvarRegistry().VariableValue(var_name);
+}
+
+std::string_view VariableString(std::string_view var_name)
+{
+    return GetCvarRegistry().VariableString(var_name);
+}
+
+std::string_view CompleteVariable(std::string_view partial)
+{
+    return GetCvarRegistry().CompleteVariable(partial);
+}
+
+void Set(std::string_view var_name, std::string_view value)
+{
+    GetCvarRegistry().Set(var_name, value);
+}
+
+void SetValue(std::string_view var_name, float value)
+{
+    GetCvarRegistry().SetValue(var_name, value);
+}
+
+void Register(cvar_t* variable)
+{
+    GetCvarRegistry().Register(variable);
+}
+
+qboolean Command(void)
+{
+    return GetCvarRegistry().Command();
+}
+
+void WriteVariables(std::FILE* f)
+{
+    GetCvarRegistry().WriteVariables(f);
 }
 
 } // namespace Cvar
