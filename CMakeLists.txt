@@ -55,38 +55,38 @@ set(CORE_SRCS
     src/zone.cpp
 )
 
-add_executable(clean-quake ${CORE_SRCS})
+add_executable(Quake.cpp ${CORE_SRCS})
 
-target_include_directories(clean-quake PRIVATE src)
+target_include_directories(Quake.cpp PRIVATE src)
 
 # Link SDL2 and Windows libraries
-target_link_libraries(clean-quake PRIVATE SDL2main SDL2-static ws2_32 winmm)
+target_link_libraries(Quake.cpp PRIVATE SDL2main SDL2-static ws2_32 winmm)
 
 # Suppress some old C warnings for cleaner output
 if(MSVC)
-    target_compile_options(clean-quake PRIVATE 
+    target_compile_options(Quake.cpp PRIVATE 
         /W4 
         /Z7
         /w14702      # Force C4702 (Unreachable code) to be a Level 1 Warning
-        # --- NEW FLAGS ---
         /Gy          # Function-level linking (puts each function in its own section)
         /Gw          # Optimize global data (puts each variable in its own section)
     )
-    target_link_options(clean-quake PRIVATE
+    # Target-specific linker overrides
+    # NOTE: /INCREMENTAL:NO is required to allow /OPT:REF to function.
+    target_link_options(Quake.cpp PRIVATE
         /INCREMENTAL:NO
         /OPT:REF       # Eliminate unreferenced functions and data
         /VERBOSE:REF   # Print out everything the linker throws away
     )
 else()
-    target_compile_options(clean-quake PRIVATE 
+    target_compile_options(Quake.cpp PRIVATE 
         -Wall -Wextra 
         -Wunreachable-code # Warn about unreachable code paths
         -Wno-write-strings
-        # --- NEW FLAGS ---
         -ffunction-sections # Put each function in its own section
         -fdata-sections     # Put each variable in its own section
     )
-    target_link_options(clean-quake PRIVATE
+    target_link_options(Quake.cpp PRIVATE
         -Wl,--gc-sections       # Garbage collect empty sections
         -Wl,--print-gc-sections # Print out everything the linker throws away
     )

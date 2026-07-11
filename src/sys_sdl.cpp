@@ -43,8 +43,6 @@ using namespace Cmd;
 const char* basedir = ".";
 const char* cachedir = "/tmp";
 
-cvar_t sys_linerefresh = { "sys_linerefresh", "0" }; // set for entity display
-
 namespace Host {
 qboolean isDedicated;
 cvar_t sys_nostdout = { "sys_nostdout", "0" };
@@ -280,10 +278,6 @@ double Sys_FloatTime(void)
 
 static volatile int oktogo;
 
-void Sys_LineRefresh(void)
-{
-}
-
 void moncontrol()
 {
 }
@@ -345,10 +339,5 @@ int main(int c, char** v)
 
         Host_Frame(static_cast<float>(time));
         moncontrol();
-
-        // graphic debugging aids
-        if (sys_linerefresh.value) {
-            Sys_LineRefresh();
-        }
     }
 }
