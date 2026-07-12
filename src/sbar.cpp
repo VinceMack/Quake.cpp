@@ -260,7 +260,7 @@ void Sbar_Init(void)
 Sbar_DrawPic
 =============
 */
-void Sbar_DrawPic(int x, int y, qpic_t* pic)
+void Sbar_DrawPic(int x, int y, const qpic_t* pic)
 {
     if (cl.gametype == GAME_DEATHMATCH) {
         Draw_Pic(x /* + ((vid.width - 320)>>1)*/, y + (vid.height - SBAR_HEIGHT),
@@ -275,7 +275,7 @@ void Sbar_DrawPic(int x, int y, qpic_t* pic)
 Sbar_DrawTransPic
 =============
 */
-void Sbar_DrawTransPic(int x, int y, qpic_t* pic)
+void Sbar_DrawTransPic(int x, int y, const qpic_t* pic)
 {
     if (cl.gametype == GAME_DEATHMATCH) {
         Draw_TransPic(x /*+ ((vid.width - 320)>>1)*/,
@@ -309,7 +309,7 @@ void Sbar_DrawCharacter(int x, int y, int num)
 Sbar_DrawString
 ================
 */
-void Sbar_DrawString(int x, int y, char* str)
+void Sbar_DrawString(int x, int y, const char* str)
 {
     if (cl.gametype == GAME_DEATHMATCH) {
         Draw_String(x /*+ ((vid.width - 320)>>1)*/, y + vid.height - SBAR_HEIGHT,
@@ -329,7 +329,6 @@ int Sbar_itoa(int num, char* buf)
 {
     char* str;
     int pow10;
-    int dig;
 
     str = buf;
 
@@ -344,7 +343,7 @@ int Sbar_itoa(int num, char* buf)
 
     do {
         pow10 /= 10;
-        dig = num / pow10;
+        int dig = num / pow10;
         *str++ = static_cast<char>('0' + dig);
         num -= dig * pow10;
     } while (pow10 != 1);
@@ -405,7 +404,7 @@ Sbar_SortFrags
 */
 void Sbar_SortFrags(void)
 {
-    int i, j, k;
+    int i, j;
 
     // sort by frags
     scoreboardlines = 0;
@@ -419,7 +418,7 @@ void Sbar_SortFrags(void)
     for (i = 0; i < scoreboardlines; i++) {
         for (j = 0; j < scoreboardlines - 1 - i; j++) {
             if (cl.scores[fragsort[j]].frags < cl.scores[fragsort[j + 1]].frags) {
-                k = fragsort[j];
+                int k = fragsort[j];
                 fragsort[j] = fragsort[j + 1];
                 fragsort[j + 1] = k;
             }
@@ -429,7 +428,7 @@ void Sbar_SortFrags(void)
 
 int Sbar_ColorForMap(int m)
 {
-    return m < 128 ? m + 8 : m + 8;
+    return m + 8;
 }
 
 /*
@@ -443,11 +442,11 @@ void Sbar_SoloScoreboard(void)
     int minutes, seconds, tens, units;
     int l;
 
-    sprintf_s(str, sizeof(str), "Monsters:%3i /%3i", cl.stats[STAT_MONSTERS],
+    snprintf(str, sizeof(str), "Monsters:%3i /%3i", cl.stats[STAT_MONSTERS],
         cl.stats[STAT_TOTALMONSTERS]);
     Sbar_DrawString(8, 4, str);
 
-    sprintf_s(str, sizeof(str), "Secrets :%3i /%3i", cl.stats[STAT_SECRETS],
+    snprintf(str, sizeof(str), "Secrets :%3i /%3i", cl.stats[STAT_SECRETS],
         cl.stats[STAT_TOTALSECRETS]);
     Sbar_DrawString(8, 12, str);
 
@@ -456,7 +455,7 @@ void Sbar_SoloScoreboard(void)
     seconds = static_cast<int>(cl.time - 60 * minutes);
     tens = seconds / 10;
     units = seconds - 10 * tens;
-    sprintf_s(str, sizeof(str), "Time :%3i:%i%i", minutes, tens, units);
+    snprintf(str, sizeof(str), "Time :%3i:%i%i", minutes, tens, units);
     Sbar_DrawString(184, 4, str);
 
     // draw level name
@@ -584,7 +583,7 @@ flashon = static_cast<int>((cl.time - time) * 10);
 
     // ammo counts
     for (i = 0; i < 4; i++) {
-        sprintf_s(num, sizeof(num), "%3i", cl.stats[STAT_SHELLS + i]);
+        snprintf(num, sizeof(num), "%3i", cl.stats[STAT_SHELLS + i]);
         if (num[0] != ' ') {
             Sbar_DrawCharacter((6 * i + 1) * 8 - 2, -24, 18 + num[0] - '0');
         }
@@ -598,7 +597,7 @@ flashon = static_cast<int>((cl.time - time) * 10);
         }
     }
 
-    flashon = 0;
+    flashon = (cl.time < 0.0f) ? 1 : 0;
     // items
     for (i = 0; i < 6; i++) {
         if (cl.items & (1 << (17 + i))) {
@@ -656,7 +655,7 @@ flashon = static_cast<int>((cl.time - time) * 10);
     } else {
         // sigils
         for (i = 0; i < 4; i++) {
-            if (cl.items & (1 << (28 + i))) {
+            if (cl.items & (1U << (28 + i))) {
                 time = cl.item_gettime[28 + i];
                 if (time && time > cl.time - 2 && flashon) { // flash frame
                     sb_updates = 0;
@@ -681,12 +680,11 @@ Sbar_DrawFrags
 */
 void Sbar_DrawFrags(void)
 {
-    int i, k, l;
+    int i, l;
     int top, bottom;
     int x, y, f;
     int xofs;
     char num[12];
-    scoreboard_t* s;
 
     Sbar_SortFrags();
 
@@ -703,8 +701,8 @@ void Sbar_DrawFrags(void)
     y = vid.height - SBAR_HEIGHT - 23;
 
     for (i = 0; i < l; i++) {
-        k = fragsort[i];
-        s = &cl.scores[k];
+        int k = fragsort[i];
+        const scoreboard_t* s = &cl.scores[k];
         if (!s->name[0]) {
             continue;
         }
@@ -720,7 +718,7 @@ void Sbar_DrawFrags(void)
 
         // draw number
         f = s->frags;
-        sprintf_s(num, sizeof(num), "%3i", f);
+        snprintf(num, sizeof(num), "%3i", f);
 
         Sbar_DrawCharacter((x + 1) * 8, -24, num[0]);
         Sbar_DrawCharacter((x + 2) * 8, -24, num[1]);
@@ -773,7 +771,7 @@ void Sbar_DrawFace(void)
 
         // draw number
         f = s->frags;
-        sprintf_s(num, sizeof(num), "%3i", f);
+        snprintf(num, sizeof(num), "%3i", f);
 
         if (top == 8) {
             if (num[0] != ' ') {
@@ -1005,12 +1003,11 @@ Sbar_DeathmatchOverlay
 */
 void Sbar_DeathmatchOverlay(void)
 {
-    qpic_t* pic;
-    int i, k, l;
+    const qpic_t* pic;
+    int i, l;
     int top, bottom;
     int x, y, f;
     char num[12];
-    scoreboard_t* s;
 
     scr_copyeverything = 1;
     scr_fullupdate = 0;
@@ -1027,8 +1024,8 @@ void Sbar_DeathmatchOverlay(void)
     x = 80 + ((vid.width - 320) >> 1);
     y = 40;
     for (i = 0; i < l; i++) {
-        k = fragsort[i];
-        s = &cl.scores[k];
+        int k = fragsort[i];
+        const scoreboard_t* s = &cl.scores[k];
         if (!s->name[0]) {
             continue;
         }
@@ -1044,7 +1041,7 @@ void Sbar_DeathmatchOverlay(void)
 
         // draw number
         f = s->frags;
-        sprintf_s(num, sizeof(num), "%3i", f);
+        snprintf(num, sizeof(num), "%3i", f);
 
         Draw_Character(x + 8, y, num[0]);
         Draw_Character(x + 16, y, num[1]);
@@ -1069,11 +1066,10 @@ Sbar_DeathmatchOverlay
 */
 void Sbar_MiniDeathmatchOverlay(void)
 {
-    int i, k;
+    int i;
     int top, bottom;
     int x, y, f;
     char num[12];
-    scoreboard_t* s;
     int numlines;
 
     if (vid.width < 512 || !sb_lines) {
@@ -1116,8 +1112,8 @@ void Sbar_MiniDeathmatchOverlay(void)
 
     x = 324;
     for (/* */; i < scoreboardlines && y < static_cast<int>(vid.height) - 8; i++) {
-        k = fragsort[i];
-        s = &cl.scores[k];
+        int k = fragsort[i];
+        const scoreboard_t* s = &cl.scores[k];
         if (!s->name[0]) {
             continue;
         }
@@ -1133,7 +1129,7 @@ void Sbar_MiniDeathmatchOverlay(void)
 
         // draw number
         f = s->frags;
-        sprintf_s(num, sizeof(num), "%3i", f);
+        snprintf(num, sizeof(num), "%3i", f);
 
         Draw_Character(x + 8, y, num[0]);
         Draw_Character(x + 16, y, num[1]);
@@ -1159,7 +1155,7 @@ Sbar_IntermissionOverlay
 */
 void Sbar_IntermissionOverlay(void)
 {
-    qpic_t* pic;
+    const qpic_t* pic;
     int dig;
     int num;
 
@@ -1203,7 +1199,7 @@ Sbar_FinaleOverlay
 */
 void Sbar_FinaleOverlay(void)
 {
-    qpic_t* pic;
+    const qpic_t* pic;
 
     scr_copyeverything = 1;
 

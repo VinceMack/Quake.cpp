@@ -13,6 +13,7 @@
 
 #define GAMENAME "id1"
 
+#include <bsd/string.h>
 #include <cmath>
 #include <cstring>
 #include <cstdarg>
@@ -168,14 +169,14 @@ inline void VID_UnlockBuffer(void) {}
 #include "zone.hpp"
 #include "mathlib.hpp"
 
-typedef struct {
+typedef struct entity_state_s {
     Vector3 origin;
     Vector3 angles;
-    int modelindex;
-    int frame;
-    int colormap;
-    int skin;
-    int effects;
+    int modelindex = 0;
+    int frame = 0;
+    int colormap = 0;
+    int skin = 0;
+    int effects = 0;
 } entity_state_t;
 
 #include "wad.hpp"

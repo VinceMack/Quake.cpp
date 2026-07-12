@@ -49,10 +49,9 @@ Can safely be performed in place.
 void W_CleanupName(const char* in, char* out)
 {
     int i;
-    int c;
 
     for (i = 0; i < 16; i++) {
-        c = in[i];
+        int c = in[i];
         if (!c) {
             break;
         }
@@ -86,7 +85,7 @@ void W_LoadWadFile(const char* filename)
         Sys_Error("W_LoadWadFile: couldn't load %s", filename);
     }
 
-    header = (wadinfo_t*)wad_base;
+    header = reinterpret_cast<wadinfo_t*>(wad_base);
 
     if (header->identification[0] != 'W' || header->identification[1] != 'A' || header->identification[2] != 'D' || header->identification[3] != '2') {
         Sys_Error("Wad file %s doesn't have WAD2 id\n", filename);
@@ -94,14 +93,14 @@ void W_LoadWadFile(const char* filename)
 
     wad_numlumps = LittleLong(header->numlumps);
     infotableofs = LittleLong(header->infotableofs);
-    wad_lumps = (lumpinfo_t*)(wad_base + infotableofs);
+    wad_lumps = reinterpret_cast<lumpinfo_t*>(wad_base + infotableofs);
 
     for (i = 0, lump_p = wad_lumps; i < (unsigned)wad_numlumps; i++, lump_p++) {
         lump_p->filepos = LittleLong(lump_p->filepos);
         lump_p->size = LittleLong(lump_p->size);
         W_CleanupName(lump_p->name, lump_p->name);
         if (lump_p->type == TYP_QPIC) {
-            SwapPic((qpic_t*)(wad_base + lump_p->filepos));
+            SwapPic(reinterpret_cast<qpic_t*>(wad_base + lump_p->filepos));
         }
     }
 }
@@ -130,11 +129,9 @@ lumpinfo_t* W_GetLumpinfo(const char* name)
 
 void* W_GetLumpName(const char* name)
 {
-    lumpinfo_t* lump;
+    const lumpinfo_t* lump = W_GetLumpinfo(name);
 
-    lump = W_GetLumpinfo(name);
-
-    return (void*)(wad_base + lump->filepos);
+    return static_cast<void*>(wad_base + lump->filepos);
 }
 
 /*

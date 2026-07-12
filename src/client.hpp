@@ -1,13 +1,13 @@
 // client.h -- client state, connection, and entity structures
 #pragma once
 
-typedef struct {
+typedef struct usercmd_s {
     Vector3 viewangles;
 
     // intended velocities
-    float forwardmove;
-    float sidemove;
-    float upmove;
+    float forwardmove = 0.0f;
+    float sidemove = 0.0f;
+    float upmove = 0.0f;
 } usercmd_t;
 
 typedef struct {
@@ -15,12 +15,12 @@ typedef struct {
     char map[MAX_STYLESTRING];
 } lightstyle_t;
 
-typedef struct {
-    char name[MAX_SCOREBOARDNAME];
-    float entertime;
-    int frags;
-    int colors; // two 4 bit fields
-    byte translations[VID_GRADES * 256];
+typedef struct scoreboard_s {
+    char name[MAX_SCOREBOARDNAME] = {};
+    float entertime = 0.0f;
+    int frags = 0;
+    int colors = 0; // two 4 bit fields
+    byte translations[VID_GRADES * 256] = {};
 } scoreboard_t;
 
 typedef struct {
@@ -44,21 +44,21 @@ typedef struct {
 
 #define MAX_DLIGHTS 32
 
-typedef struct {
+typedef struct dlight_s {
     Vector3 origin;
-    float radius;
-    float die;      // stop lighting after this time
-    float decay;    // drop this each second
-    float minlight; // don't add when contributing less
-    int key;
+    float radius = 0.0f;
+    float die = 0.0f;      // stop lighting after this time
+    float decay = 0.0f;    // drop this each second
+    float minlight = 0.0f; // don't add when contributing less
+    int key = 0;
 } dlight_t;
 
 #define MAX_BEAMS 24
 
-typedef struct {
-    int entity;
-    struct model_s* model;
-    float endtime;
+typedef struct beam_s {
+    int entity = 0;
+    struct model_s* model = nullptr;
+    float endtime = 0.0f;
     Vector3 start, end;
 } beam_t;
 
@@ -113,21 +113,21 @@ namespace Client {
 // the client_state_t structure is wiped completely at every
 // server signon
 //
-typedef struct {
-    int movemessages; // since connecting to this server
+typedef struct client_state_s {
+    int movemessages = 0; // since connecting to this server
     // throw out the first couple, so the player
     // doesn't accidentally do something the
     // first frame
-    usercmd_t cmd; // last command sent to the server
+    usercmd_t cmd = {}; // last command sent to the server
 
     // information for local display
-    int stats[MAX_CL_STATS]; // health, etc
-    int items;               // inventory bit flags
-    float item_gettime[32];  // cl.time of aquiring item, for blinking
-    float faceanimtime;      // use anim frame if cl.time < this
+    int stats[MAX_CL_STATS] = {}; // health, etc
+    int items = 0;               // inventory bit flags
+    float item_gettime[32] = {};  // cl.time of aquiring item, for blinking
+    float faceanimtime = 0.0f;      // use anim frame if cl.time < this
 
-    cshift_t cshifts[NUM_CSHIFTS];      // color shifts for damage, powerups
-    cshift_t prev_cshifts[NUM_CSHIFTS]; // and content types
+    cshift_t cshifts[NUM_CSHIFTS] = {};      // color shifts for damage, powerups
+    cshift_t prev_cshifts[NUM_CSHIFTS] = {}; // and content types
 
     // the client maintains its own idea of view angles, which are
     // sent to the server each frame.  The server sets punchangle when
@@ -144,53 +144,53 @@ typedef struct {
     Vector3 punchangle; // temporary offset
 
     // pitch drifting vars
-    float idealpitch;
-    float pitchvel;
-    qboolean nodrift;
-    float driftmove;
-    double laststop;
+    float idealpitch = 0.0f;
+    float pitchvel = 0.0f;
+    qboolean nodrift = false;
+    float driftmove = 0.0f;
+    double laststop = 0.0;
 
-    float viewheight;
-    float crouch; // local amount for smoothing stepups
+    float viewheight = 0.0f;
+    float crouch = 0.0f; // local amount for smoothing stepups
 
-    qboolean paused; // send over by server
-    qboolean onground;
-    qboolean inwater;
+    qboolean paused = false; // send over by server
+    qboolean onground = false;
+    qboolean inwater = false;
 
-    int intermission;   // don't change view angle, full screen, etc
-    int completed_time; // latched at intermission start
+    int intermission = 0;   // don't change view angle, full screen, etc
+    int completed_time = 0; // latched at intermission start
 
-    double mtime[2]; // the timestamp of last two messages
-    double time;     // clients view of time, should be between
+    double mtime[2] = {}; // the timestamp of last two messages
+    double time = 0.0;     // clients view of time, should be between
     // servertime and oldservertime to generate
     // a lerp point for other data
-    double oldtime; // previous cl.time, time-oldtime is used
+    double oldtime = 0.0; // previous cl.time, time-oldtime is used
     // to decay light values and smooth step ups
 
-    float last_received_message; // (realtime) for net trouble icon
+    float last_received_message = 0.0f; // (realtime) for net trouble icon
 
     //
     // information that is static for the entire time connected to a server
     //
-    struct model_s* model_precache[MAX_MODELS];
-    struct sfx_s* sound_precache[MAX_SOUNDS];
+    struct model_s* model_precache[MAX_MODELS] = {};
+    struct sfx_s* sound_precache[MAX_SOUNDS] = {};
 
-    char levelname[40]; // for display on solo scoreboard
-    int viewentity;     // cl_entitites[cl.viewentity] = player
-    int maxclients;
-    int gametype;
+    char levelname[40] = {}; // for display on solo scoreboard
+    int viewentity = 0;     // cl_entitites[cl.viewentity] = player
+    int maxclients = 0;
+    int gametype = 0;
 
     // refresh related state
-    struct model_s* worldmodel; // cl_entitites[0].model
-    struct efrag_s* free_efrags;
-    int num_entities; // held in cl_entities array
-    int num_statics;  // held in cl_staticentities array
-    entity_t viewent; // the gun model
+    struct model_s* worldmodel = nullptr; // cl_entitites[0].model
+    struct efrag_s* free_efrags = nullptr;
+    int num_entities = 0; // held in cl_entities array
+    int num_statics = 0;  // held in cl_staticentities array
+    entity_t viewent = {}; // the gun model
 
-    int cdtrack, looptrack; // cd audio
+    int cdtrack = 0, looptrack = 0; // cd audio
 
     // frag scoreboard
-    scoreboard_t* scores; // [cl.maxclients]
+    scoreboard_t* scores = nullptr; // [cl.maxclients]
 
 } client_state_t;
 
@@ -240,6 +240,7 @@ using BeamArray = beam_t[MAX_BEAMS];
 
 class ClientSubsystem {
 public:
+    ClientSubsystem() = default;
     client_static_t& GetStaticState() { return cls_; }
     const client_static_t& GetStaticState() const { return cls_; }
 
@@ -255,15 +256,15 @@ public:
     BeamArray& GetBeams() { return cl_beams_; }
 
 private:
-    client_static_t cls_;
-    client_state_t cl_;
-    efrag_t cl_efrags_[MAX_EFRAGS];
-    entity_t cl_entities_[MAX_EDICTS];
-    entity_t cl_static_entities_[MAX_STATIC_ENTITIES];
-    lightstyle_t cl_lightstyle_[MAX_LIGHTSTYLES];
-    dlight_t cl_dlights_[MAX_DLIGHTS];
-    entity_t cl_temp_entities_[MAX_TEMP_ENTITIES];
-    beam_t cl_beams_[MAX_BEAMS];
+    client_static_t cls_ = {};
+    client_state_t cl_ = {};
+    efrag_t cl_efrags_[MAX_EFRAGS] = {};
+    entity_t cl_entities_[MAX_EDICTS] = {};
+    entity_t cl_static_entities_[MAX_STATIC_ENTITIES] = {};
+    lightstyle_t cl_lightstyle_[MAX_LIGHTSTYLES] = {};
+    dlight_t cl_dlights_[MAX_DLIGHTS] = {};
+    entity_t cl_temp_entities_[MAX_TEMP_ENTITIES] = {};
+    beam_t cl_beams_[MAX_BEAMS] = {};
 };
 
 ClientSubsystem& GetClientSubsystem();
@@ -316,7 +317,7 @@ extern kbutton_t in_speed;
 
 void CL_InitInput(void);
 void CL_SendCmd(void);
-void CL_SendMove(usercmd_t* cmd);
+void CL_SendMove(const usercmd_t* cmd);
 
 void CL_ParseTEnt(void);
 void CL_UpdateTEnts(void);

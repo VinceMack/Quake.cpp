@@ -18,9 +18,9 @@
 #define TYP_SOUND 67
 #define TYP_MIPTEX 68
 
-typedef struct {
-    int width, height;
-    byte data[4]; // variably sized
+typedef struct qpic_s {
+    int width = 0, height = 0;
+    byte data[4] = {}; // variably sized
 } qpic_t;
 
 typedef struct {

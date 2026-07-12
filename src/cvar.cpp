@@ -57,7 +57,7 @@ VariableValue
 */
 float CvarRegistry::VariableValue(std::string_view var_name)
 {
-    cvar_t* var = FindVar(var_name);
+    const cvar_t* var = FindVar(var_name);
     if (!var) {
         return 0.0f;
     }
@@ -71,7 +71,7 @@ VariableString
 */
 std::string_view CvarRegistry::VariableString(std::string_view var_name)
 {
-    cvar_t* var = FindVar(var_name);
+    const cvar_t* var = FindVar(var_name);
     if (!var) {
         return "";
     }
@@ -114,7 +114,7 @@ void CvarRegistry::Set(std::string_view var_name, std::string_view value)
 
     Z_Free(const_cast<char*>(var->string)); // free the old value string
 
-    char* new_str = (char *) Z_Malloc(static_cast<int>(value.length()) + 1);
+    char* new_str = static_cast<char*>(Z_Malloc(static_cast<int>(value.length()) + 1));
     Q_memcpy(new_str, const_cast<char*>(value.data()), static_cast<int>(value.length()));
     new_str[value.length()] = '\0';
     var->string = new_str;
@@ -134,7 +134,7 @@ SetValue
 void CvarRegistry::SetValue(std::string_view var_name, float value)
 {
     char val[32];
-    sprintf_s(val, sizeof(val), "%f", value);
+    snprintf(val, sizeof(val), "%f", value);
     Set(var_name, val);
 }
 
@@ -159,7 +159,7 @@ void CvarRegistry::Register(cvar_t* variable)
 
     // copy the value off, because future sets will Z_Free it
     const char* oldstr = variable->string;
-    char* new_str = (char *) Z_Malloc(Q_strlen(oldstr) + 1);
+    char* new_str = static_cast<char*>(Z_Malloc(Q_strlen(oldstr) + 1));
     Q_strcpy(new_str, oldstr);
     variable->string = new_str;
     variable->value = Q_atof(variable->string);
@@ -198,7 +198,7 @@ WriteVariables
 */
 void CvarRegistry::WriteVariables(std::FILE* f)
 {
-    for (cvar_t* var = state_.vars; var; var = var->next) {
+    for (const cvar_t* var = state_.vars; var; var = var->next) {
         if (var->archive) {
             std::fprintf(f, "%s \"%s\"\n", var->name, var->string);
         }

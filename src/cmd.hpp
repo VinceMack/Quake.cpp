@@ -56,12 +56,12 @@ public:
 
 private:
     State state_;
-    sizebuf_t cmd_text_;
+    sizebuf_t cmd_text_ = {};
     bool cmd_wait_ = false;
     cmdalias_t* cmd_alias_ = nullptr;
     cmd_function_t* cmd_functions_ = nullptr;
     int cmd_argc_ = 0;
-    char* cmd_argv_[80]; // MAX_ARGS
+    char* cmd_argv_[80] = {}; // MAX_ARGS
     std::string_view cmd_args_;
 };
 

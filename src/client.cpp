@@ -137,11 +137,11 @@ void CL_ClearState(void)
 
     // clear other arrays
     memset(cl_efrags, 0, sizeof(cl_efrags));
-    for (auto& e : cl_entities) e = {};
-    for (auto& dl : cl_dlights) dl = {};
+    std::fill(std::begin(cl_entities), std::end(cl_entities), entity_t{});
+    std::fill(std::begin(cl_dlights), std::end(cl_dlights), dlight_t{});
     memset(cl_lightstyle, 0, sizeof(cl_lightstyle));
-    for (auto& e : cl_temp_entities) e = {};
-    for (auto& b : cl_beams) b = {};
+    std::fill(std::begin(cl_temp_entities), std::end(cl_temp_entities), entity_t{});
+    std::fill(std::begin(cl_beams), std::end(cl_beams), beam_t{});
 
     //
     // allocate the efrags and chain together into a free list
@@ -259,7 +259,7 @@ void CL_SignonReply(void)
                 ((int)cl_color.value) & 15));
 
         MSG_WriteByte(&cls.message, clc_stringcmd);
-        sprintf_s(str, sizeof(str), "spawn %s", cls.spawnparms);
+        snprintf(str, sizeof(str), "spawn %s", cls.spawnparms);
         MSG_WriteString(&cls.message, str);
         break;
 
@@ -292,7 +292,7 @@ void CL_NextDemo(void)
 
     SCR_BeginLoadingPlaque();
 
-    if (!cls.demos[cls.demonum][0] || cls.demonum == MAX_DEMOS) {
+    if (!cls.demos[cls.demonum][0] || cls.demonum >= MAX_DEMOS) {
         cls.demonum = 0;
         if (!cls.demos[cls.demonum][0]) {
             Con_Printf("No demos listed with startdemos\n");
@@ -302,7 +302,7 @@ void CL_NextDemo(void)
         }
     }
 
-    sprintf_s(str, sizeof(str), "playdemo %s\n", cls.demos[cls.demonum]);
+    snprintf(str, sizeof(str), "playdemo %s\n", cls.demos[cls.demonum]);
     Cmd::BufferInsertText(str);
     cls.demonum++;
 }
@@ -977,7 +977,7 @@ void CL_BaseMove(usercmd_t* cmd)
 CL_SendMove
 ==============
 */
-void CL_SendMove(usercmd_t* cmd)
+void CL_SendMove(const usercmd_t* cmd)
 {
     int i;
     int bits;
@@ -1154,7 +1154,6 @@ Handles recording and playback of demos, on top of NET_ code
 */
 int CL_GetMessage(void)
 {
-    int r, i;
     float f;
 
     if (cls.demoplayback) {
@@ -1180,7 +1179,7 @@ int CL_GetMessage(void)
         // get the next message
         fread(&net_message.cursize, 4, 1, cls.demofile);
         VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
-        for (i = 0; i < 3; i++) {
+        for (int i = 0; i < 3; i++) {
             fread(&f, 4, 1, cls.demofile);
             cl.mviewangles[0][i] = LittleFloat(f);
         }
@@ -1190,7 +1189,7 @@ int CL_GetMessage(void)
             Sys_Error("Demo message > MAX_MSGLEN");
         }
 
-        r = (int)fread(net_message.data, net_message.cursize, 1, cls.demofile);
+        int r = (int)fread(net_message.data, net_message.cursize, 1, cls.demofile);
         if (r != 1) {
             CL_StopPlayback();
 
@@ -1199,6 +1198,8 @@ int CL_GetMessage(void)
 
         return 1;
     }
+
+    int r;
 
     while (1) {
         r = NET_GetMessage(cls.netcon);
@@ -1299,7 +1300,7 @@ void CL_Record_f(void)
         track = -1;
     }
 
-    sprintf_s(name, sizeof(name), "%s/%s", com_gamedir, std::string(Cmd::Argv(1)).c_str());
+    snprintf(name, sizeof(name), "%s/%s", com_gamedir, std::string(Cmd::Argv(1)).c_str());
 
     //
     // start the map up
@@ -1314,7 +1315,7 @@ void CL_Record_f(void)
     COM_DefaultExtension(name, ".dem");
 
     Con_Printf("recording to %s.\n", name);
-    fopen_s(&cls.demofile, name, "wb");
+    cls.demofile = fopen(name, "wb");
     if (!cls.demofile) {
         Con_Printf("ERROR: couldn't open.\n");
 
@@ -1622,7 +1623,7 @@ void CL_ParseServerInfo(void)
 
     // parse signon message
     str = MSG_ReadString();
-    strncpy_s(cl.levelname, sizeof(cl.levelname), str, _TRUNCATE);
+    strlcpy(cl.levelname, str, sizeof(cl.levelname));
 
     // seperate the printfs so the server message can have a color
     Con_Printf(
@@ -1650,7 +1651,7 @@ void CL_ParseServerInfo(void)
             return;
         }
 
-        strcpy_s(model_precache[nummodels], sizeof(model_precache[nummodels]), str);
+        strlcpy(model_precache[nummodels], str, sizeof(model_precache[nummodels]));
         Mod_TouchModel(str);
     }
 
@@ -1668,7 +1669,7 @@ void CL_ParseServerInfo(void)
             return;
         }
 
-        strcpy_s(sound_precache[numsounds], sizeof(sound_precache[numsounds]), str);
+        strlcpy(sound_precache[numsounds], str, sizeof(sound_precache[numsounds]));
         S_TouchSound(str);
     }
 
@@ -1931,7 +1932,7 @@ void CL_ParseClientdata(int bits)
     if (cl.items != i) { // set flash times
         Sbar_Changed();
         for (j = 0; j < 32; j++) {
-            if ((i & (1 << j)) && !(cl.items & (1 << j))) {
+            if ((i & (1U << static_cast<unsigned>(j))) && !(cl.items & (1U << static_cast<unsigned>(j)))) {
                 cl.item_gettime[j] = static_cast<float>(cl.time);
             }
         }
@@ -2108,7 +2109,6 @@ CL_ParseServerMessage
 */
 void CL_ParseServerMessage(void)
 {
-    int cmd;
     int i;
 
     //
@@ -2131,9 +2131,8 @@ void CL_ParseServerMessage(void)
             Host_Error("CL_ParseServerMessage: Bad server message");
         }
 
-        cmd = MSG_ReadByte();
-
-        if (cmd == -1) {
+        int cmd = MSG_ReadByte();
+        if (msg_badread) {
             SHOWNET("END OF MESSAGE");
 
             return; // end of message
@@ -2238,7 +2237,7 @@ void CL_ParseServerMessage(void)
                 Host_Error("CL_ParseServerMessage: svc_updatename > MAX_SCOREBOARD");
             }
 
-            strcpy_s(cl.scores[i].name, sizeof(cl.scores[i].name), MSG_ReadString());
+            strlcpy(cl.scores[i].name, MSG_ReadString(), sizeof(cl.scores[i].name));
             break;
 
         case svc_updatefrags:
@@ -2406,7 +2405,7 @@ void CL_ParseBeam(model_t* m)
     // override any beam with the same entity
     for (i = 0, b = cl_beams; i < MAX_BEAMS; i++, b++) {
         if (b->entity == ent) {
-            b->entity = ent;
+            // b->entity already matches ent, just update the rest
             b->model = m;
             b->endtime = static_cast<float>(cl.time + 0.2);
             b->start = start;

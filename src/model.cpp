@@ -237,7 +237,7 @@ model_t* Mod_FindName(const char* name)
             mod_numknown++;
         }
 
-        strcpy_s(mod->name, sizeof(mod->name), name);
+        strlcpy(mod->name, name, sizeof(mod->name));
         mod->needload = NL_NEEDS_LOADED;
     }
 
@@ -1247,10 +1247,10 @@ void Mod_LoadBrushModel(model_t* mod, void* buffer)
         if (i < mod->numsubmodels - 1) { // duplicate the basic information
             char name[10];
 
-            sprintf_s(name, sizeof(name), "*%i", i + 1);
+            snprintf(name, sizeof(name), "*%i", i + 1);
             loadmodel = Mod_FindName(name);
             *loadmodel = *mod;
-            strcpy_s(loadmodel->name, sizeof(loadmodel->name), name);
+            strlcpy(loadmodel->name, name, sizeof(loadmodel->name));
             mod = loadmodel;
         }
     }
@@ -1283,7 +1283,7 @@ void* Mod_LoadAliasFrame(void* pin,
 
     pdaliasframe = (daliasframe_t*)pin;
 
-    strcpy_s(name, 16, pdaliasframe->name);
+    strlcpy(name, pdaliasframe->name, 16);
 
     for (i = 0; i < 3; i++) {
         // these are byte values, so we don't have to worry about

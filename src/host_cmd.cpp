@@ -288,7 +288,7 @@ void Host_Map_f(void)
         Q_strcat(cls.mapstring, Cmd::Argv(i));
         Q_strcat(cls.mapstring, " ");
     }
-    strcat_s(cls.mapstring, sizeof(cls.mapstring), "\n");
+    strlcat(cls.mapstring, "\n", sizeof(cls.mapstring));
 
     svs.serverflags = 0; // haven't completed an episode yet
     Q_strcpy(name, Cmd::Argv(1));
@@ -298,7 +298,7 @@ void Host_Map_f(void)
     }
 
     if (cls.state != ca_dedicated) {
-        strcpy_s(cls.spawnparms, sizeof(cls.spawnparms), "");
+        strlcpy(cls.spawnparms, "", sizeof(cls.spawnparms));
 
         for (i = 2; i < Cmd::Argc(); i++) {
             Q_strcat(cls.spawnparms, Cmd::Argv(i));
@@ -356,7 +356,7 @@ void Host_Restart_f(void)
         return;
     }
 
-    strcpy_s(mapname, sizeof(mapname), sv.name); // must copy out, because it gets cleared
+    strlcpy(mapname, sv.name, sizeof(mapname)); // must copy out, because it gets cleared
                                                   // in sv_spawnserver
     SV_SpawnServer(mapname);
 }
@@ -423,7 +423,7 @@ void Host_SavegameComment(char* text)
         text[i] = ' ';
     }
     memcpy(text, cl.levelname, strlen(cl.levelname));
-    sprintf_s(kills, sizeof(kills), "kills:%3i/%3i", cl.stats[STAT_MONSTERS],
+    snprintf(kills, sizeof(kills), "kills:%3i/%3i", cl.stats[STAT_MONSTERS],
         cl.stats[STAT_TOTALMONSTERS]);
     memcpy(text + 22, kills, strlen(kills));
     // convert space to _ to make stdio happy
@@ -489,11 +489,11 @@ void Host_Savegame_f(void)
         }
     }
 
-    sprintf_s(name, sizeof(name), "%s/%s", com_gamedir, std::string(Cmd::Argv(1)).c_str());
+    snprintf(name, sizeof(name), "%s/%s", com_gamedir, std::string(Cmd::Argv(1)).c_str());
     COM_DefaultExtension(name, ".sav");
 
     Con_Printf("Saving game to %s...\n", name);
-    fopen_s(&f, name, "w");
+    f = fopen(name, "w");
     if (!f) {
         Con_Printf("ERROR: couldn't open.\n");
 
@@ -540,8 +540,8 @@ void Host_Loadgame_f(void)
     FILE* f;
     char mapname[MAX_QPATH];
     float time, tfloat;
-    char str[32768], *start;
-    int i, r;
+    char str[32768];
+    int i;
     edict_t* ent;
     int entnum;
     int version;
@@ -559,7 +559,7 @@ void Host_Loadgame_f(void)
 
     cls.demonum = -1; // stop demo loop in case this fails
 
-    sprintf_s(name, sizeof(name), "%s/%s", com_gamedir, std::string(Cmd::Argv(1)).c_str());
+    snprintf(name, sizeof(name), "%s/%s", com_gamedir, std::string(Cmd::Argv(1)).c_str());
     COM_DefaultExtension(name, ".sav");
 
     // we can't call SCR_BeginLoadingPlaque, because too much stack space has
@@ -567,14 +567,14 @@ void Host_Loadgame_f(void)
     //	SCR_BeginLoadingPlaque ();
 
     Con_Printf("Loading game from %s...\n", name);
-    fopen_s(&f, name, "r");
+    f = fopen(name, "r");
     if (!f) {
         Con_Printf("ERROR: couldn't open.\n");
 
         return;
     }
 
-    fscanf_s(f, "%i\n", &version);
+    fscanf(f, "%i\n", &version);
     if (version != SAVEGAME_VERSION) {
         fclose(f);
         Con_Printf("Savegame is version %i, not %i\n", version, SAVEGAME_VERSION);
@@ -582,18 +582,18 @@ void Host_Loadgame_f(void)
         return;
     }
 
-    fscanf_s(f, "%s\n", str, (unsigned)sizeof(str));
+    fscanf(f, "%s\n", str, (unsigned)sizeof(str));
     for (i = 0; i < NUM_SPAWN_PARMS; i++) {
-        fscanf_s(f, "%f\n", &spawn_parms[i]);
+        fscanf(f, "%f\n", &spawn_parms[i]);
     }
     // this silliness is so we can load 1.06 save files, which have float skill values
-    fscanf_s(f, "%f\n", &tfloat);
+    fscanf(f, "%f\n", &tfloat);
     current_skill = (int)(tfloat + 0.1);
     Cvar::SetValue("skill", (float)current_skill);
 
 
-    fscanf_s(f, "%s\n", mapname, (unsigned)sizeof(mapname));
-    fscanf_s(f, "%f\n", &time);
+    fscanf(f, "%s\n", mapname, (unsigned)sizeof(mapname));
+    fscanf(f, "%f\n", &time);
 
     CL_Disconnect_f();
 
@@ -610,16 +610,16 @@ void Host_Loadgame_f(void)
     // load the light styles
 
     for (i = 0; i < MAX_LIGHTSTYLES; i++) {
-        fscanf_s(f, "%s\n", str, (unsigned)sizeof(str));
+        fscanf(f, "%s\n", str, (unsigned)sizeof(str));
         sv.lightstyles[i] = (char *) Hunk_Alloc((int)strlen(str) + 1);
-        strcpy_s(sv.lightstyles[i], strlen(str) + 1, str);
+        strlcpy(sv.lightstyles[i], str, strlen(str) + 1);
     }
 
     // load the edicts out of the savegame file
     entnum = -1; // -1 is the globals
     while (!feof(f)) {
         for (i = 0; i < static_cast<int>(sizeof(str) - 1); i++) {
-            r = fgetc(f);
+            int r = fgetc(f);
             if (r == EOF || !r) {
                 break;
             }
@@ -635,7 +635,7 @@ void Host_Loadgame_f(void)
         }
 
         str[i] = 0;
-        start = COM_Parse(str);
+        const char* start = COM_Parse(str);
         if (!com_token[0]) {
             break; // end of file
         }
@@ -645,13 +645,13 @@ void Host_Loadgame_f(void)
         }
 
         if (entnum == -1) { // parse the global vars
-            ED_ParseGlobals(start);
+            ED_ParseGlobals(const_cast<char*>(start));
         } else { // parse an edict
 
             ent = EDICT_NUM(entnum);
             std::memset(reinterpret_cast<void*>(&ent->v), 0, static_cast<size_t>(progs->entityfields) * 4);
             ent->free = false;
-            ED_ParseEdict(start, ent);
+            ED_ParseEdict(const_cast<char*>(start), ent);
 
             // link it into the bsp tree
             if (!ent->free) {
@@ -778,19 +778,19 @@ void Host_Say(qboolean teamonly)
 
     // turn on color set 1
     if (!fromServer) {
-        sprintf_s((char*)text, sizeof(text), "%c%s: ", 1, save->name);
+        snprintf((char*)text, sizeof(text), "%c%s: ", 1, save->name);
     } else {
-        sprintf_s((char*)text, sizeof(text), "%c<%s> ", 1, hostname.string);
+        snprintf((char*)text, sizeof(text), "%c<%s> ", 1, hostname.string);
     }
 
-    j = sizeof(text) - 2 - Q_strlen((char*)text); // -2 for /n and null terminator
+    j = sizeof(text) - 2 - Q_strlen(reinterpret_cast<const char*>(text)); // -2 for /n and null terminator
     if (arg_str.length() > (size_t)j) {
         arg_str.resize(j);
     }
     const char* p = arg_str.c_str();
 
-    strcat_s((char*)text, sizeof(text), p);
-    strcat_s((char*)text, sizeof(text), "\n");
+    strlcat((char*)text, p, sizeof(text));
+    strlcat((char*)text, "\n", sizeof(text));
 
     for (j = 0, client = svs.clients; j < svs.maxclients; j++, client++) {
         if (!client || !client->active || !client->spawned) {
@@ -846,8 +846,8 @@ void Host_Tell_f(void)
     }
     const char* p = arg_str.c_str();
 
-    strcat_s(text, sizeof(text), p);
-    strcat_s(text, sizeof(text), "\n");
+    strlcat(text, p, sizeof(text));
+    strlcat(text, "\n", sizeof(text));
 
     save = host_client;
     for (j = 0, client = svs.clients; j < svs.maxclients; j++, client++) {
@@ -1151,8 +1151,6 @@ Kicks a user off of the server
 */
 void Host_Kick_f(void)
 {
-    const char* who;
-    const char* message = NULL;
     client_t* save;
     int i;
     qboolean byNumber = false;
@@ -1196,6 +1194,8 @@ void Host_Kick_f(void)
     }
 
     if (i < svs.maxclients) {
+        const char* who;
+        const char* message = nullptr;
         if (Cmd::state.source == Cmd::Source::Command) {
             if (cls.state == ca_dedicated) {
                 who = "Console";
@@ -1222,7 +1222,7 @@ void Host_Kick_f(void)
                 message += Cmd::Argv(2).length(); // skip the number
             }
 
-            while (*message && *message == ' ') {
+            while (*message == ' ') {
                 message++;
             }
         }
@@ -1461,7 +1461,7 @@ void Host_Viewframe_f(void)
         return;
     }
 
-    m = cl.model_precache[(int)e->v.modelindex];
+    m = cl.model_precache[static_cast<int>(e->v.modelindex)];
 
     f = Q_atoi(Cmd::Argv(1));
     if (f >= m->numframes) {
@@ -1476,7 +1476,7 @@ void PrintFrameName(model_t* m, int frame)
     aliashdr_t* hdr;
     maliasframedesc_t* pframedesc;
 
-    hdr = (aliashdr_t*)Mod_Extradata(m);
+    hdr = static_cast<aliashdr_t*>(Mod_Extradata(m));
     if (!hdr) {
         return;
     }

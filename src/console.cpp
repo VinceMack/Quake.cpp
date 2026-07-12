@@ -2,11 +2,11 @@
 
 #ifdef _MSC_VER
 #include <io.h>
+#include <share.h>
 #else
 #include <unistd.h>
 #endif
 #include <fcntl.h>
-#include <share.h>
 #include <sys/stat.h>
 #include "quakedef.hpp"
 
@@ -146,7 +146,7 @@ If the line width has changed, reformat the buffer.
 */
 void Con_CheckResize(void)
 {
-    int i, j, width, oldwidth, oldtotallines, numlines, numchars;
+    int width;
     char tbuf[CON_TEXTSIZE];
 
     width = (vid.width >> 3) - 2;
@@ -162,17 +162,17 @@ void Con_CheckResize(void)
         con_totallines = CON_TEXTSIZE / con_linewidth;
         Q_memset(con_text, ' ', CON_TEXTSIZE);
     } else {
-        oldwidth = con_linewidth;
+        int oldwidth = con_linewidth;
         con_linewidth = width;
-        oldtotallines = con_totallines;
+        int oldtotallines = con_totallines;
         con_totallines = CON_TEXTSIZE / con_linewidth;
-        numlines = oldtotallines;
+        int numlines = oldtotallines;
 
         if (con_totallines < numlines) {
             numlines = con_totallines;
         }
 
-        numchars = oldwidth;
+        int numchars = oldwidth;
 
         if (con_linewidth < numchars) {
             numchars = con_linewidth;
@@ -181,8 +181,8 @@ void Con_CheckResize(void)
         Q_memcpy(tbuf, con_text, CON_TEXTSIZE);
         Q_memset(con_text, ' ', CON_TEXTSIZE);
 
-        for (i = 0; i < numlines; i++) {
-            for (j = 0; j < numchars; j++) {
+        for (int i = 0; i < numlines; i++) {
+            for (int j = 0; j < numchars; j++) {
                 con_text[(con_totallines - 1 - i) * con_linewidth + j] = tbuf[((con_current - i + oldtotallines) % oldtotallines) * oldwidth + j];
             }
         }
@@ -209,12 +209,12 @@ void Con_Init(void)
 
     if (con_debuglog) {
         if (strlen(com_gamedir) < (MAXGAMEDIRLEN - strlen(t2))) {
-            sprintf_s(temp, sizeof(temp), "%s%s", com_gamedir, t2);
-            _unlink(temp);
+            snprintf(temp, sizeof(temp), "%s%s", com_gamedir, t2);
+            unlink(temp);
         }
     }
 
-    con_text = (char *) Hunk_Alloc(CON_TEXTSIZE, "context");
+    con_text = static_cast<char*>(Hunk_Alloc(CON_TEXTSIZE, "context"));
     Q_memset(con_text, ' ', CON_TEXTSIZE);
     con_linewidth = -1;
     Con_CheckResize();
@@ -347,7 +347,7 @@ void Con_DebugLog(const char* file, const char* fmt, ...)
     int fd;
 
     va_start(argptr, fmt);
-    vsprintf_s(data, sizeof(data), fmt, argptr);
+    vsnprintf(data, sizeof(data), fmt, argptr);
     va_end(argptr);
     fd = open(file, O_WRONLY | O_CREAT | O_APPEND, 0666);
     write(fd, data, (unsigned int)strlen(data));
@@ -371,7 +371,7 @@ void Con_Printf(const char* fmt, ...)
     static qboolean inupdate;
 
     va_start(argptr, fmt);
-    vsprintf_s(msg, sizeof(msg), fmt, argptr);
+    vsnprintf(msg, sizeof(msg), fmt, argptr);
     va_end(argptr);
 
     // also echo to debugging console
@@ -422,7 +422,7 @@ void Con_DPrintf(const char* fmt, ...)
     }
 
     va_start(argptr, fmt);
-    vsprintf_s(msg, sizeof(msg), fmt, argptr);
+    vsnprintf(msg, sizeof(msg), fmt, argptr);
     va_end(argptr);
 
     Con_Printf("%s", msg);
@@ -486,11 +486,9 @@ Draws the last few lines of output transparently over the game top
 void Con_DrawNotify(void)
 {
     int x, v;
-    char* text;
-    int i;
     float time;
-	v = 0;
-    for (i = con_current - NUM_CON_TIMES + 1; i <= con_current; i++) {
+    v = 0;
+    for (int i = con_current - NUM_CON_TIMES + 1; i <= con_current; i++) {
         if (i < 0) {
             continue;
         }
@@ -505,7 +503,7 @@ void Con_DrawNotify(void)
             continue;
         }
 
-        text = con_text + (i % con_totallines) * con_linewidth;
+        const char* text = con_text + (i % con_totallines) * con_linewidth;
 
         clearnotify = 0;
         scr_copytop = 1;
@@ -548,10 +546,8 @@ The typing input line at the bottom should only be drawn if typing is allowed
 */
 void Con_DrawConsole(int lines, qboolean drawinput)
 {
-    int i, x, y;
+    int x, y;
     int rows;
-    char* text;
-    int j;
 
     if (lines <= 0) {
         return;
@@ -563,16 +559,16 @@ void Con_DrawConsole(int lines, qboolean drawinput)
     // draw the text
     con_vislines = lines;
 
-    rows = (lines - 16) >> 3;     // rows of text to draw
+    rows = (lines - 16) / 8;      // rows of text to draw
     y = lines - 16 - (rows << 3); // may start slightly negative
 
-    for (i = con_current - rows + 1; i <= con_current; i++, y += 8) {
-        j = i - con_backscroll;
+    for (int i = con_current - rows + 1; i <= con_current; i++, y += 8) {
+        int j = i - con_backscroll;
         if (j < 0) {
             j = 0;
         }
 
-        text = con_text + (j % con_totallines) * con_linewidth;
+        const char* text = con_text + (j % con_totallines) * con_linewidth;
 
         for (x = 0; x < con_linewidth; x++) {
             Draw_Character((x + 1) << 3, y, text[x]);

@@ -259,18 +259,8 @@ byte gammatable[256]; // palette is sent through this
 
 void BuildGammaTable(float g)
 {
-    int i, inf;
-
-    if (g == 1.0) {
-        for (i = 0; i < 256; i++) {
-            gammatable[i] = static_cast<byte>(i);
-        }
-
-        return;
-    }
-
-    for (i = 0; i < 256; i++) {
-        inf = static_cast<int>(255 * pow((i + 0.5) / 255.5, g) + 0.5);
+    for (int i = 0; i < 256; i++) {
+        int inf = static_cast<int>(255 * pow((i + 0.5) / 255.5, g) + 0.5);
         if (inf < 0) {
             inf = 0;
         }
@@ -475,7 +465,6 @@ void V_UpdatePalette(void)
     qboolean new_shift;
     byte *basepal, *newpal;
     byte pal[768];
-    int r, g, b;
     qboolean force;
 
     V_CalcPowerupCshift();
@@ -517,15 +506,15 @@ void V_UpdatePalette(void)
     newpal = pal;
 
     for (i = 0; i < 256; i++) {
-        r = basepal[0];
-        g = basepal[1];
-        b = basepal[2];
+        int r = basepal[0];
+        int g = basepal[1];
+        int b = basepal[2];
         basepal += 3;
 
-        for (j = 0; j < NUM_CSHIFTS; j++) {
-            r += (cl.cshifts[j].percent * (cl.cshifts[j].destcolor[0] - r)) >> 8;
-            g += (cl.cshifts[j].percent * (cl.cshifts[j].destcolor[1] - g)) >> 8;
-            b += (cl.cshifts[j].percent * (cl.cshifts[j].destcolor[2] - b)) >> 8;
+        for (int k = 0; k < NUM_CSHIFTS; k++) {
+            r += (cl.cshifts[k].percent * (cl.cshifts[k].destcolor[0] - r)) >> 8;
+            g += (cl.cshifts[k].percent * (cl.cshifts[k].destcolor[1] - g)) >> 8;
+            b += (cl.cshifts[k].percent * (cl.cshifts[k].destcolor[2] - b)) >> 8;
         }
 
         newpal[0] = gammatable[r];
@@ -626,7 +615,7 @@ V_BoundOffsets
 */
 void V_BoundOffsets(void)
 {
-    entity_t* ent;
+    const entity_t* ent;
 
     ent = &cl_entities[cl.viewentity];
 

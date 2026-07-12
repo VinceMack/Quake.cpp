@@ -38,10 +38,10 @@ typedef struct {
 // !!! if this is changed, it must be changed in asm_i386.h too !!!
 typedef struct mplane_s {
     Vector3 normal;
-    float dist;
-    byte type;     // for texture axis selection and fast side tests
-    byte signbits; // signx + signy<<1 + signz<<1
-    byte pad[2];
+    float dist = 0.0f;
+    byte type = 0;     // for texture axis selection and fast side tests
+    byte signbits = 0; // signx + signy<<1 + signz<<1
+    byte pad[2] = {};
 } mplane_t;
 
 typedef struct texture_s {
@@ -75,28 +75,28 @@ typedef struct {
 } mtexinfo_t;
 
 typedef struct msurface_s {
-    int visframe; // should be drawn when node is crossed
+    int visframe = 0; // should be drawn when node is crossed
 
-    int dlightframe;
-    int dlightbits;
+    int dlightframe = 0;
+    int dlightbits = 0;
 
-    mplane_t* plane;
-    int flags;
+    mplane_t* plane = nullptr;
+    int flags = 0;
 
-    int firstedge; // look up in model->surfedges[], negative numbers
-    int numedges;  // are backwards edges
+    int firstedge = 0; // look up in model->surfedges[], negative numbers
+    int numedges = 0;  // are backwards edges
 
     // surface generation data
-    struct surfcache_s* cachespots[MIPLEVELS];
+    struct surfcache_s* cachespots[MIPLEVELS] = {};
 
-    short texturemins[2];
-    short extents[2];
+    short texturemins[2] = {};
+    short extents[2] = {};
 
-    mtexinfo_t* texinfo;
+    mtexinfo_t* texinfo = nullptr;
 
     // lighting info
-    byte styles[MAXLIGHTMAPS];
-    byte* samples; // [numstyles*surfsize]
+    byte styles[MAXLIGHTMAPS] = {};
+    byte* samples = nullptr; // [numstyles*surfsize]
 } msurface_t;
 
 typedef struct mnode_s {
@@ -118,29 +118,29 @@ typedef struct mnode_s {
 
 typedef struct mleaf_s {
     // common with node
-    int contents; // wil be a negative contents number
-    int visframe; // node needs to be traversed if current
+    int contents = 0; // wil be a negative contents number
+    int visframe = 0; // node needs to be traversed if current
 
-    short minmaxs[6]; // for bounding box culling
+    short minmaxs[6] = {}; // for bounding box culling
 
-    struct mnode_s* parent;
+    struct mnode_s* parent = nullptr;
 
     // leaf specific
-    byte* compressed_vis;
-    efrag_t* efrags;
+    byte* compressed_vis = nullptr;
+    efrag_t* efrags = nullptr;
 
-    msurface_t** firstmarksurface;
-    int nummarksurfaces;
-    int key; // BSP sequence number for leaf's contents
-    byte ambient_sound_level[NUM_AMBIENTS];
+    msurface_t** firstmarksurface = nullptr;
+    int nummarksurfaces = 0;
+    int key = 0; // BSP sequence number for leaf's contents
+    byte ambient_sound_level[NUM_AMBIENTS] = {};
 } mleaf_t;
 
 // !!! if this is changed, it must be changed in asm_i386.h too !!!
-typedef struct {
-    dclipnode_t* clipnodes;
-    mplane_t* planes;
-    int firstclipnode;
-    int lastclipnode;
+typedef struct hull_s {
+    dclipnode_t* clipnodes = nullptr;
+    mplane_t* planes = nullptr;
+    int firstclipnode = 0;
+    int lastclipnode = 0;
     Vector3 clip_mins;
     Vector3 clip_maxs;
 } hull_t;
@@ -155,17 +155,17 @@ SPRITE MODELS
 
 // FIXME: shorten these?
 typedef struct mspriteframe_s {
-    int width;
-    int height;
-    void* pcachespot; // remove?
-    float up, down, left, right;
-    byte pixels[4];
+    int width = 0;
+    int height = 0;
+    void* pcachespot = nullptr; // remove?
+    float up = 0.0f, down = 0.0f, left = 0.0f, right = 0.0f;
+    byte pixels[4] = {};
 } mspriteframe_t;
 
-typedef struct {
-    int numframes;
-    float* intervals;
-    mspriteframe_t* frames[1];
+typedef struct mspritegroup_s {
+    int numframes = 0;
+    float* intervals = nullptr;
+    mspriteframe_t* frames[1] = {};
 } mspritegroup_t;
 
 typedef struct {
@@ -192,12 +192,12 @@ Alias models are position independent, so the cache manager can move them.
 ==============================================================================
 */
 
-typedef struct {
-    aliasframetype_t type;
-    trivertx_t bboxmin;
-    trivertx_t bboxmax;
-    int frame;
-    char name[16];
+typedef struct maliasframedesc_s {
+    aliasframetype_t type = {};
+    trivertx_t bboxmin = {};
+    trivertx_t bboxmax = {};
+    int frame = 0;
+    char name[16] = {};
 } maliasframedesc_t;
 
 typedef struct {
@@ -206,16 +206,16 @@ typedef struct {
     int skin;
 } maliasskindesc_t;
 
-typedef struct {
-    trivertx_t bboxmin;
-    trivertx_t bboxmax;
-    int frame;
+typedef struct maliasgroupframedesc_s {
+    trivertx_t bboxmin = {};
+    trivertx_t bboxmax = {};
+    int frame = 0;
 } maliasgroupframedesc_t;
 
-typedef struct {
-    int numframes;
-    int intervals;
-    maliasgroupframedesc_t frames[1];
+typedef struct maliasgroup_s {
+    int numframes = 0;
+    int intervals = 0;
+    maliasgroupframedesc_t frames[1] = {};
 } maliasgroup_t;
 
 typedef struct {
@@ -230,12 +230,12 @@ typedef struct mtriangle_s {
     int vertindex[3];
 } mtriangle_t;
 
-typedef struct {
-    int model;
-    int stverts;
-    int skindesc;
-    int triangles;
-    maliasframedesc_t frames[1];
+typedef struct aliashdr_s {
+    int model = 0;
+    int stverts = 0;
+    int skindesc = 0;
+    int triangles = 0;
+    maliasframedesc_t frames[1] = {};
 } aliashdr_t;
 
 //===================================================================
@@ -258,72 +258,72 @@ typedef enum { mod_brush,
 #define EF_TRACER3 128 // purple trail
 
 typedef struct model_s {
-    char name[MAX_QPATH];
-    int needload; // bmodels and sprites don't cache normally
+    char name[MAX_QPATH] = {};
+    int needload = 0; // bmodels and sprites don't cache normally
 
-    modtype_t type;
-    int numframes;
-    synctype_t synctype;
+    modtype_t type = {};
+    int numframes = 0;
+    synctype_t synctype = {};
 
-    int flags;
+    int flags = 0;
 
     //
     // volume occupied by the model
     //
     Vector3 mins, maxs;
-    float radius;
+    float radius = 0.0f;
 
     //
     // brush model
     //
-    int firstmodelsurface, nummodelsurfaces;
+    int firstmodelsurface = 0, nummodelsurfaces = 0;
 
-    int numsubmodels;
-    dmodel_t* submodels;
+    int numsubmodels = 0;
+    dmodel_t* submodels = nullptr;
 
-    int numplanes;
-    mplane_t* planes;
+    int numplanes = 0;
+    mplane_t* planes = nullptr;
 
-    int numleafs; // number of visible leafs, not counting 0
-    mleaf_t* leafs;
+    int numleafs = 0; // number of visible leafs, not counting 0
+    mleaf_t* leafs = nullptr;
 
-    int numvertexes;
-    mvertex_t* vertexes;
+    int numvertexes = 0;
+    mvertex_t* vertexes = nullptr;
 
-    int numedges;
-    medge_t* edges;
+    int numedges = 0;
+    medge_t* edges = nullptr;
 
-    int numnodes;
-    mnode_t* nodes;
+    int numnodes = 0;
+    mnode_t* nodes = nullptr;
 
-    int numtexinfo;
-    mtexinfo_t* texinfo;
+    int numtexinfo = 0;
+    mtexinfo_t* texinfo = nullptr;
 
-    int numsurfaces;
-    msurface_t* surfaces;
+    int numsurfaces = 0;
+    msurface_t* surfaces = nullptr;
 
-    int numsurfedges;
-    int* surfedges;
+    int numsurfedges = 0;
+    int* surfedges = nullptr;
 
-    int numclipnodes;
-    dclipnode_t* clipnodes;
+    int numclipnodes = 0;
+    dclipnode_t* clipnodes = nullptr;
 
-    int nummarksurfaces;
-    msurface_t** marksurfaces;
+    int nummarksurfaces = 0;
+    msurface_t** marksurfaces = nullptr;
 
-    hull_t hulls[MAX_MAP_HULLS];
+    hull_t hulls[MAX_MAP_HULLS] = {};
 
-    int numtextures;
-    texture_t** textures;
+    int numtextures = 0;
+    texture_t** textures = nullptr;
 
-    byte* visdata;
-    byte* lightdata;
-    char* entities;
+    byte* visdata = nullptr;
+    byte* lightdata = nullptr;
+    char* entities = nullptr;
 
     //
     // additional model data
     //
-    cache_user_t cache; // only access through Mod_Extradata
+    cache_user_t cache = {}; // only access through Mod_Extradata
 
 } model_t;
 

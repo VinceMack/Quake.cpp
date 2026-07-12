@@ -77,7 +77,7 @@ Host_EndGame
     char string[1024];
 
     va_start(argptr, message);
-    vsprintf_s(string, sizeof(string), message, argptr);
+    vsnprintf(string, sizeof(string), message, argptr);
     va_end(argptr);
     Con_DPrintf("Host_EndGame: %s\n", string);
 
@@ -120,7 +120,7 @@ This shuts down both the client and server
     SCR_EndLoadingPlaque(); // reenable screen updates
 
     va_start(argptr, error);
-    vsprintf_s(string, sizeof(string), error, argptr);
+    vsnprintf(string, sizeof(string), error, argptr);
     va_end(argptr);
     Con_Printf("Host_Error: %s\n", string);
 
@@ -187,7 +187,7 @@ void Host_FindMaxClients(void)
         svs.maxclientslimit = 4;
     }
 
-    svs.clients = (client_s *) Hunk_Alloc(svs.maxclientslimit * sizeof(client_t), "clients");
+    svs.clients = static_cast<client_s*>(Hunk_Alloc(svs.maxclientslimit * sizeof(client_t), "clients"));
 
     if (svs.maxclients > 1) {
         Cvar::SetValue("deathmatch", 1.0);
@@ -244,7 +244,7 @@ void Host_WriteConfiguration(void)
     // dedicated servers initialize the host but don't parse and set the
     // config.cfg cvars
     if (host_initialized & !isDedicated) {
-        fopen_s(&f, va("%s/config.cfg", com_gamedir), "w");
+        f = fopen(va("%s/config.cfg", com_gamedir), "w");
         if (!f) {
             Con_Printf("Couldn't write config.cfg.\n");
 
@@ -278,7 +278,7 @@ void SV_ClientPrintf(const char* fmt, ...)
     char string[1024];
 
     va_start(argptr, fmt);
-    vsprintf_s(string, sizeof(string), fmt, argptr);
+    vsnprintf(string, sizeof(string), fmt, argptr);
     va_end(argptr);
 
     MSG_WriteByte(&host_client->message, svc_print);
@@ -299,7 +299,7 @@ void SV_BroadcastPrintf(const char* fmt, ...)
     int i;
 
     va_start(argptr, fmt);
-    vsprintf_s(string, sizeof(string), fmt, argptr);
+    vsnprintf(string, sizeof(string), fmt, argptr);
     va_end(argptr);
 
     for (i = 0; i < svs.maxclients; i++) {
@@ -322,7 +322,6 @@ if (crash = true), don't bother sending signofs
 */
 void SV_DropClient(qboolean crash)
 {
-    int saveSelf;
     int i;
     client_t* client;
 
@@ -336,7 +335,7 @@ void SV_DropClient(qboolean crash)
         if (host_client->edict && host_client->spawned) {
             // call the prog function for removing a client
             // this will set the body to a dead frame, among other things
-            saveSelf = pr_global_struct->self;
+            int saveSelf = pr_global_struct->self;
             pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(host_client->edict));
             PR_ExecuteProgram(pr_global_struct->ClientDisconnect);
             pr_global_struct->self = saveSelf;
@@ -390,7 +389,7 @@ void Host_ClientCommands(const char* fmt, ...)
     char string[1024];
 
     va_start(argptr, fmt);
-    vsprintf_s(string, sizeof(string), fmt, argptr);
+    vsnprintf(string, sizeof(string), fmt, argptr);
     va_end(argptr);
 
     MSG_WriteByte(&host_client->message, svc_stufftext);
@@ -409,7 +408,7 @@ void Host_ShutdownServer(qboolean crash)
     int i;
     int count;
     sizebuf_t buf;
-    char message[4];
+    char message[4] = {};
     double start;
 
     if (!sv.active) {
@@ -445,7 +444,7 @@ void Host_ShutdownServer(qboolean crash)
     } while (count);
 
     // make sure all the clients know we're disconnecting
-    buf.data = (byte*)message;
+    buf.data = reinterpret_cast<byte*>(message);
     buf.maxsize = 4;
     buf.cursize = 0;
     MSG_WriteByte(&buf, svc_disconnect);
@@ -537,10 +536,8 @@ Add them exactly as if they had been typed at the console
 */
 void Host_GetConsoleCommands(void)
 {
-    char* cmd;
-
     while (1) {
-        cmd = Sys_ConsoleInput();
+        char* cmd = Sys_ConsoleInput();
         if (!cmd) {
             break;
         }
@@ -640,14 +637,10 @@ Runs all active servers
 */
 void _Host_Frame(float time)
 {
-    static double time1 = 0;
-    static double time2 = 0;
-    static double time3 = 0;
-    int pass1, pass2, pass3;
 
     try {
         // keep the random time dependent
-        rand();
+        (void)rand();
 
         // decide the simulation time
         if (!Host_FilterTime(time)) {
@@ -703,12 +696,14 @@ void _Host_Frame(float time)
         }
 
         // update video
+        double time1 = 0;
         if (host_speeds.value) {
             time1 = Sys_FloatTime();
         }
 
         SCR_UpdateScreen();
 
+        double time2 = 0;
         if (host_speeds.value) {
             time2 = Sys_FloatTime();
         }
@@ -724,10 +719,11 @@ void _Host_Frame(float time)
         CDAudio_Update();
 
         if (host_speeds.value) {
-            pass1 = static_cast<int>((time1 - time3) * 1000);
+            static double time3 = 0;
+            int pass1 = static_cast<int>((time1 - time3) * 1000);
             time3 = Sys_FloatTime();
-            pass2 = static_cast<int>((time2 - time1) * 1000);
-            pass3 = static_cast<int>((time3 - time2) * 1000);
+            int pass2 = static_cast<int>((time2 - time1) * 1000);
+            int pass3 = static_cast<int>((time3 - time2) * 1000);
             Con_Printf("%3i tot %3i server %3i gfx %3i snd\n", pass1 + pass2 + pass3,
                 pass1, pass2, pass3);
         }
@@ -802,11 +798,11 @@ void Host_InitVCR(quakeparms_t* parms)
         }
 
         Sys_FileRead(vcrFile, &com_argc, sizeof(int));
-        com_argv = (char**)malloc(com_argc * sizeof(char*));
+        com_argv = static_cast<char**>(malloc(com_argc * sizeof(char*)));
         com_argv[0] = parms->argv[0];
         for (i = 0; i < com_argc; i++) {
             Sys_FileRead(vcrFile, &len, sizeof(int));
-            p = (char*)malloc(len);
+            p = static_cast<char*>(malloc(len));
             Sys_FileRead(vcrFile, p, len);
             com_argv[i + 1] = p;
         }
@@ -890,12 +886,12 @@ void Host_Init(quakeparms_t* parms)
     R_InitTextures(); // needed even for dedicated servers
 
     if (cls.state != ca_dedicated) {
-        host_basepal = (byte*)COM_LoadHunkFile("gfx/palette.lmp");
+        host_basepal = COM_LoadHunkFile("gfx/palette.lmp");
         if (!host_basepal) {
             Sys_Error("Couldn't load gfx/palette.lmp");
         }
 
-        host_colormap = (byte*)COM_LoadHunkFile("gfx/colormap.lmp");
+        host_colormap = COM_LoadHunkFile("gfx/colormap.lmp");
         if (!host_colormap) {
             Sys_Error("Couldn't load gfx/colormap.lmp");
         }

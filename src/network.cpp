@@ -580,7 +580,7 @@ static int PartialIPAddress(const char* in, struct qsockaddr* hostaddr)
 
     buff[0] = '.';
     b = buff;
-    strcpy_s(buff + 1, sizeof(buff) - 1, in);
+    strlcpy(buff + 1, in, sizeof(buff) - 1);
     if (buff[1] == '.') {
         b++;
     }
@@ -726,7 +726,7 @@ char* UDP_AddrToString(struct qsockaddr* addr)
     int haddr;
 
     haddr = ntohl(((struct sockaddr_in*)addr)->sin_addr.s_addr);
-    sprintf_s(buffer, sizeof(buffer), "%d.%d.%d.%d:%d", (haddr >> 24) & 0xff, (haddr >> 16) & 0xff,
+    snprintf(buffer, sizeof(buffer), "%d.%d.%d.%d:%d", (haddr >> 24) & 0xff, (haddr >> 16) & 0xff,
         (haddr >> 8) & 0xff, haddr & 0xff,
         ntohs(((struct sockaddr_in*)addr)->sin_port));
 
@@ -740,7 +740,7 @@ int UDP_StringToAddr(const char* string, struct qsockaddr* addr)
     int ha1, ha2, ha3, ha4, hp;
     int ipaddr;
 
-    sscanf_s(string, "%d.%d.%d.%d:%d", &ha1, &ha2, &ha3, &ha4, &hp);
+    sscanf(string, "%d.%d.%d.%d:%d", &ha1, &ha2, &ha3, &ha4, &hp);
     ipaddr = (ha1 << 24) | (ha2 << 16) | (ha3 << 8) | ha4;
 
     addr->sa_family = AF_INET;
@@ -895,7 +895,7 @@ char* StrAddr(struct qsockaddr* addr)
     int n;
 
     for (n = 0; n < 16; n++) {
-        sprintf_s(buf + n * 2, sizeof(buf) - n * 2, "%02x", *p++);
+        snprintf(buf + n * 2, sizeof(buf) - n * 2, "%02x", *p++);
     }
 
     return buf;

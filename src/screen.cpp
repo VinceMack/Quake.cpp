@@ -95,7 +95,7 @@ for a few moments
 */
 void SCR_CenterPrint(const char* str)
 {
-    strncpy_s(scr_centerstring, sizeof(scr_centerstring), str, sizeof(scr_centerstring) - 1);
+    strlcpy(scr_centerstring, str, sizeof(scr_centerstring) - 1);
     scr_centertime_off = scr_centertime.value;
     scr_centertime_start = static_cast<float>(cl.time);
 
@@ -132,10 +132,10 @@ void SCR_EraseCenterString(void)
 
 void SCR_DrawCenterString(void)
 {
-    char* start;
+    const char* start;
     int l;
     int j;
-    int x, y;
+    int y;
     int remaining;
 
     // the finale prints the characters one at a time
@@ -161,7 +161,7 @@ void SCR_DrawCenterString(void)
                 break;
             }
         }
-        x = (vid.width - l * 8) / 2;
+        int x = (vid.width - l * 8) / 2;
         for (j = 0; j < l; j++, x += 8) {
             Draw_Character(x, y, start[j]);
             if (!remaining--) {
@@ -432,7 +432,7 @@ DrawPause
 */
 void SCR_DrawPause(void)
 {
-    qpic_t* pic;
+    const qpic_t* pic;
 
     if (!scr_showpause.value) { // turn off for screenshots
         return;
@@ -454,7 +454,7 @@ SCR_DrawLoading
 */
 void SCR_DrawLoading(void)
 {
-    qpic_t* pic;
+    const qpic_t* pic;
 
     if (!scr_drawloading) {
         return;
@@ -565,18 +565,18 @@ typedef struct {
 WritePCXfile
 ==============
 */
-void WritePCXfile(char* filename,
+void WritePCXfile(const char* filename,
     byte* data,
     int width,
     int height,
     int rowbytes,
-    byte* palette)
+    const byte* palette)
 {
     int i, j, length;
     pcx_t* pcx;
     byte* pack;
 
-    pcx = (pcx_t *) Hunk_TempAlloc(width * height * 2 + 1000);
+    pcx = static_cast<pcx_t*>(Hunk_TempAlloc(width * height * 2 + 1000));
     if (pcx == NULL) {
         Con_Printf("SCR_ScreenShot_f: not enough memory\n");
 
@@ -622,7 +622,7 @@ void WritePCXfile(char* filename,
     }
 
     // write output file
-    length = static_cast<int>(pack - (byte*)pcx);
+    length = static_cast<int>(pack - reinterpret_cast<const byte*>(pcx));
     COM_WriteFile(filename, pcx, length);
 }
 
@@ -640,12 +640,12 @@ void SCR_ScreenShot_f(void)
     //
     // find a file name to save it to
     //
-    strcpy_s(pcxname, sizeof(pcxname), "quake00.pcx");
+    strlcpy(pcxname, "quake00.pcx", sizeof(pcxname));
 
     for (i = 0; i <= 99; i++) {
         pcxname[5] = static_cast<char>(i / 10 + '0');
         pcxname[6] = static_cast<char>(i % 10 + '0');
-        sprintf_s(checkname, sizeof(checkname), "%s/%s", com_gamedir, pcxname);
+        snprintf(checkname, sizeof(checkname), "%s/%s", com_gamedir, pcxname);
         if (Sys_FileTime(checkname) == -1) {
             break; // file doesn't exist
         }
@@ -730,7 +730,7 @@ void SCR_DrawNotifyString(void)
     const char* start;
     int l;
     int j;
-    int x, y;
+    int y;
 
     start = scr_notifystring;
 
@@ -743,7 +743,7 @@ void SCR_DrawNotifyString(void)
                 break;
             }
         }
-        x = (vid.width - l * 8) / 2;
+        int x = (vid.width - l * 8) / 2;
         for (j = 0; j < l; j++, x += 8) {
             Draw_Character(x, y, start[j]);
         }

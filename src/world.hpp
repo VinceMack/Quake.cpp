@@ -1,19 +1,19 @@
 // world.h -- collision detection structures (trace, plane, hull)
 #pragma once
 
-typedef struct {
-    Vector3 normal;
-    float dist;
+typedef struct plane_s {
+    Vector3 normal = {};
+    float dist = 0.0f;
 } plane_t;
 
-typedef struct {
-    qboolean allsolid;   // if true, plane is not valid
-    qboolean startsolid; // if true, the initial point was in a solid area
-    qboolean inopen, inwater;
-    float fraction; // time completed, 1.0 = didn't hit anything
-    Vector3 endpos;  // final position
-    plane_t plane;  // surface normal at impact
-    edict_t* ent;   // entity the surface is on
+typedef struct trace_s {
+    qboolean allsolid = false;   // if true, plane is not valid
+    qboolean startsolid = false; // if true, the initial point was in a solid area
+    qboolean inopen = false, inwater = false;
+    float fraction = 1.0f; // time completed, 1.0 = didn't hit anything
+    Vector3 endpos = {};  // final position
+    plane_t plane = {};  // surface normal at impact
+    edict_t* ent = nullptr;   // entity the surface is on
 } trace_t;
 
 #define MOVE_NORMAL 0
@@ -60,6 +60,6 @@ trace_t SV_Move(const Vector3& start,
 // shouldn't be considered solid objects
 
 // passedict is explicitly excluded from clipping checks (normally NULL)
-qboolean SV_RecursiveHullCheck(hull_t* hull, int num, float p1f, float p2f, const Vector3& p1, const Vector3& p2, trace_t* trace);
+qboolean SV_RecursiveHullCheck(const hull_t* hull, int num, float p1f, float p2f, const Vector3& p1, const Vector3& p2, trace_t* trace);
 
 } // namespace Server

@@ -26,10 +26,12 @@ typedef struct link_s {
     struct link_s *prev, *next;
 } link_t;
 
+#include <cstddef>
+
 // (type *)STRUCT_FROM_LINK(link_t *link, type, member)
 // ent = STRUCT_FROM_LINK(link,entity_t,order)
 // FIXME: remove this mess!
-#define STRUCT_FROM_LINK(l, t, m) ((t*)((byte*)l - (intptr_t)&(((t*)0)->m)))
+#define STRUCT_FROM_LINK(l, t, m) (reinterpret_cast<t*>(reinterpret_cast<byte*>(l) - offsetof(t, m)))
 
 //============================================================================
 
@@ -156,10 +158,10 @@ inline void SZ_Write(sizebuf_t* buf, const void* data, int length)
 
 inline int Q_strcasecmp(const char* s1, const char* s2)
 {
-    int c1, c2;
+    int c1;
     do {
         c1 = *s1++;
-        c2 = *s2++;
+        int c2 = *s2++;
         if (c1 != c2) {
             if (c1 >= 'a' && c1 <= 'z') c1 -= ('a' - 'A');
             if (c2 >= 'a' && c2 <= 'z') c2 -= ('a' - 'A');
@@ -219,7 +221,7 @@ extern int com_filesize;
 
 extern char com_gamedir[MAX_OSPATH];
 
-void COM_WriteFile(const char* filename, void* data, int len);
+void COM_WriteFile(const char* filename, const void* data, int len);
 
 int COM_FindFile(const char* filename, int* handle, FILE** file);
 byte* COM_LoadFile(const char* path, int usehunk);

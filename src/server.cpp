@@ -104,7 +104,7 @@ void SV_Init(void)
     Cvar::Register(&sv_nostep);
 
     for (i = 0; i < MAX_MODELS; i++) {
-        sprintf_s(localmodels[i], sizeof(localmodels[i]), "*%i", i);
+        snprintf(localmodels[i], sizeof(localmodels[i]), "*%i", i);
     }
 }
 
@@ -117,7 +117,7 @@ Make sure the event gets sent to all clients
 */
 void SV_StartParticle(const Vector3& org, const Vector3& dir, int color, int count)
 {
-    int i, v;
+    int i;
 
     if (sv.datagram.cursize > MAX_DATAGRAM - 16) {
         return;
@@ -128,7 +128,7 @@ void SV_StartParticle(const Vector3& org, const Vector3& dir, int color, int cou
     MSG_WriteCoord(&sv.datagram, org[1]);
     MSG_WriteCoord(&sv.datagram, org[2]);
     for (i = 0; i < 3; i++) {
-        v = static_cast<int>(dir[i] * 16);
+        int v = static_cast<int>(dir[i] * 16);
         if (v > 127) {
             v = 127;
         } else if (v < -128) {
@@ -244,7 +244,7 @@ void SV_SendServerinfo(client_t* client)
     char message[2048];
 
     MSG_WriteByte(&client->message, svc_print);
-    sprintf_s(message, sizeof(message), "%c\nVERSION %4.2f SERVER (%i CRC)", 2, VERSION, pr_crc);
+    snprintf(message, sizeof(message), "%c\nVERSION %4.2f SERVER (%i CRC)", 2, VERSION, pr_crc);
     MSG_WriteString(&client->message, message);
 
     MSG_WriteByte(&client->message, svc_serverinfo);
@@ -257,7 +257,7 @@ void SV_SendServerinfo(client_t* client)
         MSG_WriteByte(&client->message, GAME_COOP);
     }
 
-    sprintf_s(message, sizeof(message), "%s", PR_GetString(sv.edicts->v.message));
+    snprintf(message, sizeof(message), "%s", PR_GetString(sv.edicts->v.message));
 
     MSG_WriteString(&client->message, message);
 
@@ -301,7 +301,6 @@ void SV_ConnectClient(int clientnum)
     client_t* client;
     int edictnum;
     struct qsocket_s* netconnection;
-    int i;
     float spawn_parms[NUM_SPAWN_PARMS];
 
     client = svs.clients + clientnum;
@@ -319,10 +318,10 @@ void SV_ConnectClient(int clientnum)
         memcpy(spawn_parms, client->spawn_parms, sizeof(spawn_parms));
     }
 
-    memset(client, 0, sizeof(*client));
+    *client = client_t{};
     client->netconnection = netconnection;
 
-    strcpy_s(client->name, sizeof(client->name), "unconnected");
+    strlcpy(client->name, "unconnected", sizeof(client->name));
     client->active = true;
     client->spawned = false;
     client->edict = ent;
@@ -337,7 +336,7 @@ void SV_ConnectClient(int clientnum)
     } else {
         // call the progs to get default spawn parms for the new client
         PR_ExecuteProgram(pr_global_struct->SetNewParms);
-        for (i = 0; i < NUM_SPAWN_PARMS; i++) {
+        for (int i = 0; i < NUM_SPAWN_PARMS; i++) {
             client->spawn_parms[i] = (&pr_global_struct->parm1)[i];
         }
     }
@@ -390,17 +389,12 @@ void SV_CheckForNewClients(void)
 
 void SV_AddToFatPVS(const Vector3& org, mnode_t* node)
 {
-    int i;
-    byte* pvs;
-    mplane_t* plane;
-    float d;
-
     while (1) {
         // if this is a leaf, accumulate the pvs bits
         if (node->contents < 0) {
             if (node->contents != CONTENTS_SOLID) {
-                pvs = Mod_LeafPVS((mleaf_t*)node, sv.worldmodel);
-                for (i = 0; i < fatbytes; i++) {
+                byte* pvs = Mod_LeafPVS(reinterpret_cast<mleaf_t*>(node), sv.worldmodel);
+                for (int i = 0; i < fatbytes; i++) {
                     fatpvs[i] |= pvs[i];
                 }
             }
@@ -408,8 +402,8 @@ void SV_AddToFatPVS(const Vector3& org, mnode_t* node)
             return;
         }
 
-        plane = node->plane;
-        d = org.dot(plane->normal) - plane->dist;
+        const mplane_t* plane = node->plane;
+        float d = org.dot(plane->normal) - plane->dist;
         if (d > 8) {
             node = node->children[0];
         } else if (d < -8) {
@@ -630,7 +624,6 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
 {
     int bits;
     int i;
-    edict_t* other;
     int items;
     eval_t* val;
 
@@ -638,7 +631,7 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
     // send a damage message
     //
     if (ent->v.dmg_take || ent->v.dmg_save) {
-        other = PROG_TO_EDICT(ent->v.dmg_inflictor);
+        edict_t* other = PROG_TO_EDICT(ent->v.dmg_inflictor);
         MSG_WriteByte(msg, svc_damage);
         MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_save));
         MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_take));
@@ -1046,7 +1039,7 @@ void SV_SendReconnect(void)
     char data[128];
     sizebuf_t msg;
 
-    msg.data = (byte*)data;
+    msg.data = reinterpret_cast<byte*>(data);
     msg.cursize = 0;
     msg.maxsize = sizeof(data);
 
@@ -1141,9 +1134,9 @@ void SV_SpawnServer(char* server)
     //
     Host_ClearMemory();
 
-    memset(&sv, 0, sizeof(sv));
+    sv = server_t{};
 
-    strcpy_s(sv.name, sizeof(sv.name), server);
+    strlcpy(sv.name, server, sizeof(sv.name));
 
     // load progs to get entity field count
     PR_LoadProgs();
@@ -1151,7 +1144,7 @@ void SV_SpawnServer(char* server)
     // allocate server memory
     sv.max_edicts = MAX_EDICTS;
 
-    sv.edicts = (edict_t *) Hunk_Alloc(sv.max_edicts * pr_edict_size, "edicts");
+    sv.edicts = static_cast<edict_t*>(Hunk_Alloc(sv.max_edicts * pr_edict_size, "edicts"));
 
     sv.datagram.maxsize = sizeof(sv.datagram_buf);
     sv.datagram.cursize = 0;
@@ -1177,8 +1170,8 @@ void SV_SpawnServer(char* server)
 
     sv.time = 1.0;
 
-    strcpy_s(sv.name, sizeof(sv.name), server);
-    sprintf_s(sv.modelname, sizeof(sv.modelname), "maps/%s.bsp", server);
+    strlcpy(sv.name, server, sizeof(sv.name));
+    snprintf(sv.modelname, sizeof(sv.modelname), "maps/%s.bsp", server);
     sv.worldmodel = Mod_ForName(sv.modelname, false);
     if (!sv.worldmodel) {
         Con_Printf("Couldn't spawn server %s\n", sv.modelname);
@@ -1424,13 +1417,10 @@ If steptrace is not NULL, the trace of any vertical wall hit will be stored
 int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
 {
     int bumpcount, numbumps;
-    Vector3 dir;
-    float d;
     int numplanes;
     Vector3 planes[MAX_CLIP_PLANES];
     Vector3 primal_velocity, original_velocity, new_velocity;
     int i, j;
-    trace_t trace;
     Vector3 end;
     float time_left;
     int blocked;
@@ -1451,7 +1441,7 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
 
         end = ent->v.origin + ent->v.velocity * time_left;
 
-        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, false, ent);
+        trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, false, ent);
 
         if (trace.allsolid) { // entity is trapped in another solid
             ent->v.velocity = vec3_origin;
@@ -1535,8 +1525,8 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
                 return 7;
             }
 
-            dir = planes[0].cross(planes[1]);
-            d = dir.dot(ent->v.velocity);
+            Vector3 dir = planes[0].cross(planes[1]);
+            float d = dir.dot(ent->v.velocity);
             ent->v.velocity = dir * d;
         }
 

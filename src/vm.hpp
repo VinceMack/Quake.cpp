@@ -76,10 +76,10 @@ void ED_LoadFromFile(char* data);
 edict_t* EDICT_NUM(int n);
 int NUM_FOR_EDICT(edict_t* e);
 
-#define NEXT_EDICT(e) ((edict_t*)((byte*)e + pr_edict_size))
+#define NEXT_EDICT(e) (reinterpret_cast<edict_t*>(reinterpret_cast<byte*>(e) + pr_edict_size))
 
-#define EDICT_TO_PROG(e) ((byte*)e - (byte*)sv.edicts)
-#define PROG_TO_EDICT(e) ((edict_t*)((byte*)sv.edicts + e))
+#define EDICT_TO_PROG(e) (reinterpret_cast<byte*>(e) - reinterpret_cast<byte*>(sv.edicts))
+#define PROG_TO_EDICT(e) (reinterpret_cast<edict_t*>(reinterpret_cast<byte*>(sv.edicts) + e))
 
 //============================================================================
 

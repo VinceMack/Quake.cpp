@@ -13,10 +13,10 @@ struct Vector3 {
 
     // Array subscript operators
     constexpr float operator[](size_t index) const {
-        return (&x)[index];
+        return (index == 0) ? x : ((index == 1) ? y : z);
     }
     constexpr float& operator[](size_t index) {
-        return (&x)[index];
+        return (index == 0) ? x : ((index == 1) ? y : z);
     }
 
     // Implicit conversions to raw pointers
@@ -105,7 +105,7 @@ typedef int fixed16_t;
 
 struct mplane_s;
 
-#define IS_NAN(x) (((*(int*)&x) & nanmask) == nanmask)
+#define IS_NAN(x) std::isnan(x)
 
 // Modern C++ template functions replacing legacy macros
 template <typename T, typename U>
@@ -185,8 +185,8 @@ inline void VectorScale(const T& in, vec_t scale, U&& out) {
     out[2] = in[2] * scale;
 }
 
-void R_ConcatRotations(float in1[3][3], float in2[3][3], float out[3][3]);
-void R_ConcatTransforms(float in1[3][4], float in2[3][4], float out[3][4]);
+void R_ConcatRotations(const float in1[3][3], const float in2[3][3], float out[3][3]);
+void R_ConcatTransforms(const float in1[3][4], const float in2[3][4], float out[3][4]);
 
 void FloorDivMod(double numer, double denom, int* quotient, int* rem);
 int GreatestCommonDivisor(int i1, int i2);

@@ -1,7 +1,21 @@
 // audio.cpp -- merged audio subsystem (snd_*.cpp)
 // Contains: sound control, caching, mixing, and SDL audio driver
+#pragma warning(disable: 4324)
 
+#include <SDL.h>
 #include "quakedef.hpp"
+#include <span>
+#include <array>
+#include <string_view>
+#include <cstring>
+#include <cstdio>
+#include <algorithm>
+#include <bit>
+#include <limits>
+#include <new>
+#include <random>
+#include <charconv>
+#include <cstdint>
 
 using namespace CDAudio;
 using namespace Client;
@@ -30,57 +44,173 @@ using namespace Cmd;
 
 namespace Audio {
 
-// ============================================================================
-// snd_dma.cpp -- main control for any streaming sound output device
-// ============================================================================
+namespace {
+
+enum class AudioCommandType {
+    StartSound,
+    StaticSound,
+    StopSound,
+    StopAllSounds,
+    ListenerUpdate,
+    ClearBuffer
+};
+
+struct AudioCommand {
+    AudioCommandType type;
+    int entnum;
+    int entchannel;
+    sfx_t* sfx;
+    Vector3 origin;
+    float vol;
+    float attenuation;
+    bool clear;
+    Vector3 v_forward;
+    Vector3 v_right;
+    Vector3 v_up;
+    std::array<int, NUM_AMBIENTS> ambient_vols;
+    float host_frametime;
+    float ambient_fade;
+    bool snd_ambient;
+    int random_offset;
+};
+
+template <typename T, size_t Capacity>
+class SPSCQueue {
+public:
+    static_assert((Capacity & (Capacity - 1)) == 0, "Capacity must be a power of 2");
+    static_assert(std::is_trivially_copyable_v<T>, "Queue objects must be trivially copyable to ensure lock-free safety");
+
+    [[nodiscard]] bool Push(const T& value) {
+        size_t write_idx = write_idx_.load(std::memory_order_relaxed);
+        size_t read_idx = read_idx_.load(std::memory_order_acquire);
+        if (write_idx - read_idx >= Capacity) {
+            return false; // Queue full
+        }
+        buffer_[write_idx & (Capacity - 1)] = value;
+        write_idx_.store(write_idx + 1, std::memory_order_release);
+        return true;
+    }
+
+    [[nodiscard]] bool Pop(T& value) {
+        size_t read_idx = read_idx_.load(std::memory_order_relaxed);
+        size_t write_idx = write_idx_.load(std::memory_order_acquire);
+        if (read_idx == write_idx) {
+            return false; // Queue empty
+        }
+        value = buffer_[read_idx & (Capacity - 1)];
+        read_idx_.store(read_idx + 1, std::memory_order_release);
+        return true;
+    }
+
+private:
+    std::array<T, Capacity> buffer_;
+    alignas(64) std::atomic<size_t> write_idx_{0};
+    alignas(64) std::atomic<size_t> read_idx_{0};
+};
+
+SPSCQueue<AudioCommand, 256> command_queue;
+float local_volume = 0.7f;
+dma_t the_shm;
+
+void S_StartSoundInternal(int entnum, int entchannel, sfx_t* sfx, const Vector3& origin, float fvol, float attenuation, int random_offset);
+void S_StaticSoundInternal(sfx_t* sfx, const Vector3& origin, float vol, float attenuation);
+void S_StopSoundInternal(int entnum, int entchannel);
+void S_StopAllSoundsInternal(bool clear);
+void S_ClearBufferInternal(void);
+void S_UpdateInternal(const Vector3& origin,
+    const Vector3& forward,
+    const Vector3& right,
+    const Vector3& up,
+    float vol_val,
+    const std::array<int, NUM_AMBIENTS>& ambient_vols,
+    float host_frametime_val,
+    float ambient_fade_val,
+    bool snd_ambient_val);
+void ExecuteAudioCommand(const AudioCommand& cmd);
+
+template <typename T>
+[[nodiscard]] constexpr T byteswap(T val) noexcept {
+    static_assert(std::is_integral_v<T>, "byteswap requires integral type");
+    if constexpr (sizeof(T) == 2) {
+        return static_cast<T>((static_cast<unsigned short>(val) << 8) | (static_cast<unsigned short>(val) >> 8));
+    } else if constexpr (sizeof(T) == 4) {
+        unsigned int u = static_cast<unsigned int>(val);
+        return static_cast<T>(
+            ((u << 24) & 0xFF000000) |
+            ((u << 8)  & 0x00FF0000) |
+            ((u >> 8)  & 0x0000FF00) |
+            ((u >> 24) & 0x000000FF)
+        );
+    } else {
+        return val;
+    }
+}
 
 void S_Play(void);
 void S_PlayVol(void);
 void S_SoundList(void);
 void S_Update_();
-void S_StopAllSounds(qboolean clear);
+
+} // namespace
+
+void S_StopAllSounds(bool clear);
 
 // =======================================================================
 // Internal sound data & structures
 // =======================================================================
 
-channel_t channels[MAX_CHANNELS];
-int total_channels;
+namespace {
 
-int snd_blocked = 0;
-static qboolean snd_ambient = 1;
-qboolean snd_initialized = false;
-
-// pointer should go away
-volatile dma_t* shm = 0;
-volatile dma_t sn;
+std::array<channel_t, MAX_CHANNELS> channels;
+std::atomic<int> total_channels{MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS};
+bool snd_ambient = true;
 
 Vector3 listener_origin;
 Vector3 listener_forward;
 Vector3 listener_right;
 Vector3 listener_up;
-vec_t sound_nominal_clip_dist = 1000.0;
 
 int soundtime;   // sample PAIRS
 int paintedtime; // sample PAIRS
 
-#define MAX_SFX 512
-sfx_t* known_sfx; // hunk allocated [MAX_SFX]
-int num_sfx;
+bool fakedma = false;
+dma_t* shm = nullptr;
+bool snd_initialized = false;
 
-sfx_t* ambient_sfx[NUM_AMBIENTS];
+} // namespace
+
+int snd_blocked = 0;
+vec_t sound_nominal_clip_dist = 1000.0;
+
+namespace {
+
+constexpr int MAX_SFX = 512;
+sfx_t* known_sfx = nullptr; // hunk allocated [MAX_SFX]
+size_t num_sfx;
+
+std::array<sfx_t*, NUM_AMBIENTS> ambient_sfx;
 
 int desired_speed = 11025;
 int desired_bits = 16;
 
-int sound_started = 0;
+qboolean sound_started = false;
+
+} // namespace
 
 cvar_t bgmvolume = { "bgmvolume", "1", true, {}, {}, {} };
 cvar_t volume = { "volume", "0.7", true, {}, {}, {} };
 
+namespace {
+
 cvar_t nosound = { "nosound", "0", {}, {}, {}, {} };
 cvar_t precache = { "precache", "1", {}, {}, {}, {} };
+
+} // namespace
+
 cvar_t loadas8bit = { "loadas8bit", "0", {}, {}, {}, {} };
+
+namespace {
+
 cvar_t bgmbuffer = { "bgmbuffer", "4096", {}, {}, {}, {} };
 cvar_t ambient_level = { "ambient_level", "0.3", {}, {}, {}, {} };
 cvar_t ambient_fade = { "ambient_fade", "100", {}, {}, {}, {} };
@@ -88,11 +218,15 @@ cvar_t snd_noextraupdate = { "snd_noextraupdate", "0", {}, {}, {}, {} };
 cvar_t snd_show = { "snd_show", "0", {}, {}, {}, {} };
 cvar_t _snd_mixahead = { "_snd_mixahead", "0.1", true, {}, {}, {} };
 
+} // namespace
+
 // ====================================================================
 // User-setable variables
 // ====================================================================
 
-qboolean fakedma = false;
+
+
+namespace {
 
 void S_SoundInfo_f(void)
 {
@@ -102,15 +236,17 @@ void S_SoundInfo_f(void)
         return;
     }
 
-    Con_Printf("%5d stereo\n", shm->channels - 1);
-    Con_Printf("%5d samples\n", shm->samples);
-    Con_Printf("%5d samplepos\n", shm->samplepos);
-    Con_Printf("%5d samplebits\n", shm->samplebits);
-    Con_Printf("%5d submission_chunk\n", shm->submission_chunk);
-    Con_Printf("%5d speed\n", shm->speed);
-    Con_Printf("0x%x dma buffer\n", shm->buffer);
-    Con_Printf("%5d total_channels\n", total_channels);
+    Con_Printf("%5d stereo\n", shm->channels.load() - 1);
+    Con_Printf("%5d samples\n", shm->samples.load());
+    Con_Printf("%5d samplepos\n", shm->samplepos.load());
+    Con_Printf("%5d samplebits\n", shm->samplebits.load());
+    Con_Printf("%5d submission_chunk\n", shm->submission_chunk.load());
+    Con_Printf("%5d speed\n", shm->speed.load());
+    Con_Printf("0x%x dma buffer\n", shm->buffer.load());
+    Con_Printf("%5d total_channels\n", total_channels.load(std::memory_order_relaxed));
 }
+
+} // namespace
 
 /*
 ================
@@ -120,7 +256,7 @@ S_Startup
 
 void S_Startup(void)
 {
-    int rc;
+    bool rc;
 
     if (!snd_initialized) {
         return;
@@ -186,27 +322,27 @@ void S_Init(void)
 
     SND_InitScaletable();
 
-    known_sfx = (sfx_t *) Hunk_Alloc(MAX_SFX * sizeof(sfx_t), "sfx_t");
+    known_sfx = static_cast<sfx_t*>(Hunk_Alloc(MAX_SFX * sizeof(sfx_t), "sfx_t"));
     num_sfx = 0;
 
     // create a piece of DMA memory
 
     if (fakedma) {
-        shm = (volatile dma_t*)(void*)Hunk_Alloc(sizeof(*shm), "shm");
-        shm->splitbuffer = 0;
-        shm->samplebits = 16;
-        shm->speed = 22050;
-        shm->channels = 2;
-        shm->samples = 32768;
-        shm->samplepos = 0;
-        shm->soundalive = true;
-        shm->gamealive = true;
-        shm->submission_chunk = 1;
-        shm->buffer = (unsigned char *) Hunk_Alloc(1 << 16, "shmbuf");
+        shm = &the_shm;
+        shm->splitbuffer.store(0, std::memory_order_relaxed);
+        shm->samplebits.store(16, std::memory_order_relaxed);
+        shm->speed.store(22050, std::memory_order_relaxed);
+        shm->channels.store(2, std::memory_order_relaxed);
+        shm->samples.store(32768, std::memory_order_relaxed);
+        shm->samplepos.store(0, std::memory_order_relaxed);
+        shm->soundalive.store(true, std::memory_order_relaxed);
+        shm->gamealive.store(true, std::memory_order_relaxed);
+        shm->submission_chunk.store(1, std::memory_order_relaxed);
+        shm->buffer.store(static_cast<unsigned char*>(Hunk_Alloc(1 << 16, "shmbuf")), std::memory_order_release);
     }
 
     if (shm) {
-        Con_Printf("Sound sampling rate: %i\n", shm->speed);
+        Con_Printf("Sound sampling rate: %i\n", shm->speed.load());
     }
 
     ambient_sfx[AMBIENT_WATER] = S_PrecacheSound("ambience/water1.wav");
@@ -226,10 +362,10 @@ void S_Shutdown(void)
     }
 
     if (shm) {
-        shm->gamealive = 0;
+        shm->gamealive.store(0, std::memory_order_release);
     }
 
-    shm = 0;
+    shm = nullptr;
     sound_started = 0;
 
     if (!fakedma) {
@@ -247,23 +383,22 @@ S_FindName
 
 ==================
 */
-sfx_t* S_FindName(const char* name)
-{
-    int i;
-    sfx_t* sfx;
+namespace {
 
-    if (!name) {
+[[nodiscard]] sfx_t* S_FindName(std::string_view name)
+{
+    if (name.empty()) {
         Sys_Error("S_FindName: NULL\n");
     }
 
-    if (Q_strlen(name) >= MAX_QPATH) {
-        Sys_Error("Sound name too long: %s", name);
+    if (name.length() >= MAX_QPATH) {
+        Sys_Error("Sound name too long: %.*s", static_cast<int>(name.length()), name.data());
     }
 
     // see if already loaded
-    for (i = 0; i < num_sfx; i++) {
-        if (!Q_strcmp(known_sfx[i].name, name)) {
-            return &known_sfx[i];
+    for (auto& sfx : std::span(known_sfx, num_sfx)) {
+        if (sfx.name == name) {
+            return &sfx;
         }
     }
 
@@ -271,13 +406,16 @@ sfx_t* S_FindName(const char* name)
         Sys_Error("S_FindName: out of sfx_t");
     }
 
-    sfx = &known_sfx[i];
-    strcpy_s(sfx->name, sizeof(sfx->name), name);
+    sfx_t* sfx = &known_sfx[num_sfx];
+    name.copy(sfx->name, name.length());
+    sfx->name[name.length()] = '\0';
 
     num_sfx++;
 
     return sfx;
 }
+
+} // namespace
 
 /*
 ==================
@@ -285,15 +423,13 @@ S_TouchSound
 
 ==================
 */
-void S_TouchSound(const char* name)
+void S_TouchSound(std::string_view name)
 {
-    sfx_t* sfx;
-
     if (!sound_started) {
         return;
     }
 
-    sfx = S_FindName(name);
+    sfx_t* sfx = S_FindName(name);
     Cache_Check(&sfx->cache);
 }
 
@@ -303,19 +439,17 @@ S_PrecacheSound
 
 ==================
 */
-sfx_t* S_PrecacheSound(const char* name)
+sfx_t* S_PrecacheSound(std::string_view name)
 {
-    sfx_t* sfx;
-
     if (!sound_started || nosound.value) {
-        return NULL;
+        return nullptr;
     }
 
-    sfx = S_FindName(name);
+    sfx_t* sfx = S_FindName(name);
 
     // cache it in
     if (precache.value) {
-        S_LoadSound(sfx);
+        static_cast<void>(S_LoadSound(sfx));
     }
 
     return sfx;
@@ -330,41 +464,36 @@ SND_PickChannel
 */
 channel_t* SND_PickChannel(int entnum, int entchannel)
 {
-    int ch_idx;
-    int first_to_die;
-    int life_left;
-
     // Check for replacement sound, or find the best one to replace
-    first_to_die = -1;
-    life_left = 0x7fffffff;
-    for (ch_idx = NUM_AMBIENTS; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS;
-        ch_idx++) {
+    channel_t* first_to_die = nullptr;
+    int life_left = std::numeric_limits<int>::max();
+    for (auto& chan : std::span(channels).subspan(NUM_AMBIENTS, MAX_DYNAMIC_CHANNELS)) {
         if (entchannel != 0                                                                                            // channel 0 never overrides
-            && channels[ch_idx].entnum == entnum && (channels[ch_idx].entchannel == entchannel || entchannel == -1)) { // allways override sound from same entity
-            first_to_die = ch_idx;
+            && chan.entnum == entnum && (chan.entchannel == entchannel || entchannel == -1)) { // allways override sound from same entity
+            first_to_die = &chan;
             break;
         }
 
         // don't let monster sounds override player sounds
-        if (channels[ch_idx].entnum == cl.viewentity && entnum != cl.viewentity && channels[ch_idx].sfx) {
+        if (chan.entnum == cl.viewentity && entnum != cl.viewentity && chan.sfx) {
             continue;
         }
 
-        if (channels[ch_idx].end - paintedtime < life_left) {
-            life_left = channels[ch_idx].end - paintedtime;
-            first_to_die = ch_idx;
+        if (chan.end - paintedtime < life_left) {
+            life_left = chan.end - paintedtime;
+            first_to_die = &chan;
         }
     }
 
-    if (first_to_die == -1) {
-        return NULL;
+    if (!first_to_die) {
+        return nullptr;
     }
 
-    if (channels[first_to_die].sfx) {
-        channels[first_to_die].sfx = NULL;
+    if (first_to_die->sfx) {
+        first_to_die->sfx = nullptr;
     }
 
-    return &channels[first_to_die];
+    return first_to_die;
 }
 
 /*
@@ -395,7 +524,7 @@ void SND_Spatialize(channel_t* ch)
 
     dot = listener_right.dot(source_vec);
 
-    if (shm->channels == 1) {
+    if (shm->channels.load(std::memory_order_relaxed) == 1) {
         rscale = 1.0;
         lscale = 1.0;
     } else {
@@ -405,13 +534,13 @@ void SND_Spatialize(channel_t* ch)
 
     // add in distance effect
     scale = static_cast<vec_t>((1.0 - dist) * rscale);
-    ch->rightvol = (int)(ch->master_vol * scale);
+    ch->rightvol = static_cast<int>(ch->master_vol * scale);
     if (ch->rightvol < 0) {
         ch->rightvol = 0;
     }
 
     scale = static_cast<vec_t>((1.0 - dist) * lscale);
-    ch->leftvol = (int)(ch->master_vol * scale);
+    ch->leftvol = static_cast<int>(ch->master_vol * scale);
     if (ch->leftvol < 0) {
         ch->leftvol = 0;
     }
@@ -421,30 +550,21 @@ void SND_Spatialize(channel_t* ch)
 // Start a sound effect
 // =======================================================================
 
-void S_StartSound(int entnum,
+
+
+namespace {
+
+void S_StartSoundInternal(int entnum,
     int entchannel,
     sfx_t* sfx,
     const Vector3& origin,
     float fvol,
-    float attenuation)
+    float attenuation,
+    int random_offset)
 {
-    channel_t *target_chan, *check;
+    channel_t *target_chan;
     sfxcache_t* sc;
     int vol;
-    int ch_idx;
-    int skip;
-
-    if (!sound_started) {
-        return;
-    }
-
-    if (!sfx) {
-        return;
-    }
-
-    if (nosound.value) {
-        return;
-    }
 
     vol = static_cast<int>(fvol * 255);
 
@@ -467,12 +587,11 @@ void S_StartSound(int entnum,
         return; // not audible at all
     }
 
-    // new channel
-    sc = S_LoadSound(sfx);
+    // new channel (strictly check cache only, no I/O or heap allocation on audio thread)
+    sc = static_cast<sfxcache_t*>(Cache_Check(&sfx->cache));
     if (!sc) {
-        target_chan->sfx = NULL;
-
-        return; // couldn't load the sound's data
+        target_chan->sfx = nullptr;
+        return;
     }
 
     target_chan->sfx = sfx;
@@ -481,17 +600,18 @@ void S_StartSound(int entnum,
 
     // if an identical sound has also been started this frame, offset the pos
     // a bit to keep it from just making the first one louder
-    check = &channels[NUM_AMBIENTS];
-    for (ch_idx = NUM_AMBIENTS; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS;
-        ch_idx++, check++) {
-        if (check == target_chan) {
+    for (auto& check : std::span(channels).subspan(NUM_AMBIENTS, MAX_DYNAMIC_CHANNELS)) {
+        if (&check == target_chan) {
             continue;
         }
 
-        if (check->sfx == sfx && !check->pos) {
-            skip = rand() % (int)(0.1 * shm->speed);
+        if (check.sfx == sfx && !check.pos) {
+            int skip = random_offset;
             if (skip >= target_chan->end) {
                 skip = target_chan->end - 1;
+            }
+            if (skip < 0) {
+                skip = 0;
             }
 
             target_chan->pos += skip;
@@ -501,93 +621,59 @@ void S_StartSound(int entnum,
     }
 }
 
-void S_StopSound(int entnum, int entchannel)
+void S_StopSoundInternal(int entnum, int entchannel)
 {
-    int i;
-
-    for (i = 0; i < MAX_DYNAMIC_CHANNELS; i++) {
-        if (channels[i].entnum == entnum && channels[i].entchannel == entchannel) {
-            channels[i].end = 0;
-            channels[i].sfx = NULL;
+    for (auto& chan : std::span(channels).first(MAX_DYNAMIC_CHANNELS)) {
+        if (chan.entnum == entnum && chan.entchannel == entchannel) {
+            chan.end = 0;
+            chan.sfx = nullptr;
 
             return;
         }
     }
 }
 
-void S_StopAllSounds(qboolean clear)
+void S_StopAllSoundsInternal(bool clear)
 {
-    int i;
-
-    if (!sound_started) {
-        return;
-    }
-
     total_channels = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS; // no statics
 
-    for (i = 0; i < MAX_CHANNELS; i++) {
-        if (channels[i].sfx) {
-            channels[i].sfx = NULL;
+    for (auto& chan : channels) {
+        if (chan.sfx) {
+            chan.sfx = nullptr;
         }
     }
 
-    Q_memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
+    channels.fill({});
 
     if (clear) {
-        S_ClearBuffer();
+        S_ClearBufferInternal();
     }
 }
 
-
-
-void S_ClearBuffer(void)
+void S_ClearBufferInternal(void)
 {
-#if 0
-    int clear;
-
-    if (shm->samplebits == 8) {
-        clear = 0x80;
-    } else {
-        clear = 0;
-    }
-
-    {
-        Q_memset(shm->buffer, clear, shm->samples * shm->samplebits / 8);
-    }
-#endif
 }
 
-/*
-=================
-S_StaticSound
-=================
-*/
-void S_StaticSound(sfx_t* sfx, const Vector3& origin, float vol, float attenuation)
+void S_StaticSoundInternal(sfx_t* sfx, const Vector3& origin, float vol, float attenuation)
 {
     channel_t* ss;
     sfxcache_t* sc;
 
-    if (!sfx) {
-        return;
-    }
-
     if (total_channels == MAX_CHANNELS) {
-        Con_Printf("total_channels == MAX_CHANNELS\n");
-
         return;
     }
 
     ss = &channels[total_channels];
     total_channels++;
 
-    sc = S_LoadSound(sfx);
+    // strictly check cache only
+    sc = static_cast<sfxcache_t*>(Cache_Check(&sfx->cache));
     if (!sc) {
+        total_channels--; // Revert increment since sound could not be loaded/found in cache
         return;
     }
 
     if (sc->loopstart == -1) {
-        Con_Printf("Sound %s not looped\n", sfx->name);
-
         return;
     }
 
@@ -600,6 +686,142 @@ void S_StaticSound(sfx_t* sfx, const Vector3& origin, float vol, float attenuati
     SND_Spatialize(ss);
 }
 
+void ExecuteAudioCommand(const AudioCommand& cmd)
+{
+    switch (cmd.type) {
+    case AudioCommandType::StartSound:
+        S_StartSoundInternal(cmd.entnum, cmd.entchannel, cmd.sfx, cmd.origin, cmd.vol, cmd.attenuation, cmd.random_offset);
+        break;
+    case AudioCommandType::StaticSound:
+        S_StaticSoundInternal(cmd.sfx, cmd.origin, cmd.vol, cmd.attenuation);
+        break;
+    case AudioCommandType::StopSound:
+        S_StopSoundInternal(cmd.entnum, cmd.entchannel);
+        break;
+    case AudioCommandType::StopAllSounds:
+        S_StopAllSoundsInternal(cmd.clear);
+        break;
+    case AudioCommandType::ListenerUpdate:
+        S_UpdateInternal(cmd.origin, cmd.v_forward, cmd.v_right, cmd.v_up, cmd.vol, cmd.ambient_vols, cmd.host_frametime, cmd.ambient_fade, cmd.snd_ambient);
+        break;
+    case AudioCommandType::ClearBuffer:
+        S_ClearBufferInternal();
+        break;
+    }
+}
+
+} // namespace
+
+void S_StartSound(int entnum,
+    int entchannel,
+    sfx_t* sfx,
+    const Vector3& origin,
+    float fvol,
+    float attenuation)
+{
+    if (!sound_started || !sfx || nosound.value) {
+        return;
+    }
+
+    // strictly check cache only during active gameplay; drop sound if not precached
+    if (!Cache_Check(&sfx->cache)) {
+        return;
+    }
+
+    AudioCommand cmd{};
+    cmd.type = AudioCommandType::StartSound;
+    cmd.entnum = entnum;
+    cmd.entchannel = entchannel;
+    cmd.sfx = sfx;
+    cmd.origin = origin;
+    cmd.vol = fvol;
+    cmd.attenuation = attenuation;
+
+    // Calculate random offset on main thread (thread-safe, no system calls on audio thread)
+    int random_offset = 0;
+    if (shm) {
+        int max_skip = static_cast<int>(0.1 * shm->speed.load(std::memory_order_relaxed));
+        if (max_skip > 0) {
+            thread_local std::mt19937 generator(std::random_device{}());
+            std::uniform_int_distribution<int> distribution(0, max_skip - 1);
+            random_offset = distribution(generator);
+        }
+    }
+    cmd.random_offset = random_offset;
+
+    if (!command_queue.Push(cmd)) {
+        Con_Printf("WARNING: Audio command queue overflow!\n");
+    }
+}
+
+void S_StaticSound(sfx_t* sfx, const Vector3& origin, float vol, float attenuation)
+{
+    if (!sound_started || !sfx) {
+        return;
+    }
+
+    // strictly check cache only during active gameplay; drop sound if not precached
+    if (!Cache_Check(&sfx->cache)) {
+        return;
+    }
+
+    AudioCommand cmd{};
+    cmd.type = AudioCommandType::StaticSound;
+    cmd.sfx = sfx;
+    cmd.origin = origin;
+    cmd.vol = vol;
+    cmd.attenuation = attenuation;
+
+    if (!command_queue.Push(cmd)) {
+        Con_Printf("WARNING: Audio command queue overflow!\n");
+    }
+}
+
+void S_StopSound(int entnum, int entchannel)
+{
+    if (!sound_started) {
+        return;
+    }
+
+    AudioCommand cmd{};
+    cmd.type = AudioCommandType::StopSound;
+    cmd.entnum = entnum;
+    cmd.entchannel = entchannel;
+
+    if (!command_queue.Push(cmd)) {
+        Con_Printf("WARNING: Audio command queue overflow!\n");
+    }
+}
+
+void S_StopAllSounds(bool clear)
+{
+    if (!sound_started) {
+        return;
+    }
+
+    AudioCommand cmd{};
+    cmd.type = AudioCommandType::StopAllSounds;
+    cmd.clear = clear;
+
+    if (!command_queue.Push(cmd)) {
+        Con_Printf("WARNING: Audio command queue overflow!\n");
+    }
+}
+
+void S_ClearBuffer(void)
+{
+    if (!sound_started) {
+        return;
+    }
+
+    AudioCommand cmd{};
+    cmd.type = AudioCommandType::ClearBuffer;
+
+    if (!command_queue.Push(cmd)) {
+        Con_Printf("WARNING: Audio command queue overflow!\n");
+    }
+}
+
 //=============================================================================
 
 /*
@@ -607,95 +829,69 @@ void S_StaticSound(sfx_t* sfx, const Vector3& origin, float vol, float attenuati
 S_UpdateAmbientSounds
 ===================
 */
-void S_UpdateAmbientSounds(void)
+namespace {
+
+void S_UpdateInternal(const Vector3& origin,
+    const Vector3& forward,
+    const Vector3& right,
+    const Vector3& up,
+    float vol_val,
+    const std::array<int, NUM_AMBIENTS>& ambient_vols,
+    float host_frametime_val,
+    float ambient_fade_val,
+    bool snd_ambient_val)
 {
-    mleaf_t* l;
-    float vol;
-    int ambient_channel;
-    channel_t* chan;
-
-    if (!snd_ambient) {
-        return;
-    }
-
-    // calc ambient sound levels
-    if (!cl.worldmodel) {
-        return;
-    }
-
-    l = Mod_PointInLeaf(listener_origin, cl.worldmodel);
-    if (!l || !ambient_level.value) {
-        for (ambient_channel = 0; ambient_channel < NUM_AMBIENTS;
-            ambient_channel++) {
-            channels[ambient_channel].sfx = NULL;
-        }
-
-        return;
-    }
-
-    for (ambient_channel = 0; ambient_channel < NUM_AMBIENTS; ambient_channel++) {
-        chan = &channels[ambient_channel];
-        chan->sfx = ambient_sfx[ambient_channel];
-
-        vol = ambient_level.value * l->ambient_sound_level[ambient_channel];
-        if (vol < 8) {
-            vol = 0;
-        }
-
-        // don't adjust volume too fast
-        if (chan->master_vol < vol) {
-            chan->master_vol = static_cast<int>(chan->master_vol + host_frametime * ambient_fade.value);
-            if (chan->master_vol > vol) {
-                chan->master_vol = static_cast<int>(vol);
-            }
-        } else if (chan->master_vol > vol) {
-            chan->master_vol = static_cast<int>(chan->master_vol - host_frametime * ambient_fade.value);
-            if (chan->master_vol < vol) {
-                chan->master_vol = static_cast<int>(vol);
-            }
-        }
-
-        chan->leftvol = chan->rightvol = chan->master_vol;
-    }
-}
-
-/*
-============
-S_Update
-
-Called once each time through the main loop
-============
-*/
-void S_Update(const Vector3& origin, const Vector3& forward, const Vector3& right, const Vector3& up)
-{
-    int i, j;
     int total;
-    channel_t* ch;
     channel_t* combine;
-
-    if (!sound_started || (snd_blocked > 0)) {
-        return;
-    }
 
     listener_origin = origin;
     listener_forward = forward;
     listener_right = right;
     listener_up = up;
+    local_volume = vol_val;
 
-    // update general area ambient sound sources
-    S_UpdateAmbientSounds();
+    // update general area ambient sound sources (thread-safe volume interpolation on the audio thread)
+    if (!snd_ambient_val) {
+        for (auto& ambient_chan : std::span(channels).first(NUM_AMBIENTS)) {
+            ambient_chan.sfx = nullptr;
+        }
+    } else {
+        for (int ambient_channel = 0; ambient_channel < NUM_AMBIENTS; ambient_channel++) {
+            channel_t* chan = &channels[ambient_channel];
+            chan->sfx = ambient_sfx[ambient_channel];
 
-    combine = NULL;
+            int target_vol = ambient_vols[ambient_channel];
+
+            // don't adjust volume too fast
+            if (chan->master_vol < target_vol) {
+                chan->master_vol = static_cast<int>(chan->master_vol + host_frametime_val * ambient_fade_val);
+                if (chan->master_vol > target_vol) {
+                    chan->master_vol = target_vol;
+                }
+            } else if (chan->master_vol > target_vol) {
+                chan->master_vol = static_cast<int>(chan->master_vol - host_frametime_val * ambient_fade_val);
+                if (chan->master_vol < target_vol) {
+                    chan->master_vol = target_vol;
+                }
+            }
+
+            chan->leftvol = chan->rightvol = chan->master_vol;
+        }
+    }
+
+    combine = nullptr;
 
     // update spatialization for static and dynamic sounds
-    ch = channels + NUM_AMBIENTS;
-    for (i = NUM_AMBIENTS; i < total_channels; i++, ch++) {
-        if (!ch->sfx) {
+    int i = NUM_AMBIENTS;
+    for (auto& ch : std::span(channels).subspan(NUM_AMBIENTS, total_channels - NUM_AMBIENTS)) {
+        if (!ch.sfx) {
+            i++;
             continue;
         }
 
-        SND_Spatialize(ch); // respatialize channel
-        if (!ch->leftvol && !ch->rightvol) {
+        SND_Spatialize(&ch); // respatialize channel
+        if (!ch.leftvol && !ch.rightvol) {
+            i++;
             continue;
         }
 
@@ -704,53 +900,97 @@ void S_Update(const Vector3& origin, const Vector3& forward, const Vector3& righ
 
         if (i >= MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS) {
             // see if it can just use the last one
-            if (combine && combine->sfx == ch->sfx) {
-                combine->leftvol += ch->leftvol;
-                combine->rightvol += ch->rightvol;
-                ch->leftvol = ch->rightvol = 0;
+            if (combine && combine->sfx == ch.sfx) {
+                combine->leftvol += ch.leftvol;
+                combine->rightvol += ch.rightvol;
+                ch.leftvol = ch.rightvol = 0;
+                i++;
                 continue;
             }
 
             // search for one
-            combine = channels + MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;
+            combine = &channels[MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS];
+            int j;
             for (j = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS; j < i; j++, combine++) {
-                if (combine->sfx == ch->sfx) {
+                if (combine->sfx == ch.sfx) {
                     break;
                 }
             }
 
             if (j == total_channels) {
-                combine = NULL;
+                combine = nullptr;
             } else {
-                if (combine != ch) {
-                    combine->leftvol += ch->leftvol;
-                    combine->rightvol += ch->rightvol;
-                    ch->leftvol = ch->rightvol = 0;
+                if (combine != &ch) {
+                    combine->leftvol += ch.leftvol;
+                    combine->rightvol += ch.rightvol;
+                    ch.leftvol = ch.rightvol = 0;
                 }
 
+                i++;
                 continue;
             }
         }
+        i++;
     }
 
-    //
-    // debugging output
-    //
-    if (snd_show.value) {
+    // debugging output (only printed if fakedma is active to preserve real-time safety of background audio thread)
+    if (fakedma && snd_show.value) {
         total = 0;
-        ch = channels;
-        for (i = 0; i < total_channels; i++, ch++) {
-            if (ch->sfx && (ch->leftvol || ch->rightvol)) {
-                //Con_Printf ("%3i %3i %s\n", ch->leftvol, ch->rightvol, ch->sfx->name);
+        for (auto& ch : std::span(channels).first(total_channels)) {
+            if (ch.sfx && (ch.leftvol || ch.rightvol)) {
                 total++;
             }
         }
 
         Con_Printf("----(%i)----\n", total);
     }
+}
 
-    // mix some sound
-    S_Update_();
+} // namespace
+
+void S_Update(const Vector3& origin, const Vector3& forward, const Vector3& right, const Vector3& up)
+{
+    if (!sound_started || (snd_blocked > 0)) {
+        return;
+    }
+
+    AudioCommand cmd{};
+    cmd.type = AudioCommandType::ListenerUpdate;
+    cmd.origin = origin;
+    cmd.v_forward = forward;
+    cmd.v_right = right;
+    cmd.v_up = up;
+    cmd.vol = volume.value;
+
+    // Calculate ambient sound levels on the main thread (thread-safe worldmodel leaf traversal)
+    cmd.snd_ambient = snd_ambient;
+    cmd.ambient_fade = ambient_fade.value;
+    cmd.host_frametime = static_cast<float>(host_frametime);
+    cmd.ambient_vols.fill(0);
+
+    if (snd_ambient && cl.worldmodel && ambient_level.value) {
+        mleaf_t* l = Mod_PointInLeaf(origin, cl.worldmodel);
+        if (l) {
+            for (int ambient_channel = 0; ambient_channel < NUM_AMBIENTS; ambient_channel++) {
+                float vol = ambient_level.value * l->ambient_sound_level[ambient_channel];
+                if (vol < 8) {
+                    vol = 0;
+                }
+                cmd.ambient_vols[ambient_channel] = static_cast<int>(vol);
+            }
+        }
+    }
+
+    if (!command_queue.Push(cmd)) {
+        Con_Printf("WARNING: Audio command queue overflow!\n");
+    }
+
+    if (fakedma) {
+        AudioCommand c{};
+        while (command_queue.Pop(c)) {
+            ExecuteAudioCommand(c);
+        }
+    }
 }
 
 void S_ExtraUpdate(void)
@@ -762,6 +1002,8 @@ void S_ExtraUpdate(void)
 
     S_Update_();
 }
+
+namespace {
 
 void S_Update_(void)
 {
@@ -777,60 +1019,64 @@ console functions
 
 void S_Play(void)
 {
-    static int hash = 345;
-    int i;
-    char name[256];
+    thread_local std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<int> dist(0, 1000);
+    int hash = dist(rng);
     sfx_t* sfx;
 
-    i = 1;
+    int i = 1;
     while (i < Cmd::Argc()) {
-        if (Cmd::Argv(i).find('.') == std::string_view::npos) {
-            Q_strcpy(name, Cmd::Argv(i));
-            Q_strcat(name, ".wav");
+        std::string name;
+        auto arg = Cmd::Argv(i);
+        if (arg.find('.') == std::string_view::npos) {
+            name = std::string(arg) + ".wav";
         } else {
-            Q_strcpy(name, Cmd::Argv(i));
+            name = std::string(arg);
         }
 
         sfx = S_PrecacheSound(name);
-        S_StartSound(hash++, 0, sfx, listener_origin, 1.0, 1.0);
+        Vector3 play_origin = cl_entities[cl.viewentity].origin;
+        S_StartSound(hash++, 0, sfx, play_origin, 1.0, 1.0);
         i++;
     }
 }
 
 void S_PlayVol(void)
 {
-    static int hash = 543;
-    int i;
+    thread_local std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<int> dist(0, 1000);
+    int hash = dist(rng);
     float vol;
-    char name[256];
     sfx_t* sfx;
 
-    i = 1;
+    int i = 1;
     while (i < Cmd::Argc()) {
-        if (Cmd::Argv(i).find('.') == std::string_view::npos) {
-            Q_strcpy(name, Cmd::Argv(i));
-            Q_strcat(name, ".wav");
+        std::string name;
+        auto arg = Cmd::Argv(i);
+        if (arg.find('.') == std::string_view::npos) {
+            name = std::string(arg) + ".wav";
         } else {
-            Q_strcpy(name, Cmd::Argv(i));
+            name = std::string(arg);
         }
 
         sfx = S_PrecacheSound(name);
-        vol = Q_atof(Cmd::Argv(i + 1));
-        S_StartSound(hash++, 0, sfx, listener_origin, vol, 1.0);
+        auto arg_vol = Cmd::Argv(i + 1);
+        vol = 1.0f;
+        std::from_chars(arg_vol.data(), arg_vol.data() + arg_vol.size(), vol);
+        Vector3 play_origin = cl_entities[cl.viewentity].origin;
+        S_StartSound(hash++, 0, sfx, play_origin, vol, 1.0);
         i += 2;
     }
 }
 
 void S_SoundList(void)
 {
-    int i;
-    sfx_t* sfx;
     sfxcache_t* sc;
     int size, total;
 
     total = 0;
-    for (sfx = known_sfx, i = 0; i < num_sfx; i++, sfx++) {
-        sc = (sfxcache_t *) Cache_Check(&sfx->cache);
+    for (auto& sfx : std::span(known_sfx, num_sfx)) {
+        sc = static_cast<sfxcache_t*>(Cache_Check(&sfx.cache));
         if (!sc) {
             continue;
         }
@@ -843,31 +1089,27 @@ void S_SoundList(void)
             Con_Printf(" ");
         }
 
-        Con_Printf("(%2db) %6i : %s\n", sc->width * 8, size, sfx->name);
+        Con_Printf("%s\n", sfx.name);
     }
-    Con_Printf("Total resident: %i\n", total);
+    Con_Printf("Total sound memory: %i\n", total);
 }
 
-void S_LocalSound(const char* sound)
+} // namespace
+
+void S_LocalSound(std::string_view sound)
 {
-    sfx_t* sfx;
-
-    if (nosound.value) {
+    if (nosound.value || !sound_started) {
         return;
     }
 
-    if (!sound_started) {
+    sfx_t* sfx = S_FindName(sound);
+    if (!sfx || !Cache_Check(&sfx->cache)) {
+        Con_Printf("WARNING: S_LocalSound attempted to play non-precached sound: %.*s\n", 
+                   static_cast<int>(sound.length()), sound.data());
         return;
     }
 
-    sfx = S_PrecacheSound(sound);
-    if (!sfx) {
-        Con_Printf("S_LocalSound: can't cache %s\n", sound);
-
-        return;
-    }
-
-    S_StartSound(cl.viewentity, -1, sfx, vec3_origin, 1, 1);
+    S_StartSound(cl.viewentity, -1, sfx, vec3_origin, 1.0f, 1.0f);
 }
 
 void S_BeginPrecaching(void)
@@ -891,21 +1133,22 @@ byte* S_Alloc(int size);
 ResampleSfx
 ================
 */
+namespace {
+
 void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data)
 {
     int outcount;
     int srcsample;
     float stepscale;
-    int i;
     int sample, samplefrac, fracstep;
     sfxcache_t* sc;
 
-    sc = (sfxcache_t *) Cache_Check(&sfx->cache);
+    sc = static_cast<sfxcache_t*>(Cache_Check(&sfx->cache));
     if (!sc) {
         return;
     }
 
-    stepscale = (float)inrate / shm->speed; // this is usually 0.5, 1, or 2
+    stepscale = static_cast<float>(inrate) / shm->speed.load(); // this is usually 0.5, 1, or 2
 
     outcount = static_cast<int>(sc->length / stepscale);
     sc->length = outcount;
@@ -913,7 +1156,7 @@ void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data)
         sc->loopstart = static_cast<int>(sc->loopstart / stepscale);
     }
 
-    sc->speed = shm->speed;
+    sc->speed = shm->speed.load();
     if (loadas8bit.value) {
         sc->width = 1;
     } else {
@@ -926,30 +1169,38 @@ void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data)
 
     if (stepscale == 1 && inwidth == 1 && sc->width == 1) {
         // fast special case
-        for (i = 0; i < outcount; i++) {
-            ((signed char*)sc->data)[i] = (int)((unsigned char)(data[i]) - 128);
+        for (int i = 0; i < outcount; i++) {
+            reinterpret_cast<signed char*>(sc->data)[i] = static_cast<int>(data[i] - 128);
         }
     } else {
         // general case
         samplefrac = 0;
         fracstep = static_cast<int>(stepscale * 256);
-        for (i = 0; i < outcount; i++) {
+        for (int i = 0; i < outcount; i++) {
             srcsample = samplefrac >> 8;
             samplefrac += fracstep;
             if (inwidth == 2) {
-                sample = LittleShort(((short*)data)[srcsample]);
+                short val;
+                std::memcpy(&val, &data[srcsample * 2], sizeof(short));
+                if constexpr (std::endian::native == std::endian::big) {
+                    val = byteswap(val);
+                }
+                sample = val;
             } else {
-                sample = (int)((unsigned char)(data[srcsample]) - 128) << 8;
+                sample = static_cast<int>(data[srcsample] - 128) << 8;
             }
 
             if (sc->width == 2) {
-                ((short*)sc->data)[i] = static_cast<short>(sample);
+                short s = static_cast<short>(sample);
+                std::memcpy(&sc->data[i * sizeof(short)], &s, sizeof(short));
             } else {
-                ((signed char*)sc->data)[i] = static_cast<signed char>(sample >> 8);
+                reinterpret_cast<signed char*>(sc->data)[i] = static_cast<signed char>(sample >> 8);
             }
         }
     }
 }
+
+} // namespace
 
 //=============================================================================
 
@@ -960,50 +1211,47 @@ S_LoadSound
 */
 sfxcache_t* S_LoadSound(sfx_t* s)
 {
-    char namebuffer[256];
     byte* data;
     wavinfo_t info;
     int len;
     float stepscale;
     sfxcache_t* sc;
-    byte stackbuf[1 * 1024]; // avoid dirtying the cache heap
+    std::array<byte, 1024> stackbuf; // avoid dirtying the cache heap
 
     // see if still in memory
-    sc = (sfxcache_t *) Cache_Check(&s->cache);
+    sc = static_cast<sfxcache_t*>(Cache_Check(&s->cache));
     if (sc) {
         return sc;
     }
 
-    //Con_Printf ("S_LoadSound: %x\n", (int)stackbuf);
-    // load it in
-    Q_strcpy(namebuffer, "sound/");
-    Q_strcat(namebuffer, s->name);
+    // load it in using stack allocation for path construction (no heap alloc)
+    std::array<char, MAX_QPATH + 16> namebuffer;
+    std::snprintf(namebuffer.data(), namebuffer.size(), "sound/%s", s->name);
 
-    //	Con_Printf ("loading %s\n",namebuffer);
-
-    data = COM_LoadStackFile(namebuffer, stackbuf, sizeof(stackbuf));
+    data = COM_LoadStackFile(namebuffer.data(), stackbuf.data(), sizeof(stackbuf));
 
     if (!data) {
-        Con_Printf("Couldn't load %s\n", namebuffer);
+        Con_Printf("Couldn't load %s\n", namebuffer.data());
 
-        return NULL;
+        return nullptr;
     }
 
-    info = GetWavinfo(s->name, data, com_filesize);
+    // Call GetWavinfo using a std::span for strict bounds checking
+    info = GetWavinfo(s->name, std::span<const byte>(data, com_filesize));
     if (info.channels != 1) {
         Con_Printf("%s is a stereo sample\n", s->name);
 
-        return NULL;
+        return nullptr;
     }
 
-    stepscale = (float)info.rate / shm->speed;
+    stepscale = static_cast<float>(info.rate) / shm->speed.load(std::memory_order_relaxed);
     len = static_cast<int>(info.samples / stepscale);
 
     len = len * info.width * info.channels;
 
-    sc = (sfxcache_t *) Cache_Alloc(&s->cache, len + sizeof(sfxcache_t), s->name);
+    sc = static_cast<sfxcache_t*>(Cache_Alloc(&s->cache, len + sizeof(sfxcache_t), s->name));
     if (!sc) {
-        return NULL;
+        return nullptr;
     }
 
     sc->length = info.samples;
@@ -1025,139 +1273,170 @@ WAV loading
 ===============================================================================
 */
 
-byte* data_p;
-byte* iff_end;
-byte* last_chunk;
-byte* iff_data;
-int iff_chunk_len;
+namespace {
 
-short GetLittleShort(void)
-{
-    short val = 0;
-    val = *data_p;
-    val = val + (*(data_p + 1) << 8);
-    data_p += 2;
+class WavParser {
+public:
+    explicit WavParser(std::span<const byte> wav_data)
+        : file_data_(wav_data), iff_data_offset_(0), last_chunk_offset_(0), current_chunk_offset_(wav_data.size()), iff_chunk_len_(0) {}
 
-    return val;
-}
+    [[nodiscard]] bool FindNextChunk(std::string_view name) {
+        while (true) {
+            size_t offset = last_chunk_offset_;
+            if (offset + 8 > file_data_.size()) {
+                current_chunk_offset_ = file_data_.size();
+                return false;
+            }
 
-int GetLittleLong(void)
-{
-    int val = 0;
-    val = *data_p;
-    val = val + (*(data_p + 1) << 8);
-    val = val + (*(data_p + 2) << 16);
-    val = val + (*(data_p + 3) << 24);
-    data_p += 4;
+            int len = static_cast<int>(file_data_[offset + 4] |
+                                       (file_data_[offset + 5] << 8) |
+                                       (file_data_[offset + 6] << 16) |
+                                       (file_data_[offset + 7] << 24));
+            if (len < 0) {
+                current_chunk_offset_ = file_data_.size();
+                return false;
+            }
 
-    return val;
-}
+            iff_chunk_len_ = static_cast<size_t>(len);
+            current_chunk_offset_ = offset;
+            last_chunk_offset_ = offset + 8 + ((iff_chunk_len_ + 1) & ~1);
 
-void FindNextChunk(const char* name)
-{
-    while (1) {
-        data_p = last_chunk;
-
-        if (data_p >= iff_end) { // didn't find the chunk
-            data_p = NULL;
-
-            return;
-        }
-
-        data_p += 4;
-        iff_chunk_len = GetLittleLong();
-        if (iff_chunk_len < 0) {
-            data_p = NULL;
-
-            return;
-        }
-
-        //		if (iff_chunk_len > 1024*1024)
-        //			Sys_Error ("FindNextChunk: %i length is past the 1 meg sanity limit", iff_chunk_len);
-        data_p -= 8;
-        last_chunk = data_p + 8 + ((iff_chunk_len + 1) & ~1);
-        if (!Q_strncmp((char*)data_p, name, 4)) {
-            return;
+            if (std::string_view(reinterpret_cast<const char*>(&file_data_[offset]), 4) == name) {
+                return true;
+            }
         }
     }
-}
 
-void FindChunk(const char* name)
-{
-    last_chunk = iff_data;
-    FindNextChunk(name);
-}
+    void FindChunk(std::string_view name) {
+        last_chunk_offset_ = iff_data_offset_;
+        static_cast<void>(FindNextChunk(name));
+    }
+
+    [[nodiscard]] short ReadShort(size_t& offset) const {
+        if (offset + 2 > file_data_.size()) {
+            return 0;
+        }
+        short val = static_cast<short>(file_data_[offset] | (file_data_[offset + 1] << 8));
+        offset += 2;
+        return val;
+    }
+
+    [[nodiscard]] int ReadLong(size_t& offset) const {
+        if (offset + 4 > file_data_.size()) {
+            return 0;
+        }
+        int val = static_cast<int>(file_data_[offset] | 
+                                   (file_data_[offset + 1] << 8) | 
+                                   (file_data_[offset + 2] << 16) | 
+                                   (file_data_[offset + 3] << 24));
+        offset += 4;
+        return val;
+    }
+
+    [[nodiscard]] bool HasFoundChunk() const {
+        return current_chunk_offset_ < file_data_.size();
+    }
+
+    [[nodiscard]] size_t GetCurrentChunkPayloadOffset() const {
+        return current_chunk_offset_ + 8;
+    }
+
+    [[nodiscard]] size_t GetCurrentChunkLength() const {
+        return iff_chunk_len_;
+    }
+
+    void SetIffDataOffset(size_t offset) {
+        iff_data_offset_ = offset;
+    }
+
+private:
+    std::span<const byte> file_data_;
+    size_t iff_data_offset_;
+    size_t last_chunk_offset_;
+    size_t current_chunk_offset_;
+    size_t iff_chunk_len_;
+};
+
+} // namespace
 
 /*
 ============
 GetWavinfo
 ============
 */
-wavinfo_t GetWavinfo(char* name, byte* wav, int wavlength)
+wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data)
 {
-    wavinfo_t info;
-    int i;
-    int format;
-    int samples;
+    wavinfo_t info{};
 
-    memset(&info, 0, sizeof(info));
-
-    if (!wav) {
+    if (wav_data.empty()) {
         return info;
     }
 
-    iff_data = wav;
-    iff_end = wav + wavlength;
+    WavParser parser(wav_data);
 
     // find "RIFF" chunk
-    FindChunk("RIFF");
-    if (!(data_p && !Q_strncmp((char*)data_p + 8, "WAVE", 4))) {
-        Con_Printf("Missing RIFF/WAVE chunks\n");
+    parser.FindChunk("RIFF");
+    if (!parser.HasFoundChunk()) {
+        Con_Printf("Missing RIFF chunk\n");
 
         return info;
     }
 
-    // get "fmt " chunk
-    iff_data = data_p + 12;
-    // DumpChunks ();
+    size_t riff_payload_offset = parser.GetCurrentChunkPayloadOffset();
+    if (riff_payload_offset + 4 > wav_data.size()) {
+        Con_Printf("Malformed RIFF chunk\n");
 
-    FindChunk("fmt ");
-    if (!data_p) {
+        return info;
+    }
+
+    if (std::string_view(reinterpret_cast<const char*>(&wav_data[riff_payload_offset]), 4) != "WAVE") {
+        Con_Printf("Missing WAVE format inside RIFF\n");
+
+        return info;
+    }
+
+    // fmt chunk searches inside the RIFF chunk. RIFF subchunks start at payload + 4 (after "WAVE")
+    parser.SetIffDataOffset(riff_payload_offset + 4);
+
+    parser.FindChunk("fmt ");
+    if (!parser.HasFoundChunk()) {
         Con_Printf("Missing fmt chunk\n");
 
         return info;
     }
 
-    data_p += 8;
-    format = GetLittleShort();
+    size_t fmt_offset = parser.GetCurrentChunkPayloadOffset();
+    int format = parser.ReadShort(fmt_offset);
     if (format != 1) {
         Con_Printf("Microsoft PCM format only\n");
 
         return info;
     }
 
-    info.channels = GetLittleShort();
-    info.rate = GetLittleLong();
-    data_p += 4 + 2;
-    info.width = GetLittleShort() / 8;
+    info.channels = parser.ReadShort(fmt_offset);
+    info.rate = parser.ReadLong(fmt_offset);
+    
+    // Skip 4 + 2 bytes: dwAvgBytesPerSec (4) and wBlockAlign (2)
+    fmt_offset += 4 + 2;
+    
+    info.width = parser.ReadShort(fmt_offset) / 8;
 
     // get cue chunk
-    FindChunk("cue ");
-    if (data_p) {
-        data_p += 32;
-        info.loopstart = GetLittleLong();
-        //		Con_Printf("loopstart=%d\n", sfx->loopstart);
+    parser.FindChunk("cue ");
+    if (parser.HasFoundChunk()) {
+        size_t cue_offset = parser.GetCurrentChunkPayloadOffset();
+        cue_offset += 32; // Skip to loopstart
+        info.loopstart = parser.ReadLong(cue_offset);
 
         // if the next chunk is a LIST chunk, look for a cue length marker
-        FindNextChunk("LIST");
-        if (data_p) {
-            if (!strncmp(
-                    (char*)data_p + 28, "mark",
-                    4)) { // this is not a proper parse, but it works with cooledit...
-                data_p += 24;
-                i = GetLittleLong(); // samples in loop
-                info.samples = info.loopstart + i;
-                //				Con_Printf("looped length: %i\n", i);
+        if (parser.FindNextChunk("LIST")) {
+            size_t list_offset = parser.GetCurrentChunkPayloadOffset();
+            if (list_offset + 32 <= wav_data.size()) {
+                if (std::string_view(reinterpret_cast<const char*>(&wav_data[list_offset + 28]), 4) == "mark") {
+                    list_offset += 24;
+                    int i = parser.ReadLong(list_offset); // samples in loop
+                    info.samples = info.loopstart + i;
+                }
             }
         }
     } else {
@@ -1165,25 +1444,25 @@ wavinfo_t GetWavinfo(char* name, byte* wav, int wavlength)
     }
 
     // find data chunk
-    FindChunk("data");
-    if (!data_p) {
+    parser.FindChunk("data");
+    if (!parser.HasFoundChunk()) {
         Con_Printf("Missing data chunk\n");
 
         return info;
     }
 
-    data_p += 4;
-    samples = GetLittleLong() / info.width;
+    size_t data_offset = parser.GetCurrentChunkPayloadOffset();
+    int samples = static_cast<int>(parser.GetCurrentChunkLength()) / info.width;
 
     if (info.samples) {
         if (samples < info.samples) {
-            Sys_Error("Sound %s has a bad loop length", name);
+            Sys_Error("Sound %.*s has a bad loop length", static_cast<int>(name.length()), name.data());
         }
     } else {
         info.samples = samples;
     }
 
-    info.dataofs = static_cast<int>(data_p - wav);
+    info.dataofs = static_cast<int>(data_offset);
 
     return info;
 }
@@ -1192,36 +1471,33 @@ wavinfo_t GetWavinfo(char* name, byte* wav, int wavlength)
 // snd_mix.cpp -- portable code to mix sounds
 // ============================================================================
 
-#include <stdint.h>
+#include <cstdint>
 
-#define PAINTBUFFER_SIZE 512
-portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
-int snd_scaletable[32][256];
-int *snd_p, snd_linear_count, snd_vol;
-short* snd_out;
+namespace {
 
-void Snd_WriteLinearBlastStereo16(void);
+constexpr int PAINTBUFFER_SIZE = 512;
+std::array<portable_samplepair_t, PAINTBUFFER_SIZE> paintbuffer;
+std::array<std::array<int, 256>, 32> snd_scaletable;
 
-void Snd_WriteLinearBlastStereo16(void)
+void Snd_WriteLinearBlastStereo16(const int* snd_p, short* snd_out, int snd_linear_count, int snd_vol)
 {
-    int i;
     int val;
 
-    for (i = 0; i < snd_linear_count; i += 2) {
+    for (int i = 0; i < snd_linear_count; i += 2) {
         val = (snd_p[i] * snd_vol) >> 8;
-        if (val > 0x7fff) {
-            snd_out[i] = 0x7fff;
-        } else if (val < -32768) {
-            snd_out[i] = -32768;
+        if (val > std::numeric_limits<short>::max()) {
+            snd_out[i] = std::numeric_limits<short>::max();
+        } else if (val < std::numeric_limits<short>::min()) {
+            snd_out[i] = std::numeric_limits<short>::min();
         } else {
             snd_out[i] = static_cast<short>(val);
         }
 
         val = (snd_p[i + 1] * snd_vol) >> 8;
-        if (val > 0x7fff) {
-            snd_out[i + 1] = 0x7fff;
-        } else if (val < -32768) {
-            snd_out[i + 1] = -32768;
+        if (val > std::numeric_limits<short>::max()) {
+            snd_out[i + 1] = std::numeric_limits<short>::max();
+        } else if (val < std::numeric_limits<short>::min()) {
+            snd_out[i + 1] = std::numeric_limits<short>::min();
         } else {
             snd_out[i + 1] = static_cast<short>(val);
         }
@@ -1230,26 +1506,17 @@ void Snd_WriteLinearBlastStereo16(void)
 
 void S_TransferStereo16(int endtime)
 {
-    int lpos;
-    int lpaintedtime;
-    unsigned char* pbuf;
+    int lpaintedtime = paintedtime;
 
-    snd_vol = static_cast<int>(volume.value * 256);
-
-    snd_p = (int*)paintbuffer;
-    lpaintedtime = paintedtime;
-
-    {
-        pbuf = (unsigned char*)shm->buffer;
-    }
+    auto snd_p = reinterpret_cast<const int*>(paintbuffer.data());
+    int snd_vol = static_cast<int>(local_volume * 256);
 
     while (lpaintedtime < endtime) {
-        // handle recirculating buffer issues
-        lpos = lpaintedtime & ((shm->samples >> 1) - 1);
+        int lpos = lpaintedtime & ((shm->samples.load() >> 1) - 1);
 
-        snd_out = (short*)pbuf + (lpos << 1);
+        auto snd_out = reinterpret_cast<short*>(shm->buffer.load()) + (lpos << 1);
 
-        snd_linear_count = (shm->samples >> 1) - lpos;
+        int snd_linear_count = (shm->samples.load() >> 1) - lpos;
         if (lpaintedtime + snd_linear_count > endtime) {
             snd_linear_count = endtime - lpaintedtime;
         }
@@ -1257,12 +1524,11 @@ void S_TransferStereo16(int endtime)
         snd_linear_count <<= 1;
 
         // write a linear blast of samples
-        Snd_WriteLinearBlastStereo16();
+        Snd_WriteLinearBlastStereo16(snd_p, snd_out, snd_linear_count, snd_vol);
 
         snd_p += snd_linear_count;
         lpaintedtime += (snd_linear_count >> 1);
     }
-
 }
 
 void S_TransferPaintBuffer(int endtime)
@@ -1276,54 +1542,58 @@ void S_TransferPaintBuffer(int endtime)
     int mix_vol;
     unsigned char* pbuf;
 
-    if (shm->samplebits == 16 && shm->channels == 2) {
+    int samplebits_val = shm->samplebits.load(std::memory_order_relaxed);
+    int channels_val = shm->channels.load(std::memory_order_relaxed);
+
+    if (samplebits_val == 16 && channels_val == 2) {
         S_TransferStereo16(endtime);
 
         return;
     }
 
-    p = (int*)paintbuffer;
-    count = (endtime - paintedtime) * shm->channels;
-    out_mask = shm->samples - 1;
-    out_idx = paintedtime * shm->channels & out_mask;
-    step = 3 - shm->channels;
-    mix_vol = static_cast<int>(volume.value * 256);
+    p = reinterpret_cast<int*>(paintbuffer.data());
+    count = (endtime - paintedtime) * channels_val;
+    out_mask = shm->samples.load(std::memory_order_relaxed) - 1;
+    out_idx = paintedtime * channels_val & out_mask;
+    step = 3 - channels_val;
+    mix_vol = static_cast<int>(local_volume * 256);
 
     {
-        pbuf = (unsigned char*)shm->buffer;
+        pbuf = static_cast<unsigned char*>(shm->buffer.load());
     }
 
-    if (shm->samplebits == 16) {
-        short* out = (short*)pbuf;
+    if (samplebits_val == 16) {
+        short* out = reinterpret_cast<short*>(pbuf);
         while (count--) {
             val = (*p * mix_vol) >> 8;
             p += step;
-            if (val > 0x7fff) {
-                val = 0x7fff;
-            } else if (val < -32768) {
-                val = -32768;
+            if (val > std::numeric_limits<short>::max()) {
+                val = std::numeric_limits<short>::max();
+            } else if (val < std::numeric_limits<short>::min()) {
+                val = std::numeric_limits<short>::min();
             }
 
             out[out_idx] = static_cast<short>(val);
             out_idx = (out_idx + 1) & out_mask;
         }
-    } else if (shm->samplebits == 8) {
-        unsigned char* out = (unsigned char*)pbuf;
+    } else if (samplebits_val == 8) {
+        unsigned char* out = static_cast<unsigned char*>(pbuf);
         while (count--) {
             val = (*p * mix_vol) >> 8;
             p += step;
-            if (val > 0x7fff) {
-                val = 0x7fff;
-            } else if (val < -32768) {
-                val = -32768;
+            if (val > std::numeric_limits<short>::max()) {
+                val = std::numeric_limits<short>::max();
+            } else if (val < std::numeric_limits<short>::min()) {
+                val = std::numeric_limits<short>::min();
             }
 
             out[out_idx] = static_cast<unsigned char>((val >> 8) + 128);
             out_idx = (out_idx + 1) & out_mask;
         }
     }
-
 }
+
+} // namespace
 
 /*
 ===============================================================================
@@ -1333,14 +1603,16 @@ CHANNEL MIXING
 ===============================================================================
 */
 
+namespace {
+
 void SND_PaintChannelFrom8(channel_t* ch, sfxcache_t* sc, int count, int offset);
 void SND_PaintChannelFrom16(channel_t* ch, sfxcache_t* sc, int count, int offset);
 
+} // namespace
+
 void S_PaintChannels(int endtime)
 {
-    int i;
     int end;
-    channel_t* ch;
     sfxcache_t* sc;
     int ltime, count;
 
@@ -1352,51 +1624,51 @@ void S_PaintChannels(int endtime)
         }
 
         // clear the paint buffer
-        Q_memset(paintbuffer, 0,
-            (end - paintedtime) * sizeof(portable_samplepair_t));
+        std::fill_n(paintbuffer.begin(), end - paintedtime, portable_samplepair_t{0, 0});
 
         // paint in the channels.
-        ch = channels;
-        for (i = 0; i < total_channels; i++, ch++) {
-            if (!ch->sfx) {
+        for (int i = 0; i < total_channels; i++) {
+            auto& chan = channels[i];
+            if (!chan.sfx) {
                 continue;
             }
 
-            if (!ch->leftvol && !ch->rightvol) {
+            if (!chan.leftvol && !chan.rightvol) {
                 continue;
             }
 
-            sc = S_LoadSound(ch->sfx);
+            sc = static_cast<sfxcache_t*>(Cache_Check(&chan.sfx->cache));
             if (!sc) {
+                chan.sfx = nullptr;
                 continue;
             }
 
             ltime = paintedtime;
 
             while (ltime < end) { // paint up to end
-                if (ch->end < end) {
-                    count = ch->end - ltime;
+                if (chan.end < end) {
+                    count = chan.end - ltime;
                 } else {
                     count = end - ltime;
                 }
 
                 if (count > 0) {
                     if (sc->width == 1) {
-                        SND_PaintChannelFrom8(ch, sc, count, ltime - paintedtime);
+                        SND_PaintChannelFrom8(&chan, sc, count, ltime - paintedtime);
                     } else {
-                        SND_PaintChannelFrom16(ch, sc, count, ltime - paintedtime);
+                        SND_PaintChannelFrom16(&chan, sc, count, ltime - paintedtime);
                     }
 
                     ltime += count;
                 }
 
                 // if at end of loop, restart
-                if (ltime >= ch->end) {
+                if (ltime >= chan.end) {
                     if (sc->loopstart >= 0) {
-                        ch->pos = sc->loopstart;
-                        ch->end = ltime + sc->length - ch->pos;
+                        chan.pos = sc->loopstart;
+                        chan.end = ltime + sc->length - chan.pos;
                     } else { // channel just stopped
-                        ch->sfx = NULL;
+                        chan.sfx = nullptr;
                         break;
                     }
                 }
@@ -1411,21 +1683,20 @@ void S_PaintChannels(int endtime)
 
 void SND_InitScaletable(void)
 {
-    int i, j;
-
-    for (i = 0; i < 32; i++) {
-        for (j = 0; j < 256; j++) {
-            snd_scaletable[i][j] = ((signed char)j) * i * 8;
+    for (int i = 0; i < 32; i++) {
+        for (int j = 0; j < 256; j++) {
+            snd_scaletable[i][j] = static_cast<signed char>(j) * i * 8;
         }
     }
 }
+
+namespace {
 
 void SND_PaintChannelFrom8(channel_t* ch, sfxcache_t* sc, int count, int offset)
 {
     int data;
     int *lscale, *rscale;
     unsigned char* sfx;
-    int i;
 
     if (ch->leftvol > 255) {
         ch->leftvol = 255;
@@ -1435,11 +1706,11 @@ void SND_PaintChannelFrom8(channel_t* ch, sfxcache_t* sc, int count, int offset)
         ch->rightvol = 255;
     }
 
-    lscale = snd_scaletable[ch->leftvol >> 3];
-    rscale = snd_scaletable[ch->rightvol >> 3];
-    sfx = (unsigned char*)sc->data + ch->pos;
+    lscale = snd_scaletable[ch->leftvol >> 3].data();
+    rscale = snd_scaletable[ch->rightvol >> 3].data();
+    sfx = static_cast<unsigned char*>(sc->data) + ch->pos;
 
-    for (i = 0; i < count; i++) {
+    for (int i = 0; i < count; i++) {
         data = sfx[i];
         paintbuffer[offset + i].left += lscale[data];
         paintbuffer[offset + i].right += rscale[data];
@@ -1450,20 +1721,17 @@ void SND_PaintChannelFrom8(channel_t* ch, sfxcache_t* sc, int count, int offset)
 
 void SND_PaintChannelFrom16(channel_t* ch, sfxcache_t* sc, int count, int offset)
 {
-    int data;
-    int left, right;
-    int leftvol, rightvol;
-    signed short* sfx;
-    int i;
+    int leftvol = ch->leftvol;
+    int rightvol = ch->rightvol;
 
-    leftvol = ch->leftvol;
-    rightvol = ch->rightvol;
-    sfx = (signed short*)sc->data + ch->pos;
+    for (int i = 0; i < count; i++) {
+        short data_val;
+        // safely extract the 16-bit sample
+        std::memcpy(&data_val, sc->data + ((ch->pos + i) * 2), sizeof(short));
 
-    for (i = 0; i < count; i++) {
-        data = sfx[i];
-        left = (data * leftvol) >> 8;
-        right = (data * rightvol) >> 8;
+        int left = (data_val * leftvol) >> 8;
+        int right = (data_val * rightvol) >> 8;
+
         paintbuffer[offset + i].left += left;
         paintbuffer[offset + i].right += right;
     }
@@ -1471,27 +1739,37 @@ void SND_PaintChannelFrom16(channel_t* ch, sfxcache_t* sc, int count, int offset
     ch->pos += count;
 }
 
+} // namespace
+
 // ============================================================================
 // snd_sdl.cpp -- SDL audio output driver
 // ============================================================================
 
-#include <stdio.h>
-#include <SDL.h>
+namespace {
 
-static dma_t the_shm;
-static int snd_inited;
+int snd_inited;
 
-static void paint_audio(void* /*unused*/, Uint8* stream, int len)
+void paint_audio(void* /*unused*/, Uint8* stream, int len)
 {
     if (shm) {
-        shm->buffer = stream;
-        shm->samplepos += len / (shm->samplebits / 8) / 2;
-        // Check for samplepos overflow?
-        S_PaintChannels(shm->samplepos);
+        AudioCommand cmd{};
+        while (command_queue.Pop(cmd)) {
+            ExecuteAudioCommand(cmd);
+        }
+
+        shm->buffer.store(stream, std::memory_order_release);
+        int samplebits_val = shm->samplebits.load(std::memory_order_relaxed);
+        int current_pos = shm->samplepos.load(std::memory_order_acquire);
+        int next_pos = current_pos + len / (samplebits_val / 8) / 2;
+        shm->samplepos.store(next_pos, std::memory_order_release);
+
+        S_PaintChannels(next_pos);
     }
 }
 
-qboolean SNDDMA_Init(void)
+} // namespace
+
+bool SNDDMA_Init(void)
 {
     SDL_AudioSpec desired;
 
@@ -1504,7 +1782,7 @@ qboolean SNDDMA_Init(void)
         desired.format = AUDIO_U8;
         break;
     case 16:
-        if (SDL_BYTEORDER == SDL_BIG_ENDIAN) {
+        if constexpr (SDL_BYTEORDER == SDL_BIG_ENDIAN) {
             desired.format = AUDIO_S16MSB;
         } else {
             desired.format = AUDIO_S16LSB;
@@ -1514,34 +1792,41 @@ qboolean SNDDMA_Init(void)
     default:
         Con_Printf("Unknown number of audio bits: %d\n", desired_bits);
 
-        return 0;
+        return false;
     }
     desired.channels = 2;
     desired.samples = 512;
+    static_assert((512 & (512 - 1)) == 0, "SDL desired samples must be a power of two for bitwise modulo to work");
     desired.callback = paint_audio;
 
     /* Open the audio device */
-    if (SDL_OpenAudio(&desired, NULL) < 0) {
+    if (SDL_OpenAudio(&desired, nullptr) < 0) {
         Con_Printf("Couldn't open SDL audio: %s\n", SDL_GetError());
 
-        return 0;
+        return false;
     }
     SDL_PauseAudio(0);
 
+    // Ensure samples count is a power of two to support fast bitwise modulo operations
+    int negotiated_samples = desired.samples * desired.channels;
+    if ((negotiated_samples & (negotiated_samples - 1)) != 0) {
+        Sys_Error("SNDDMA_Init: Negotiated buffer size (%d) is not a power of two", negotiated_samples);
+    }
+
     /* Fill the audio DMA information block */
     shm = &the_shm;
-    shm->splitbuffer = 0;
-    shm->samplebits = (desired.format & 0xFF);
-    shm->speed = desired.freq;
-    shm->channels = desired.channels;
-    shm->samples = desired.samples * shm->channels;
-    shm->samplepos = 0;
-    shm->submission_chunk = 1;
-    shm->buffer = NULL;
+    shm->splitbuffer.store(0, std::memory_order_relaxed);
+    shm->samplebits.store(static_cast<int>(desired.format & 0xFF), std::memory_order_relaxed);
+    shm->speed.store(desired.freq, std::memory_order_relaxed);
+    shm->channels.store(desired.channels, std::memory_order_relaxed);
+    shm->samples.store(desired.samples * desired.channels, std::memory_order_relaxed);
+    shm->samplepos.store(0, std::memory_order_relaxed);
+    shm->submission_chunk.store(1, std::memory_order_relaxed);
+    shm->buffer.store(nullptr, std::memory_order_release);
 
     snd_inited = 1;
 
-    return 1;
+    return true;
 }
 
 void SNDDMA_Shutdown(void)

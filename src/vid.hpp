@@ -41,18 +41,18 @@ extern unsigned d_8to24table[256];
 extern void (*vid_menudrawfn)(void);
 extern void (*vid_menukeyfn)(int key);
 
-void VID_SetPalette(unsigned char* palette);
+void VID_SetPalette(const unsigned char* palette);
 
-inline void VID_ShiftPalette(unsigned char* palette)
+inline void VID_ShiftPalette(const unsigned char* palette)
 {
     VID_SetPalette(palette);
 }
 
-void VID_Init(unsigned char* palette);
+void VID_Init(const unsigned char* palette);
 
 void VID_Shutdown(void);
 
-void VID_Update(vrect_t* rects);
+void VID_Update(const vrect_t* rects);
 
 int VID_SetMode(int modenum, unsigned char* palette);
 

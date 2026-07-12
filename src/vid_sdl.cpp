@@ -2,6 +2,7 @@
 
 #include "SDL.h"
 #include "quakedef.hpp"
+#include <vector>
 
 using namespace CDAudio;
 using namespace Client;
@@ -58,7 +59,7 @@ static qboolean mouse_avail;
 static float mouse_x, mouse_y;
 static int mouse_oldbuttonstate = 0;
 
-void VID_SetPalette(unsigned char* palette)
+void VID_SetPalette(const unsigned char* palette)
 {
     int i;
     SDL_Color colors[256];
@@ -74,7 +75,7 @@ void VID_SetPalette(unsigned char* palette)
     }
 }
 
-void VID_Init(unsigned char* palette)
+void VID_Init(const unsigned char* palette)
 {
     int pnum, chunk;
     byte* cache;
@@ -154,8 +155,8 @@ void VID_Init(unsigned char* palette)
     vid.aspect = static_cast<float>(((float)vid.height / (float)vid.width) * (320.0 / 240.0));
     vid.numpages = 1;
     vid.colormap = host_colormap;
-    vid.fullbright = 256 - LittleLong(*((int*)vid.colormap + 2048));
-    VGA_pagebase = vid.buffer = (pixel_t*)screen->pixels;
+    vid.fullbright = 256 - LittleLong(reinterpret_cast<const int*>(vid.colormap)[2048]);
+    VGA_pagebase = vid.buffer = static_cast<pixel_t*>(screen->pixels);
     VGA_rowbytes = vid.rowbytes = screen->pitch;
     vid.conbuffer = vid.buffer;
     vid.conrowbytes = vid.rowbytes;
@@ -165,13 +166,13 @@ void VID_Init(unsigned char* palette)
     chunk = vid.width * vid.height * sizeof(*d_pzbuffer);
     cachesize = D_SurfaceCacheForRes(vid.width, vid.height);
     chunk += cachesize;
-    d_pzbuffer = (short *) Hunk_HighAllocName(chunk, "video");
+    d_pzbuffer = static_cast<short*>(Hunk_HighAllocName(chunk, "video"));
     if (d_pzbuffer == NULL) {
         Sys_Error("Not enough memory for video mode\n");
     }
 
     // Initialize the cache memory
-    cache = (byte*)d_pzbuffer + vid.width * vid.height * sizeof(*d_pzbuffer);
+    cache = reinterpret_cast<byte*>(d_pzbuffer) + vid.width * vid.height * sizeof(*d_pzbuffer);
     D_InitCaches(cache, cachesize);
 
     // Initialize the mouse
@@ -188,11 +189,10 @@ void VID_Shutdown(void)
     SDL_Quit();
 }
 
-void VID_Update(vrect_t* rects)
+void VID_Update(const vrect_t* rects)
 {
-    SDL_Rect* sdlrects;
-    int n, i;
-    vrect_t* rect;
+    int n;
+    const vrect_t* rect;
 
     // Two-pass system, since Quake doesn't do it the SDL way...
 
@@ -203,11 +203,9 @@ void VID_Update(vrect_t* rects)
     }
 
     // Second, copy them to SDL rectangles and update
-    if (!(sdlrects = (SDL_Rect*)alloca(n * sizeof(*sdlrects)))) {
-        Sys_Error("Out of memory");
-    }
+    std::vector<SDL_Rect> sdlrects(n);
 
-    i = 0;
+    int i = 0;
     for (rect = rects; rect; rect = rect->pnext) {
         sdlrects[i].x = rect->x;
         sdlrects[i].y = rect->y;
@@ -220,9 +218,9 @@ void VID_Update(vrect_t* rects)
     SDL_Surface* window_surface = SDL_GetWindowSurface(window);
     if (screen != window_surface) {
         SDL_BlitSurface(screen, NULL, window_surface, NULL);
-        SDL_UpdateWindowSurfaceRects(window, sdlrects, n);
+        SDL_UpdateWindowSurfaceRects(window, sdlrects.data(), n);
     } else {
-        SDL_UpdateWindowSurfaceRects(window, sdlrects, n);
+        SDL_UpdateWindowSurfaceRects(window, sdlrects.data(), n);
     }
 }
 
@@ -243,7 +241,7 @@ void D_BeginDirectRect(int x, int y, byte* pbitmap, int width, int height)
         x = screen->w + x - 1;
     }
 
-    offset = (Uint8*)screen->pixels + y * screen->pitch + x;
+    offset = static_cast<Uint8*>(screen->pixels) + y * screen->pitch + x;
     while (height--) {
         memcpy(offset, pbitmap, width);
         offset += screen->pitch;

@@ -56,7 +56,7 @@ void Sys_Printf(const char* fmt, ...)
     char text[1024];
 
     va_start(argptr, fmt);
-    vsprintf_s(text, sizeof(text), fmt, argptr);
+    vsnprintf(text, sizeof(text), fmt, argptr);
     va_end(argptr);
     fprintf(stderr, "%s", text);
 
@@ -99,7 +99,7 @@ void Sys_HighFPPrecision(void)
     char string[1024];
 
     va_start(argptr, error);
-    vsprintf_s(string, sizeof(string), error, argptr);
+    vsnprintf(string, sizeof(string), error, argptr);
     va_end(argptr);
     fprintf(stderr, "Error: %s\n", string);
 
@@ -155,7 +155,7 @@ int Sys_FileOpenRead(const char* path, int* hndl)
 
     i = findhandle();
 
-    if (fopen_s(&f, path, "rb") != 0) {
+    if ((f = fopen(path, "rb")) == NULL) {
         *hndl = -1;
 
         return -1;
@@ -174,9 +174,9 @@ int Sys_FileOpenWrite(const char* path)
 
     i = findhandle();
 
-    if (fopen_s(&f, path, "wb") != 0) {
+    if ((f = fopen(path, "wb")) == NULL) {
         char errbuf[256];
-        strerror_s(errbuf, sizeof(errbuf), errno);
+        strerror_r(errno, errbuf, sizeof(errbuf));
         Sys_Error("Error opening %s: %s", path, errbuf);
     }
 
@@ -202,14 +202,11 @@ void Sys_FileSeek(int handle, int position)
 
 int Sys_FileRead(int handle, void* dst, int count)
 {
-    char* data;
-    int size, done;
-
-    size = 0;
+    int size = 0;
     if (handle >= 0) {
-        data = (char*)dst;
+        char* data = static_cast<char*>(dst);
         while (count > 0) {
-            done = (int)fread(data, 1, count, sys_handles[handle]);
+            int done = static_cast<int>(fread(data, 1, count, sys_handles[handle]));
             if (done == 0) {
                 break;
             }
@@ -225,14 +222,11 @@ int Sys_FileRead(int handle, void* dst, int count)
 
 int Sys_FileWrite(int handle, const void* src, int count)
 {
-    const char* data;
-    int size, done;
-
-    size = 0;
+    int size = 0;
     if (handle >= 0) {
-        data = (const char*)src;
+        const char* data = static_cast<const char*>(src);
         while (count > 0) {
-            done = (int)fwrite(data, 1, count, sys_handles[handle]);
+            int done = static_cast<int>(fwrite(data, 1, count, sys_handles[handle]));
             if (done == 0) {
                 break;
             }
@@ -250,7 +244,7 @@ int Sys_FileTime(const char* path)
 {
     FILE* f;
 
-    if (fopen_s(&f, path, "rb") == 0) {
+    if ((f = fopen(path, "rb")) != NULL) {
         fclose(f);
 
         return 1;
@@ -286,7 +280,6 @@ void moncontrol()
 
 int main(int c, char** v)
 {
-    double time, oldtime, newtime;
     quakeparms_t parms;
     extern int vcrFile;
     extern qboolean recording;
@@ -312,11 +305,11 @@ int main(int c, char** v)
 
     Cvar::Register(&sys_nostdout);
 
-    oldtime = Sys_FloatTime() - 0.1;
+    double oldtime = Sys_FloatTime() - 0.1;
     while (1) {
         // find time spent rendering last frame
-        newtime = Sys_FloatTime();
-        time = newtime - oldtime;
+        double newtime = Sys_FloatTime();
+        double time = newtime - oldtime;
 
         if (cls.state == ca_dedicated) { // play vcrfiles at max speed
             if (time < sys_ticrate.value && (vcrFile == -1 || recording)) {

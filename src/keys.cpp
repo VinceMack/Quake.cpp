@@ -378,13 +378,13 @@ FIXME: handle quote special (general escape sequence?)
 const char* Key_KeynumToString(int keynum)
 {
     keyname_t* kn;
-    static char tinystr[2];
 
     if (keynum == -1) {
         return "<KEY NOT FOUND>";
     }
 
     if (keynum > 32 && keynum < 127) { // printable ascii
+        static char tinystr[2];
         tinystr[0] = static_cast<char>(keynum);
         tinystr[1] = 0;
 
@@ -422,7 +422,7 @@ void Key_SetBinding(int keynum, const char* binding)
 
     // allocate memory for new binding
     l = Q_strlen(binding);
-    new_binding = (char*)Z_Malloc(l + 1);
+    new_binding = static_cast<char*>(Z_Malloc(l + 1));
     Q_strcpy(new_binding, binding);
     new_binding[l] = 0;
     keybindings[keynum] = new_binding;
@@ -687,14 +687,14 @@ void Key_Event(int key, qboolean down)
     if (!down) {
         kb = keybindings[key];
         if (kb && kb[0] == '+') {
-            sprintf_s(cmd, sizeof(cmd), "-%s %i\n", kb + 1, key);
+            snprintf(cmd, sizeof(cmd), "-%s %i\n", kb + 1, key);
             Cmd::BufferAddText(cmd);
         }
 
         if (keyshift[key] != key) {
             kb = keybindings[keyshift[key]];
             if (kb && kb[0] == '+') {
-                sprintf_s(cmd, sizeof(cmd), "-%s %i\n", kb + 1, key);
+                snprintf(cmd, sizeof(cmd), "-%s %i\n", kb + 1, key);
                 Cmd::BufferAddText(cmd);
             }
         }
@@ -705,7 +705,7 @@ void Key_Event(int key, qboolean down)
     //
     // during demo playback, most keys bring up the main menu
     //
-    if (cls.demoplayback && down && consolekeys[key] && key_dest == key_game) {
+    if (cls.demoplayback && consolekeys[key] && key_dest == key_game) {
         M_ToggleMenu_f();
 
         return;
@@ -718,7 +718,7 @@ void Key_Event(int key, qboolean down)
         kb = keybindings[key];
         if (kb) {
             if (kb[0] == '+') { // button commands add keynum as a parm
-                sprintf_s(cmd, sizeof(cmd), "%s %i\n", kb, key);
+                snprintf(cmd, sizeof(cmd), "%s %i\n", kb, key);
                 Cmd::BufferAddText(cmd);
             } else {
                 Cmd::BufferAddText(kb);

@@ -74,7 +74,7 @@ void CommandRegistry::BufferInsertText(std::string_view text)
     int templen = cmd_text_.cursize;
     char* temp = nullptr;
     if (templen) {
-        temp = (char *) Z_Malloc(templen);
+        temp = static_cast<char*>(Z_Malloc(templen));
         Q_memcpy(temp, cmd_text_.data, templen);
         SZ_Clear(&cmd_text_);
     }
@@ -92,7 +92,7 @@ void CommandRegistry::BufferExecute(void)
     char line[1024];
 
     while (cmd_text_.cursize) {
-        char* text = (char*)cmd_text_.data;
+        char* text = reinterpret_cast<char*>(cmd_text_.data);
 
         int quotes = 0;
         int i;
@@ -152,7 +152,7 @@ static void StuffCmds_f(void)
         return;
     }
 
-    char* text = (char *) Z_Malloc(s + 1);
+    char* text = static_cast<char*>(Z_Malloc(s + 1));
     text[0] = 0;
     for (int i = 1; i < com_argc; i++) {
         if (!com_argv[i]) {
@@ -165,7 +165,7 @@ static void StuffCmds_f(void)
         }
     }
 
-    char* build = (char *) Z_Malloc(s + 1);
+    char* build = static_cast<char*>(Z_Malloc(s + 1));
     build[0] = 0;
 
     for (int i = 0; i < s - 1; i++) {
@@ -203,7 +203,7 @@ static void Exec_f(void)
 
     int mark = Hunk_LowMark();
     std::string_view filename = Cmd::Argv(1);
-    char* f = (char*)COM_LoadHunkFile(const_cast<char*>(filename.data()));
+    char* f = reinterpret_cast<char*>(COM_LoadHunkFile(const_cast<char*>(filename.data())));
     if (!f) {
         Con_Printf("couldn't exec %.*s\n", static_cast<int>(filename.length()), filename.data());
         return;
@@ -226,7 +226,7 @@ static void Echo_f(void)
 static char* CopyString(const char* in)
 {
     char* out = (char *) Z_Malloc(static_cast<int>(std::strlen(in)) + 1);
-    strcpy_s(out, std::strlen(in) + 1, in);
+    strlcpy(out, in, std::strlen(in) + 1);
     return out;
 }
 
@@ -257,7 +257,7 @@ static void Alias_f(void)
     }
 
     if (!a) {
-        a = (cmdalias_t *) Z_Malloc(sizeof(cmdalias_t));
+        a = static_cast<cmdalias_t*>(Z_Malloc(sizeof(cmdalias_t)));
         a->next = GetCommandRegistry().GetAliases();
         GetCommandRegistry().GetAliases() = a;
     }
@@ -268,12 +268,12 @@ static void Alias_f(void)
     cmd[0] = 0;
     int c = Cmd::Argc();
     for (int i = 2; i < c; i++) {
-        strcat_s(cmd, sizeof(cmd), Cmd::Argv(i).data());
+        strlcat(cmd, Cmd::Argv(i).data(), sizeof(cmd));
         if (i != c) {
-            strcat_s(cmd, sizeof(cmd), " ");
+            strlcat(cmd, " ", sizeof(cmd));
         }
     }
-    strcat_s(cmd, sizeof(cmd), "\n");
+    strlcat(cmd, "\n", sizeof(cmd));
 
     a->value = CopyString(cmd);
 }
@@ -308,8 +308,8 @@ void CommandRegistry::AddCommand(std::string_view cmd_name, xcommand_t function)
         return;
     }
 
-    cmd_function_t* cmd = (cmd_function_t*) Hunk_Alloc(sizeof(cmd_function_t), "cmd");
-    cmd->name = (char*) Hunk_Alloc(static_cast<int>(cmd_name.length()) + 1, "cmdname");
+    cmd_function_t* cmd = static_cast<cmd_function_t*>(Hunk_Alloc(sizeof(cmd_function_t), "cmd"));
+    cmd->name = static_cast<char*>(Hunk_Alloc(static_cast<int>(cmd_name.length()) + 1, "cmdname"));
     std::memcpy(cmd->name, cmd_name.data(), cmd_name.length());
     cmd->name[cmd_name.length()] = '\0';
     cmd->function = function;
@@ -319,7 +319,7 @@ void CommandRegistry::AddCommand(std::string_view cmd_name, xcommand_t function)
 
 bool CommandRegistry::Exists(std::string_view cmd_name)
 {
-    for (cmd_function_t* cmd = cmd_functions_; cmd; cmd = cmd->next) {
+    for (const cmd_function_t* cmd = cmd_functions_; cmd; cmd = cmd->next) {
         if (cmd_name == cmd->name) {
             return true;
         }
@@ -333,7 +333,7 @@ std::string_view CommandRegistry::CompleteCommand(std::string_view partial)
         return "";
     }
 
-    for (cmd_function_t* cmd = cmd_functions_; cmd; cmd = cmd->next) {
+    for (const cmd_function_t* cmd = cmd_functions_; cmd; cmd = cmd->next) {
         if (std::string_view(cmd->name).starts_with(partial)) {
             return cmd->name;
         }
@@ -381,7 +381,6 @@ void CommandRegistry::TokenizeString(std::string_view text)
         }
 
         if (*ptr == '\n') {
-            ptr++;
             break;
         }
 
@@ -393,18 +392,16 @@ void CommandRegistry::TokenizeString(std::string_view text)
             cmd_args_ = std::string_view(ptr);
         }
 
-        char* next_ptr = COM_Parse(const_cast<char*>(ptr));
+        const char* next_ptr = COM_Parse(const_cast<char*>(ptr));
         if (!next_ptr) {
             return;
         }
         ptr = next_ptr;
 
-        if (!command_parsed) {
-            command_parsed = true;
-        }
+        command_parsed = true;
 
         if (cmd_argc_ < 80) { // MAX_ARGS
-            cmd_argv_[cmd_argc_] = (char *) Z_Malloc(Q_strlen(com_token) + 1);
+            cmd_argv_[cmd_argc_] = static_cast<char*>(Z_Malloc(Q_strlen(com_token) + 1));
             Q_strcpy(cmd_argv_[cmd_argc_], com_token);
             cmd_argc_++;
         }
@@ -420,14 +417,14 @@ void CommandRegistry::ExecuteString(std::string_view text, Source src)
         return;
     }
 
-    for (cmd_function_t* cmd = cmd_functions_; cmd; cmd = cmd->next) {
+    for (const cmd_function_t* cmd = cmd_functions_; cmd; cmd = cmd->next) {
         if (Q_strcasecmp(cmd_argv_[0], cmd->name) == 0) {
             cmd->function();
             return;
         }
     }
 
-    for (cmdalias_t* a = cmd_alias_; a; a = a->next) {
+    for (const cmdalias_t* a = cmd_alias_; a; a = a->next) {
         if (Q_strcasecmp(cmd_argv_[0], a->name) == 0) {
             BufferInsertText(a->value);
             return;

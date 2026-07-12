@@ -1,12 +1,12 @@
 // server.h -- server state and entity management structures
 #pragma once
 
-typedef struct {
-    int maxclients;
-    int maxclientslimit;
-    struct client_s* clients;    // [maxclients]
-    int serverflags;             // episode completion information
-    qboolean changelevel_issued; // cleared when at SV_SpawnServer
+typedef struct server_static_s {
+    int maxclients = 0;
+    int maxclientslimit = 0;
+    struct client_s* clients = nullptr;    // [maxclients]
+    int serverflags = 0;             // episode completion information
+    qboolean changelevel_issued = false; // cleared when at SV_SpawnServer
 } server_static_t;
 
 //=============================================================================
@@ -14,74 +14,74 @@ typedef struct {
 typedef enum { ss_loading,
     ss_active } server_state_t;
 
-typedef struct {
-    qboolean active; // false if only a net client
+typedef struct server_s {
+    qboolean active = false; // false if only a net client
 
-    qboolean paused;
-    qboolean loadgame; // handle connections specially
+    qboolean paused = false;
+    qboolean loadgame = false; // handle connections specially
 
-    double time;
+    double time = 0.0;
 
-    int lastcheck; // used by PF_checkclient
-    double lastchecktime;
+    int lastcheck = 0; // used by PF_checkclient
+    double lastchecktime = 0.0;
 
-    char name[64]; // map name
-    char modelname[64]; // maps/<name>.bsp, for model_precache[0]
-    struct model_s* worldmodel;
-    char* model_precache[MAX_MODELS]; // NULL terminated
-    struct model_s* models[MAX_MODELS];
-    char* sound_precache[MAX_SOUNDS]; // NULL terminated
-    char* lightstyles[MAX_LIGHTSTYLES];
-    int num_edicts;
-    int max_edicts;
-    edict_t* edicts; // can NOT be array indexed, because
+    char name[64] = {}; // map name
+    char modelname[64] = {}; // maps/<name>.bsp, for model_precache[0]
+    struct model_s* worldmodel = nullptr;
+    char* model_precache[MAX_MODELS] = {}; // NULL terminated
+    struct model_s* models[MAX_MODELS] = {};
+    char* sound_precache[MAX_SOUNDS] = {}; // NULL terminated
+    char* lightstyles[MAX_LIGHTSTYLES] = {};
+    int num_edicts = 0;
+    int max_edicts = 0;
+    edict_t* edicts = nullptr; // can NOT be array indexed, because
     // edict_t is variable sized, but can
     // be used to reference the world ent
-    server_state_t state; // some actions are only valid during load
+    server_state_t state = ss_loading; // some actions are only valid during load
 
-    sizebuf_t datagram;
-    byte datagram_buf[MAX_DATAGRAM];
+    sizebuf_t datagram = {};
+    byte datagram_buf[MAX_DATAGRAM] = {};
 
-    sizebuf_t reliable_datagram; // copied to all clients at end of frame
-    byte reliable_datagram_buf[MAX_DATAGRAM];
+    sizebuf_t reliable_datagram = {}; // copied to all clients at end of frame
+    byte reliable_datagram_buf[MAX_DATAGRAM] = {};
 
-    sizebuf_t signon;
-    byte signon_buf[8192];
+    sizebuf_t signon = {};
+    byte signon_buf[8192] = {};
 } server_t;
 
 #define NUM_PING_TIMES 16
 #define NUM_SPAWN_PARMS 16
 
 typedef struct client_s {
-    qboolean active;     // false = client is free
-    qboolean spawned;    // false = don't send datagrams
-    qboolean dropasap;   // has been told to go to another level
-    qboolean privileged; // can execute any host command
-    qboolean sendsignon; // only valid before spawned
+    qboolean active = false;     // false = client is free
+    qboolean spawned = false;    // false = don't send datagrams
+    qboolean dropasap = false;   // has been told to go to another level
+    qboolean privileged = false; // can execute any host command
+    qboolean sendsignon = false; // only valid before spawned
 
-    double last_message; // reliable messages must be sent
+    double last_message = 0.0; // reliable messages must be sent
     // periodically
 
-    struct qsocket_s* netconnection; // communications handle
+    struct qsocket_s* netconnection = nullptr; // communications handle
 
-    usercmd_t cmd;  // movement
+    usercmd_t cmd = {};  // movement
     Vector3 wishdir; // intended motion calced from cmd
 
-    sizebuf_t message; // can be added to at any time,
+    sizebuf_t message = {}; // can be added to at any time,
     // copied and clear once per frame
-    byte msgbuf[MAX_MSGLEN];
-    edict_t* edict; // EDICT_NUM(clientnum+1)
-    char name[32];  // for printing to other people
-    int colors;
+    byte msgbuf[MAX_MSGLEN] = {};
+    edict_t* edict = nullptr; // EDICT_NUM(clientnum+1)
+    char name[32] = {};  // for printing to other people
+    int colors = 0;
 
-    float ping_times[NUM_PING_TIMES];
-    int num_pings; // ping_times[num_pings%NUM_PING_TIMES]
+    float ping_times[NUM_PING_TIMES] = {};
+    int num_pings = 0; // ping_times[num_pings%NUM_PING_TIMES]
 
     // spawn parms are carried from level to level
-    float spawn_parms[NUM_SPAWN_PARMS];
+    float spawn_parms[NUM_SPAWN_PARMS] = {};
 
     // client known data for deltas
-    int old_frags;
+    int old_frags = 0;
 } client_t;
 
 //=============================================================================
@@ -159,6 +159,7 @@ extern cvar_t sv_gravity;
 
 class ServerSubsystem {
 public:
+    ServerSubsystem() = default;
     server_static_t& GetStaticState() { return svs_; }
     const server_static_t& GetStaticState() const { return svs_; }
 

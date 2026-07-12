@@ -14,7 +14,7 @@ void M_ToggleMenu_f(void);
 void M_Menu_Main_f(void);
 void M_Menu_Quit_f(void);
 
-void M_DrawPic(int x, int y, qpic_t* pic);
+void M_DrawPic(int x, int y, const qpic_t* pic);
 
 extern int m_state;
 extern int m_return_state;

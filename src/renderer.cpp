@@ -732,7 +732,7 @@ void R_ReadPointFile_f(void)
     particle_t* p;
     char name[MAX_OSPATH];
 
-    sprintf_s(name, sizeof(name), "maps/%s.pts", sv.name);
+    snprintf(name, sizeof(name), "maps/%s.pts", sv.name);
 
     COM_FOpenFile(name, &f);
     if (!f) {
@@ -744,7 +744,7 @@ void R_ReadPointFile_f(void)
     Con_Printf("Reading %s...\n", name);
     c = 0;
     for (;;) {
-        r = fscanf_s(f, "%f %f %f\n", &org[0], &org[1], &org[2]);
+        r = fscanf(f, "%f %f %f\n", &org[0], &org[1], &org[2]);
         if (r != 3) {
             break;
         }

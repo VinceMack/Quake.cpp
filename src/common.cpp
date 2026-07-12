@@ -143,11 +143,11 @@ void Q_memset(void* dest, int fill, int count)
         count >>= 2;
         fill = fill | (fill << 8) | (fill << 16) | (fill << 24);
         for (i = 0; i < count; i++) {
-            ((int*)dest)[i] = fill;
+            static_cast<int*>(dest)[i] = fill;
         }
     } else {
         for (i = 0; i < count; i++) {
-            ((byte*)dest)[i] = static_cast<byte>(fill);
+            static_cast<byte*>(dest)[i] = static_cast<byte>(fill);
         }
     }
 }
@@ -160,11 +160,11 @@ void Q_memcpy(void* dest, const void* src, int count)
     if ((((size_t)dest | (size_t)src | count) & 3) == 0) {
         count >>= 2;
         for (i = 0; i < count; i++) {
-            ((int*)dest)[i] = ((const int*)src)[i];
+            static_cast<int*>(dest)[i] = static_cast<const int*>(src)[i];
         }
     } else {
         for (i = 0; i < count; i++) {
-            ((byte*)dest)[i] = ((const byte*)src)[i];
+            static_cast<byte*>(dest)[i] = static_cast<const byte*>(src)[i];
         }
     }
 }
@@ -260,11 +260,9 @@ int Q_strncmp(const char* s1, const char* s2, int count)
 
 int Q_strncasecmp(const char* s1, const char* s2, int n)
 {
-    int c1, c2;
-
     while (1) {
-        c1 = *s1++;
-        c2 = *s2++;
+        int c1 = *s1++;
+        int c2 = *s2++;
 
         if (!n--) {
             return 0; // strings are equal until end point
@@ -529,7 +527,7 @@ void MSG_WriteChar(sizebuf_t* sb, int c)
 
 #endif
 
-    buf = (byte*)SZ_GetSpace(sb, 1);
+    buf = static_cast<byte*>(SZ_GetSpace(sb, 1));
     buf[0] = static_cast<byte>(c);
 }
 
@@ -544,7 +542,7 @@ void MSG_WriteByte(sizebuf_t* sb, int c)
 
 #endif
 
-    buf = (byte*)SZ_GetSpace(sb, 1);
+    buf = static_cast<byte*>(SZ_GetSpace(sb, 1));
     buf[0] = static_cast<byte>(c);
 }
 
@@ -553,26 +551,26 @@ void MSG_WriteShort(sizebuf_t* sb, int c)
     byte* buf;
 
 #ifdef PARANOID
-    if (c < ((short)0x8000) || c > (short)0x7fff) {
+    if (c < -32768 || c > 32767) {
         Sys_Error("MSG_WriteShort: range error");
     }
 
 #endif
 
-    buf = (byte*)SZ_GetSpace(sb, 2);
+    buf = static_cast<byte*>(SZ_GetSpace(sb, 2));
     buf[0] = c & 0xff;
-    buf[1] = static_cast<byte>(c >> 8);
+    buf[1] = static_cast<byte>(static_cast<unsigned int>(c) >> 8);
 }
 
 void MSG_WriteLong(sizebuf_t* sb, int c)
 {
     byte* buf;
 
-    buf = (byte*)SZ_GetSpace(sb, 4);
+    buf = static_cast<byte*>(SZ_GetSpace(sb, 4));
     buf[0] = c & 0xff;
-    buf[1] = (c >> 8) & 0xff;
-    buf[2] = (c >> 16) & 0xff;
-    buf[3] = c >> 24;
+    buf[1] = (static_cast<unsigned int>(c) >> 8) & 0xff;
+    buf[2] = (static_cast<unsigned int>(c) >> 16) & 0xff;
+    buf[3] = static_cast<byte>(static_cast<unsigned int>(c) >> 24);
 }
 
 void MSG_WriteFloat(sizebuf_t* sb, float f)
@@ -698,11 +696,9 @@ float MSG_ReadFloat(void)
 char* MSG_ReadString(void)
 {
     static char string[2048];
-    int l, c;
-
-    l = 0;
+    int l = 0;
     do {
-        c = MSG_ReadChar();
+        int c = MSG_ReadChar();
         if (c == -1 || c == 0) {
             break;
         }
@@ -724,7 +720,7 @@ void SZ_Alloc(sizebuf_t* buf, int startsize)
         startsize = 256;
     }
 
-    buf->data = (byte *) Hunk_Alloc(startsize, "sizebuf");
+    buf->data = static_cast<byte*>(Hunk_Alloc(startsize, "sizebuf"));
     buf->maxsize = startsize;
     buf->cursize = 0;
 }
@@ -766,9 +762,9 @@ void SZ_Print(sizebuf_t* buf, const char* data)
 
     // byte * cast to keep VC++ happy
     if (buf->data[buf->cursize - 1]) {
-        Q_memcpy((byte*)SZ_GetSpace(buf, len), data, len); // no trailing 0
+        Q_memcpy(SZ_GetSpace(buf, len), data, len); // no trailing 0
     } else {
-        Q_memcpy((byte*)SZ_GetSpace(buf, len - 1) - 1, data,
+        Q_memcpy(static_cast<byte*>(SZ_GetSpace(buf, len - 1)) - 1, data,
             len); // write over trailing 0
     }
 }
@@ -822,10 +818,10 @@ void COM_FileBase(const char* in, char* out)
     }
 
     if (s - s2 < 2) {
-        strcpy_s(out, 32, "?model?");
+        strlcpy(out, "?model?", 32);
     } else {
         s--;
-        strncpy_s(out, 32, s2 + 1, s - s2);
+        strlcpy(out, s2 + 1, 32);
         out[s - s2] = 0;
     }
 }
@@ -852,7 +848,7 @@ void COM_DefaultExtension(char* path, const char* extension)
         src--;
     }
 
-    strcat_s(path, 256, extension);
+    strlcat(path, extension, 256);
 }
 
 /*
@@ -1081,7 +1077,7 @@ void COM_Init()
     if (SDL_BYTEORDER == SDL_LIL_ENDIAN)
 #else
     byte swaptest[2] = { 1, 0 };
-    if (*(short*)swaptest == 1)
+    if (*reinterpret_cast<short*>(swaptest) == 1)
 #endif
     {
         bigendien = false;
@@ -1124,7 +1120,7 @@ char* va(const char* format, ...)
     static char string[1024];
 
     va_start(argptr, format);
-    vsprintf_s(string, sizeof(string), format, argptr);
+    vsnprintf(string, sizeof(string), format, argptr);
     va_end(argptr);
 
     return string;
@@ -1210,12 +1206,12 @@ COM_WriteFile
 The filename will be prefixed by the current game directory
 ============
 */
-void COM_WriteFile(const char* filename, void* data, int len)
+void COM_WriteFile(const char* filename, const void* data, int len)
 {
     int handle;
     char name[MAX_OSPATH];
 
-    sprintf_s(name, sizeof(name), "%s/%s", com_gamedir, filename);
+    snprintf(name, sizeof(name), "%s/%s", com_gamedir, filename);
 
     handle = Sys_FileOpenWrite(name);
     if (handle == -1) {
@@ -1257,7 +1253,7 @@ Copies a file over from the net to the local cache, creating any directories
 needed.  This is for the convenience of developers using ISDN from home.
 ===========
 */
-void COM_CopyFile(char* netpath, char* cachepath)
+void COM_CopyFile(const char* netpath, char* cachepath)
 {
     int in, out;
     int remaining, count;
@@ -1330,7 +1326,7 @@ int COM_FindFile(const char* filename, int* handle, FILE** file)
                         *handle = pak->handle;
                         Sys_FileSeek(pak->handle, pak->files[i].filepos);
                     } else { // open a new file on the pakfile
-                        fopen_s(file, pak->filename, "rb");
+                        *file = fopen(pak->filename, "rb");
                         if (*file) {
                             fseek(*file, pak->files[i].filepos, SEEK_SET);
                         }
@@ -1349,7 +1345,7 @@ int COM_FindFile(const char* filename, int* handle, FILE** file)
                 }
             }
 
-            sprintf_s(netpath, sizeof(netpath), "%s/%s", search->filename, filename);
+            snprintf(netpath, sizeof(netpath), "%s/%s", search->filename, filename);
 
             findtime = Sys_FileTime(netpath);
             if (findtime == -1) {
@@ -1358,9 +1354,9 @@ int COM_FindFile(const char* filename, int* handle, FILE** file)
 
             // see if the file needs to be updated in the cache
             if (!com_cachedir[0]) {
-                strcpy_s(cachepath, sizeof(cachepath), netpath);
+                strlcpy(cachepath, netpath, sizeof(cachepath));
             } else {
-                sprintf_s(cachepath, sizeof(cachepath), "%s/%s", com_cachedir, netpath);
+                snprintf(cachepath, sizeof(cachepath), "%s/%s", com_cachedir, netpath);
 
                 cachetime = Sys_FileTime(cachepath);
 
@@ -1368,7 +1364,7 @@ int COM_FindFile(const char* filename, int* handle, FILE** file)
                     COM_CopyFile(netpath, cachepath);
                 }
 
-                strcpy_s(netpath, sizeof(netpath), cachepath);
+                strlcpy(netpath, cachepath, sizeof(netpath));
             }
 
             Sys_Printf("FindFile: %s\n", netpath);
@@ -1377,7 +1373,7 @@ int COM_FindFile(const char* filename, int* handle, FILE** file)
                 *handle = i;
             } else {
                 Sys_FileClose(i);
-                fopen_s(file, netpath, "rb");
+                *file = fopen(netpath, "rb");
             }
 
             return com_filesize;
@@ -1406,9 +1402,7 @@ If it is a pak file handle, don't really close it
 */
 void COM_CloseFile(int h)
 {
-    searchpath_t* s;
-
-    for (s = com_searchpaths; s; s = s->next) {
+    for (const searchpath_t* s = com_searchpaths; s; s = s->next) {
         if (s->pack && s->pack->handle == h) {
             return;
         }
@@ -1448,16 +1442,16 @@ byte* COM_LoadFile(const char* path, int usehunk)
     COM_FileBase(path, base);
 
     if (usehunk == 1) {
-        buf = (byte *) Hunk_Alloc(len + 1, base);
+        buf = static_cast<byte*>(Hunk_Alloc(len + 1, base));
     } else if (usehunk == 2) {
-        buf = (byte *) Hunk_TempAlloc(len + 1);
+        buf = static_cast<byte*>(Hunk_TempAlloc(len + 1));
     } else if (usehunk == 0) {
-        buf = (byte *) Z_Malloc(len + 1);
+        buf = static_cast<byte*>(Z_Malloc(len + 1));
     } else if (usehunk == 3) {
-        buf = (byte *) Cache_Alloc(loadcache, len + 1, base);
+        buf = static_cast<byte*>(Cache_Alloc(loadcache, len + 1, base));
     } else if (usehunk == 4) {
         if (len + 1 > loadsize) {
-            buf = (byte *) Hunk_TempAlloc(len + 1);
+            buf = static_cast<byte*>(Hunk_TempAlloc(len + 1));
         } else {
             buf = loadbuf;
         }
@@ -1469,7 +1463,7 @@ byte* COM_LoadFile(const char* path, int usehunk)
         Sys_Error("COM_LoadFile: not enough space for %s", path);
     }
 
-    ((byte*)buf)[len] = 0;
+    buf[len] = 0;
 
     Draw_BeginDisc();
     Sys_FileRead(h, buf, len);
@@ -1490,7 +1484,7 @@ byte* COM_LoadStackFile(const char* path, void* buffer, int bufsize)
 {
     byte* buf;
 
-    loadbuf = (byte*)buffer;
+    loadbuf = static_cast<byte*>(buffer);
     loadsize = bufsize;
     buf = COM_LoadFile(path, 4);
 
@@ -1523,7 +1517,7 @@ pack_t* COM_LoadPackFile(char* packfile)
         return NULL;
     }
 
-    Sys_FileRead(packhandle, (void*)&header, sizeof(header));
+    Sys_FileRead(packhandle, &header, sizeof(header));
     if (header.id[0] != 'P' || header.id[1] != 'A' || header.id[2] != 'C' || header.id[3] != 'K') {
         Sys_Error("%s is not a packfile", packfile);
     }
@@ -1541,15 +1535,15 @@ pack_t* COM_LoadPackFile(char* packfile)
         com_modified = true; // not the original file
     }
 
-    newfiles = (packfile_t *) Hunk_Alloc(numpackfiles * sizeof(packfile_t), "packfile");
+    newfiles = static_cast<packfile_t*>(Hunk_Alloc(numpackfiles * sizeof(packfile_t), "packfile"));
 
     Sys_FileSeek(packhandle, header.dirofs);
-    Sys_FileRead(packhandle, (void*)info, header.dirlen);
+    Sys_FileRead(packhandle, info, header.dirlen);
 
     // crc the directory to check for modifications
     CRC_Init(&crc);
     for (i = 0; i < header.dirlen; i++) {
-        CRC_ProcessByte(&crc, ((byte*)info)[i]);
+        CRC_ProcessByte(&crc, reinterpret_cast<byte*>(info)[i]);
     }
     if (crc != PAK0_CRC) {
         com_modified = true;
@@ -1557,13 +1551,13 @@ pack_t* COM_LoadPackFile(char* packfile)
 
     // parse the directory
     for (i = 0; i < numpackfiles; i++) {
-        strcpy_s(newfiles[i].name, sizeof(newfiles[i].name), info[i].name);
+        strlcpy(newfiles[i].name, info[i].name, sizeof(newfiles[i].name));
         newfiles[i].filepos = LittleLong(info[i].filepos);
         newfiles[i].filelen = LittleLong(info[i].filelen);
     }
 
     pack = (pack_t *) Hunk_Alloc(sizeof(pack_t));
-    strcpy_s(pack->filename, sizeof(pack->filename), packfile);
+    strlcpy(pack->filename, packfile, sizeof(pack->filename));
     pack->handle = packhandle;
     pack->numfiles = numpackfiles;
     pack->files = newfiles;
@@ -1588,13 +1582,13 @@ void COM_AddGameDirectory(char* dir)
     pack_t* pak;
     char pakfile[MAX_OSPATH];
 
-    strcpy_s(com_gamedir, sizeof(com_gamedir), dir);
+    strlcpy(com_gamedir, dir, sizeof(com_gamedir));
 
     //
     // add the directory to the search path
     //
     search = (searchpath_t *) Hunk_Alloc(sizeof(searchpath_t));
-    strcpy_s(search->filename, sizeof(search->filename), dir);
+    strlcpy(search->filename, dir, sizeof(search->filename));
     search->next = com_searchpaths;
     com_searchpaths = search;
 
@@ -1602,13 +1596,13 @@ void COM_AddGameDirectory(char* dir)
     // add any pak files in the format pak0.pak pak1.pak, ...
     //
     for (i = 0;; i++) {
-        sprintf_s(pakfile, sizeof(pakfile), "%s/pak%i.pak", dir, i);
+        snprintf(pakfile, sizeof(pakfile), "%s/pak%i.pak", dir, i);
         pak = COM_LoadPackFile(pakfile);
         if (!pak) {
             break;
         }
 
-        search = (searchpath_t *) Hunk_Alloc(sizeof(searchpath_t));
+        search = static_cast<searchpath_t*>(Hunk_Alloc(sizeof(searchpath_t)));
         search->pack = pak;
         search->next = com_searchpaths;
         com_searchpaths = search;
@@ -1636,9 +1630,9 @@ void COM_InitFilesystem(void)
     //
     i = COM_CheckParm("-basedir");
     if (i && i < com_argc - 1) {
-        strcpy_s(basedir, sizeof(basedir), com_argv[i + 1]);
+        strlcpy(basedir, com_argv[i + 1], sizeof(basedir));
     } else {
-        strcpy_s(basedir, sizeof(basedir), host_parms.basedir);
+        strlcpy(basedir, host_parms.basedir, sizeof(basedir));
     }
 
     j = (int)strlen(basedir);
@@ -1706,14 +1700,14 @@ void COM_InitFilesystem(void)
                 break;
             }
 
-            search = (searchpath_t *) Hunk_Alloc(sizeof(searchpath_t));
+            search = static_cast<searchpath_t*>(Hunk_Alloc(sizeof(searchpath_t)));
             if (!strcmp(COM_FileExtension(com_argv[i]), "pak")) {
                 search->pack = COM_LoadPackFile(com_argv[i]);
                 if (!search->pack) {
                     Sys_Error("Couldn't load packfile: %s", com_argv[i]);
                 }
             } else {
-                strcpy_s(search->filename, sizeof(search->filename), com_argv[i]);
+                strlcpy(search->filename, com_argv[i], sizeof(search->filename));
             }
 
             search->next = com_searchpaths;

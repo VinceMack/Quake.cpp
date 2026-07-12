@@ -166,7 +166,7 @@ inline void M_DrawTransPic(int x, int y, qpic_t* pic)
     Draw_TransPic(x + ((vid.width - 320) >> 1), y, pic);
 }
 
-void M_DrawPic(int x, int y, qpic_t* pic)
+void M_DrawPic(int x, int y, const qpic_t* pic)
 {
     Draw_Pic(x + ((vid.width - 320) >> 1), y, pic);
 }
@@ -486,17 +486,17 @@ void M_ScanSaves(void)
     int version;
 
     for (i = 0; i < MAX_SAVEGAMES; i++) {
-        strcpy_s(m_filenames[i], sizeof(m_filenames[i]), "--- UNUSED SLOT ---");
+        strlcpy(m_filenames[i], "--- UNUSED SLOT ---", sizeof(m_filenames[i]));
         loadable[i] = false;
-        sprintf_s(name, sizeof(name), "%s/s%i.sav", com_gamedir, i);
-        fopen_s(&f, name, "r");
+        snprintf(name, sizeof(name), "%s/s%i.sav", com_gamedir, i);
+        f = fopen(name, "r");
         if (!f) {
             continue;
         }
 
-        fscanf_s(f, "%i\n", &version);
-        fscanf_s(f, "%79s\n", name, (unsigned)sizeof(name));
-        strncpy_s(m_filenames[i], sizeof(m_filenames[i]), name, sizeof(m_filenames[i]) - 1);
+        fscanf(f, "%i\n", &version);
+        fscanf(f, "%79s\n", name, (unsigned)sizeof(name));
+        strlcpy(m_filenames[i], name, sizeof(m_filenames[i]) - 1);
 
         // change _ back to space
         for (j = 0; j < SAVEGAME_COMMENT_LENGTH; j++) {
@@ -1510,7 +1510,7 @@ void M_Keys_Key(int k)
         if (k == K_ESCAPE) {
             bind_grab = false;
         } else if (k != '`') {
-            sprintf_s(cmd, sizeof(cmd), "bind \"%s\" \"%s\"\n", Key_KeynumToString(k),
+            snprintf(cmd, sizeof(cmd), "bind \"%s\" \"%s\"\n", Key_KeynumToString(k),
                 bindnames[keys_cursor][0]);
             Cmd::BufferInsertText(cmd);
         }
@@ -2177,7 +2177,7 @@ void M_Menu_LanConfig_f(void)
     }
 
     lanConfig_port = DEFAULTnet_hostport;
-    sprintf_s(lanConfig_portname, sizeof(lanConfig_portname), "%u", lanConfig_port);
+    snprintf(lanConfig_portname, sizeof(lanConfig_portname), "%u", lanConfig_port);
 
     m_return_onerror = false;
     m_return_reason[0] = 0;
@@ -2360,7 +2360,7 @@ void M_LanConfig_Key(int key)
         lanConfig_port = l;
     }
 
-    sprintf_s(lanConfig_portname, sizeof(lanConfig_portname), "%u", lanConfig_port);
+    snprintf(lanConfig_portname, sizeof(lanConfig_portname), "%u", lanConfig_port);
 }
 
 //=============================================================================
@@ -2965,10 +2965,10 @@ void M_ServerList_Draw(void)
     M_DrawPic((320 - p->width) / 2, 4, p);
     for (n = 0; n < hostCacheCount; n++) {
         if (hostcache[n].maxusers) {
-            sprintf_s(string, sizeof(string), "%-15.15s %-15.15s %2u/%2u\n", hostcache[n].name,
+            snprintf(string, sizeof(string), "%-15.15s %-15.15s %2u/%2u\n", hostcache[n].name,
                 hostcache[n].map, hostcache[n].users, hostcache[n].maxusers);
         } else {
-            sprintf_s(string, sizeof(string), "%-15.15s %-15.15s\n", hostcache[n].name,
+            snprintf(string, sizeof(string), "%-15.15s %-15.15s\n", hostcache[n].name,
                 hostcache[n].map);
         }
 
