@@ -1,6 +1,5 @@
 // audio.cpp -- merged audio subsystem (snd_*.cpp)
 // Contains: sound control, caching, mixing, and SDL audio driver
-#pragma warning(disable: 4324)
 
 #include <SDL.h>
 #include "quakedef.hpp"

@@ -3241,7 +3241,7 @@ Returns false if the client should be killed
 */
 qboolean SV_ReadClientMessage(void)
 {
-    int ret;
+    int ret = 1;
     int msg_cmd;
     char* s;
 

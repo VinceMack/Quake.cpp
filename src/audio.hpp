@@ -24,9 +24,7 @@ struct sfx_s {
 
 using sfx_t = sfx_s;
 
-// !!! if this is changed, it much be changed in asm_i386.h too !!!
-#pragma warning(push)
-#pragma warning(disable: 4200) // Silence nonstandard extension: zero-sized array warning
+#pragma pack(push,1)
 struct sfxcache_t {
     int length;
     int loopstart;
@@ -35,7 +33,7 @@ struct sfxcache_t {
     int stereo;
     byte data[]; // variable sized
 };
-#pragma warning(pop)
+#pragma pack(pop)
 
 struct dma_t {
     std::atomic<bool> gamealive;

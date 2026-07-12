@@ -495,7 +495,7 @@ void M_ScanSaves(void)
         }
 
         fscanf(f, "%i\n", &version);
-        fscanf(f, "%79s\n", name, (unsigned)sizeof(name));
+        fscanf(f, "%79s\n", name);
         strlcpy(m_filenames[i], name, sizeof(m_filenames[i]) - 1);
 
         // change _ back to space

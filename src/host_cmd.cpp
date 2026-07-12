@@ -582,7 +582,7 @@ void Host_Loadgame_f(void)
         return;
     }
 
-    fscanf(f, "%s\n", str, (unsigned)sizeof(str));
+    fscanf(f, "%s\n", str);
     for (i = 0; i < NUM_SPAWN_PARMS; i++) {
         fscanf(f, "%f\n", &spawn_parms[i]);
     }
@@ -592,7 +592,7 @@ void Host_Loadgame_f(void)
     Cvar::SetValue("skill", (float)current_skill);
 
 
-    fscanf(f, "%s\n", mapname, (unsigned)sizeof(mapname));
+    fscanf(f, "%s\n", mapname);
     fscanf(f, "%f\n", &time);
 
     CL_Disconnect_f();
@@ -610,7 +610,7 @@ void Host_Loadgame_f(void)
     // load the light styles
 
     for (i = 0; i < MAX_LIGHTSTYLES; i++) {
-        fscanf(f, "%s\n", str, (unsigned)sizeof(str));
+        fscanf(f, "%s\n", str);
         sv.lightstyles[i] = (char *) Hunk_Alloc((int)strlen(str) + 1);
         strlcpy(sv.lightstyles[i], str, strlen(str) + 1);
     }

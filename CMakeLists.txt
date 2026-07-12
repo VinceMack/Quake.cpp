@@ -72,6 +72,9 @@ if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "GNU|AppleClang")
 				message(STATUS "Using IPO/LTO.")
 			endif()
 		endif()
+		add_compile_options(-Wno-unused-result)
+		add_compile_options(-Wno-unused-variable)
+		add_compile_options(-Wno-unused-but-set-variable)
 	endif()
 	add_compile_options(-Wunreachable-code)		# Warn about unreachable code paths
 	add_compile_options(-ffunction-sections)	# Put each function in its own section
