@@ -4,27 +4,28 @@
 #include <stdint.h>
 
 #if !defined BYTE_DEFINED
-typedef unsigned char byte;
+using byte = unsigned char;
 #define BYTE_DEFINED 1
 #endif
 
-typedef bool qboolean;
+using qboolean = bool;
 
 //============================================================================
 
-typedef struct sizebuf_s {
-    qboolean allowoverflow; // if false, do a Sys_Error
-    qboolean overflowed;    // set to true if the buffer size failed
-    byte* data;
-    int maxsize;
-    int cursize;
-} sizebuf_t;
+struct sizebuf_t {
+    bool allowoverflow = false; // if false, do a Sys_Error
+    bool overflowed = false;    // set to true if the buffer size failed
+    byte* data = nullptr;
+    int maxsize = 0;
+    int cursize = 0;
+};
 
 //============================================================================
 
-typedef struct link_s {
-    struct link_s *prev, *next;
-} link_t;
+struct link_t {
+    link_t* prev = nullptr;
+    link_t* next = nullptr;
+};
 
 // (type *)STRUCT_FROM_LINK(link_t *link, type, member)
 // ent = STRUCT_FROM_LINK(link,entity_t,order)
@@ -33,27 +34,31 @@ typedef struct link_s {
 
 //============================================================================
 
-#ifndef NULL
-#define NULL ((void*)0)
-#endif
+inline constexpr char Q_MAXCHAR = 0x7f;
+inline constexpr short Q_MAXSHORT = 0x7fff;
+inline constexpr int Q_MAXINT = 0x7fffffff;
+inline constexpr int Q_MAXLONG = 0x7fffffff;
+inline constexpr int Q_MAXFLOAT = 0x7fffffff;
 
-#define Q_MAXCHAR ((char)0x7f)
-#define Q_MAXSHORT ((short)0x7fff)
-#define Q_MAXINT ((int)0x7fffffff)
-#define Q_MAXLONG ((int)0x7fffffff)
-#define Q_MAXFLOAT ((int)0x7fffffff)
-
-#define Q_MINCHAR ((char)0x80)
-#define Q_MINSHORT ((short)0x8000)
-#define Q_MININT ((int)0x80000000)
-#define Q_MINLONG ((int)0x80000000)
-#define Q_MINFLOAT ((int)0x7fffffff)
+inline constexpr char Q_MINCHAR = static_cast<char>(0x80);
+inline constexpr short Q_MINSHORT = static_cast<short>(0x8000);
+inline constexpr int Q_MININT = static_cast<int>(0x80000000);
+inline constexpr int Q_MINLONG = static_cast<int>(0x80000000);
+inline constexpr int Q_MINFLOAT = 0x7fffffff;
 
 //============================================================================
 
 struct cache_user_s;
 
 namespace Common {
+
+enum class HunkType {
+    Zone = 0,
+    Hunk = 1,
+    HunkTemp = 2,
+    Cache = 3,
+    Stack = 4
+};
 
 void ClearLink(link_t* l);
 void RemoveLink(link_t* l);
@@ -64,7 +69,7 @@ void SZ_Clear(sizebuf_t* buf);
 void* SZ_GetSpace(sizebuf_t* buf, int length);
 void SZ_Print(sizebuf_t* buf, const char* data);
 
-extern qboolean bigendien;
+extern bool bigendien;
 
 extern short (*BigShort)(short l);
 extern short (*LittleShort)(short l);
@@ -92,7 +97,7 @@ inline void MSG_WriteAngle(sizebuf_t* sb, float f)
 }
 
 extern int msg_readcount;
-extern qboolean msg_badread;
+extern bool msg_badread;
 
 void MSG_BeginReading(void);
 int MSG_ReadChar(void);
@@ -193,7 +198,7 @@ float Q_atof(std::string_view str);
 //============================================================================
 
 extern char com_token[1024];
-extern qboolean com_eof;
+extern bool com_eof;
 
 const char* COM_Parse(const char* data);
 inline char* COM_Parse(char* data)
@@ -222,28 +227,28 @@ extern char com_gamedir[MAX_OSPATH];
 void COM_WriteFile(const char* filename, void* data, int len);
 
 int COM_FindFile(const char* filename, int* handle, FILE** file);
-byte* COM_LoadFile(const char* path, int usehunk);
+byte* COM_LoadFile(const char* path, HunkType usehunk);
 
 inline int COM_OpenFile(const char* filename, int* hndl)
 {
-    return COM_FindFile(filename, hndl, NULL);
+    return COM_FindFile(filename, hndl, nullptr);
 }
 
 inline int COM_FOpenFile(const char* filename, FILE** file)
 {
-    return COM_FindFile(filename, NULL, file);
+    return COM_FindFile(filename, nullptr, file);
 }
 void COM_CloseFile(int h);
 
 byte* COM_LoadStackFile(const char* path, void* buffer, int bufsize);
 inline byte* COM_LoadHunkFile(const char* path)
 {
-    return COM_LoadFile(path, 1);
+    return COM_LoadFile(path, HunkType::Hunk);
 }
 void COM_LoadCacheFile(const char* path, cache_user_s* cu);
 
-extern qboolean standard_quake, rogue, hipnotic;
-extern qboolean msg_suppress_1;
+extern bool standard_quake, rogue, hipnotic;
+extern bool msg_suppress_1;
 
 } // namespace Common
 

@@ -1,6 +1,13 @@
 // common.cpp -- misc functions used in client and server
 
 #include "quakedef.hpp"
+#include <bit>
+#include <cstring>
+#include <cctype>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <string_view>
 
 using namespace Client;
 using namespace Common;
@@ -40,13 +47,13 @@ static const char* safeargvs[NUM_SAFE_ARGVS] = { "-stdvid", "-nolan", "-nosound"
     "-nocdaudio", "-nojoy", "-nomouse",
     "-dibonly" };
 
-qboolean com_modified; // set true if using non-id files
+bool com_modified; // set true if using non-id files
 
-qboolean proghack;
+bool proghack;
 
 int static_registered = 1; // only for startup check, then set
 
-qboolean msg_suppress_1 = 0;
+bool msg_suppress_1 = false;
 
 void COM_InitFilesystem(void);
 
@@ -61,7 +68,7 @@ char** com_argv;
 #define CMDLINE_LENGTH 256
 char com_cmdline[CMDLINE_LENGTH];
 
-qboolean standard_quake = true, rogue, hipnotic;
+bool standard_quake = true, rogue, hipnotic;
 
 // this graphic needs to be in the pak file to use registered features
 unsigned short pop[] = {
@@ -135,278 +142,190 @@ void InsertLinkBefore(link_t* l, link_t* before)
 
 void Q_memset(void* dest, int fill, int count)
 {
-    int i;
-    
-    // Cast to size_t instead of long to preserve 64-bit pointers
-    if ((((size_t)dest | count) & 3) == 0) {
-        count >>= 2;
-        fill = fill | (fill << 8) | (fill << 16) | (fill << 24);
-        for (i = 0; i < count; i++) {
-            ((int*)dest)[i] = fill;
-        }
-    } else {
-        for (i = 0; i < count; i++) {
-            ((byte*)dest)[i] = static_cast<byte>(fill);
-        }
-    }
+    std::memset(dest, fill, count);
 }
 
 void Q_memcpy(void* dest, const void* src, int count)
 {
-    int i;
-
-    // Cast to size_t instead of long to preserve 64-bit pointers
-    if ((((size_t)dest | (size_t)src | count) & 3) == 0) {
-        count >>= 2;
-        for (i = 0; i < count; i++) {
-            ((int*)dest)[i] = ((const int*)src)[i];
-        }
-    } else {
-        for (i = 0; i < count; i++) {
-            ((byte*)dest)[i] = ((const byte*)src)[i];
-        }
-    }
+    std::memcpy(dest, src, count);
 }
 
 void Q_strcpy(char* dest, const char* src)
 {
-    while (*src) {
-        *dest++ = *src++;
-    }
-    *dest++ = 0;
+    std::strcpy(dest, src);
 }
 
 void Q_strncpy(char* dest, const char* src, int count)
 {
-    while (*src && count--) {
-        *dest++ = *src++;
-    }
-    if (count) {
-        *dest++ = 0;
+    std::strncpy(dest, src, count);
+    if (count > 0) {
+        // Ensure null termination if src was longer or equal
+        // Wait, the original code only set a single null terminator if count was not decremented to 0:
+        // while (*src && count--) { *dest++ = *src++; }
+        // if (count) { *dest++ = 0; }
+        // In other words, if the src was longer than count, the destination is NOT null-terminated!
+        // std::strncpy does NOT null-terminate if the count is reached.
+        // So std::strncpy behaves exactly like the original in that respect!
     }
 }
 
 int Q_strlen(const char* str)
 {
-    int count;
-
-    count = 0;
-    while (str[count]) {
-        count++;
-    }
-
-    return count;
+    return static_cast<int>(std::strlen(str));
 }
 
 const char* Q_strrchr(const char* s, char c)
 {
-    int len = Q_strlen(s);
-    const char* ptr = s + len;
-    while (len--) {
-        if (*--ptr == c) {
-            return ptr;
-        }
-    }
-
-    return nullptr;
+    return std::strrchr(s, c);
 }
 
 void Q_strcat(char* dest, const char* src)
 {
-    dest += Q_strlen(dest);
-    Q_strcpy(dest, src);
+    std::strcat(dest, src);
 }
 
 int Q_strcmp(const char* s1, const char* s2)
 {
-    while (1) {
-        if (*s1 != *s2) {
-            return -1; // strings not equal
-        }
-
-        if (!*s1) {
-            return 0; // strings are equal
-        }
-
-        s1++;
-        s2++;
-    }
-
-    return -1;
+    return std::strcmp(s1, s2);
 }
 
 int Q_strncmp(const char* s1, const char* s2, int count)
 {
-    while (1) {
-        if (!count--) {
-            return 0;
-        }
-
-        if (*s1 != *s2) {
-            return -1; // strings not equal
-        }
-
-        if (!*s1) {
-            return 0; // strings are equal
-        }
-
-        s1++;
-        s2++;
-    }
-
-    return -1;
+    return std::strncmp(s1, s2, count);
 }
 
 int Q_strncasecmp(const char* s1, const char* s2, int n)
 {
-    int c1, c2;
-
-    while (1) {
-        c1 = *s1++;
-        c2 = *s2++;
-
-        if (!n--) {
-            return 0; // strings are equal until end point
-        }
-
+    while (n-- > 0) {
+        char c1 = *s1++;
+        char c2 = *s2++;
         if (c1 != c2) {
-            if (c1 >= 'a' && c1 <= 'z') {
-                c1 -= ('a' - 'A');
-            }
-
-            if (c2 >= 'a' && c2 <= 'z') {
-                c2 -= ('a' - 'A');
-            }
-
-            if (c1 != c2) {
-                return -1; // strings not equal
+            char lc1 = static_cast<char>(std::tolower(static_cast<unsigned char>(c1)));
+            char lc2 = static_cast<char>(std::tolower(static_cast<unsigned char>(c2)));
+            if (lc1 != lc2) {
+                return (lc1 < lc2) ? -1 : 1;
             }
         }
-
-        if (!c1) {
-            return 0; // strings are equal
-        }
-
-        //              s1++;
-        //              s2++;
-    }
-
-    return -1;
-}
-
-int Q_atoi(std::string_view str_view)
-{
-    std::string str(str_view);
-    const char* s = str.c_str();
-
-    int val;
-    int sign;
-    int c;
-
-    if (*s == '-') {
-        sign = -1;
-        s++;
-    } else {
-        sign = 1;
-    }
-
-    val = 0;
-
-    //
-    // check for hex
-    //
-    if (s[0] == '0' && (s[1] == 'x' || s[1] == 'X')) {
-        s += 2;
-        while (1) {
-            c = *s++;
-            if (c >= '0' && c <= '9') {
-                val = (val << 4) + c - '0';
-            } else if (c >= 'a' && c <= 'f') {
-                val = (val << 4) + c - 'a' + 10;
-            } else if (c >= 'A' && c <= 'F') {
-                val = (val << 4) + c - 'A' + 10;
-            } else {
-                return val * sign;
-            }
+        if (c1 == '\0') {
+            break;
         }
     }
-
-    //
-    // check for character
-    //
-    if (s[0] == '\'') {
-        return sign * s[1];
-    }
-
-    //
-    // assume decimal
-    //
-    while (1) {
-        c = *s++;
-        if (c < '0' || c > '9') {
-            return val * sign;
-        }
-
-        val = val * 10 + c - '0';
-    }
-
     return 0;
 }
 
-float Q_atof(std::string_view str_view)
+int Q_atoi(std::string_view str)
 {
-    std::string str(str_view);
-    const char* s = str.c_str();
+    if (str.empty()) {
+        return 0;
+    }
 
-    double val;
-    int sign;
-    int c;
-    int decimal, total;
-
-    if (*s == '-') {
+    size_t pos = 0;
+    int sign = 1;
+    if (str[pos] == '-') {
         sign = -1;
-        s++;
-    } else {
-        sign = 1;
+        pos++;
     }
 
-    val = 0;
+    if (pos >= str.size()) {
+        return 0;
+    }
 
-    //
-    // check for hex
-    //
-    if (s[0] == '0' && (s[1] == 'x' || s[1] == 'X')) {
-        s += 2;
-        while (1) {
-            c = *s++;
+    // Check for hex
+    if (pos + 1 < str.size() && str[pos] == '0' && (str[pos + 1] == 'x' || str[pos + 1] == 'X')) {
+        pos += 2;
+        int val = 0;
+        while (pos < str.size()) {
+            char c = str[pos];
             if (c >= '0' && c <= '9') {
-                val = (val * 16) + c - '0';
+                val = (val << 4) + (c - '0');
             } else if (c >= 'a' && c <= 'f') {
-                val = (val * 16) + c - 'a' + 10;
+                val = (val << 4) + (c - 'a' + 10);
             } else if (c >= 'A' && c <= 'F') {
-                val = (val * 16) + c - 'A' + 10;
+                val = (val << 4) + (c - 'A' + 10);
             } else {
-                return (float)(val * sign);
+                break;
             }
+            pos++;
         }
+        return val * sign;
     }
 
-    //
-    // check for character
-    //
-    if (s[0] == '\'') {
-        return (float)(sign * s[1]);
+    // Check for character
+    if (str[pos] == '\'') {
+        if (pos + 1 < str.size()) {
+            return sign * static_cast<int>(static_cast<unsigned char>(str[pos + 1]));
+        }
+        return 0;
     }
 
-    //
-    // assume decimal
-    //
-    decimal = -1;
-    total = 0;
-    while (1) {
-        c = *s++;
+    // Assume decimal
+    int val = 0;
+    while (pos < str.size()) {
+        char c = str[pos];
+        if (c < '0' || c > '9') {
+            break;
+        }
+        val = val * 10 + (c - '0');
+        pos++;
+    }
+
+    return val * sign;
+}
+
+float Q_atof(std::string_view str)
+{
+    if (str.empty()) {
+        return 0.0f;
+    }
+
+    size_t pos = 0;
+    int sign = 1;
+    if (str[pos] == '-') {
+        sign = -1;
+        pos++;
+    }
+
+    if (pos >= str.size()) {
+        return 0.0f;
+    }
+
+    // Check for hex
+    if (pos + 1 < str.size() && str[pos] == '0' && (str[pos + 1] == 'x' || str[pos + 1] == 'X')) {
+        pos += 2;
+        double val = 0.0;
+        while (pos < str.size()) {
+            char c = str[pos];
+            if (c >= '0' && c <= '9') {
+                val = (val * 16) + (c - '0');
+            } else if (c >= 'a' && c <= 'f') {
+                val = (val * 16) + (c - 'a' + 10);
+            } else if (c >= 'A' && c <= 'F') {
+                val = (val * 16) + (c - 'A' + 10);
+            } else {
+                break;
+            }
+            pos++;
+        }
+        return static_cast<float>(val * sign);
+    }
+
+    // Check for character
+    if (str[pos] == '\'') {
+        if (pos + 1 < str.size()) {
+            return static_cast<float>(sign * static_cast<int>(static_cast<unsigned char>(str[pos + 1])));
+        }
+        return 0.0f;
+    }
+
+    // Assume decimal
+    double val = 0.0;
+    int decimal = -1;
+    int total = 0;
+    while (pos < str.size()) {
+        char c = str[pos];
         if (c == '.') {
             decimal = total;
+            pos++;
             continue;
         }
 
@@ -414,20 +333,21 @@ float Q_atof(std::string_view str_view)
             break;
         }
 
-        val = val * 10 + c - '0';
+        val = val * 10 + (c - '0');
         total++;
+        pos++;
     }
 
     if (decimal == -1) {
-        return (float)(val * sign);
+        return static_cast<float>(val * sign);
     }
 
     while (total > decimal) {
-        val /= 10;
+        val /= 10.0;
         total--;
     }
 
-    return (float)(val * sign);
+    return static_cast<float>(val * sign);
 }
 
 /*
@@ -442,7 +362,7 @@ float Q_atof(std::string_view str_view)
 #include "SDL.h"
 #endif
 
-qboolean bigendien;
+bool bigendien;
 
 short (*BigShort)(short l);
 short (*LittleShort)(short l);
@@ -453,12 +373,8 @@ float (*LittleFloat)(float l);
 
 short ShortSwap(short l)
 {
-    byte b1, b2;
-
-    b1 = l & 255;
-    b2 = (l >> 8) & 255;
-
-    return (b1 << 8) + b2;
+    uint16_t u = static_cast<uint16_t>(l);
+    return static_cast<short>((u >> 8) | (u << 8));
 }
 
 short ShortNoSwap(short l)
@@ -468,14 +384,13 @@ short ShortNoSwap(short l)
 
 int LongSwap(int l)
 {
-    byte b1, b2, b3, b4;
-
-    b1 = l & 255;
-    b2 = (l >> 8) & 255;
-    b3 = (l >> 16) & 255;
-    b4 = (l >> 24) & 255;
-
-    return ((int)b1 << 24) + ((int)b2 << 16) + ((int)b3 << 8) + b4;
+    uint32_t u = static_cast<uint32_t>(l);
+    return static_cast<int>(
+        ((u & 0xff000000) >> 24) |
+        ((u & 0x00ff0000) >> 8)  |
+        ((u & 0x0000ff00) << 8)  |
+        ((u & 0x000000ff) << 24)
+    );
 }
 
 int LongNoSwap(int l)
@@ -485,18 +400,12 @@ int LongNoSwap(int l)
 
 float FloatSwap(float f)
 {
-    union {
-        float f;
-        byte b[4];
-    } dat1, dat2;
-
-    dat1.f = f;
-    dat2.b[0] = dat1.b[3];
-    dat2.b[1] = dat1.b[2];
-    dat2.b[2] = dat1.b[1];
-    dat2.b[3] = dat1.b[0];
-
-    return dat2.f;
+    uint32_t u = std::bit_cast<uint32_t>(f);
+    uint32_t swapped = ((u & 0xff000000) >> 24) |
+                       ((u & 0x00ff0000) >> 8)  |
+                       ((u & 0x0000ff00) << 8)  |
+                       ((u & 0x000000ff) << 24);
+    return std::bit_cast<float>(swapped);
 }
 
 float FloatNoSwap(float f)
@@ -576,15 +485,10 @@ void MSG_WriteLong(sizebuf_t* sb, int c)
 
 void MSG_WriteFloat(sizebuf_t* sb, float f)
 {
-    union {
-        float f;
-        int l;
-    } dat;
+    uint32_t val = std::bit_cast<uint32_t>(f);
+    int swapped = LittleLong(static_cast<int>(val));
 
-    dat.f = f;
-    dat.l = LittleLong(dat.l);
-
-    SZ_Write(sb, &dat.l, 4);
+    SZ_Write(sb, &swapped, 4);
 }
 
 void MSG_WriteString(sizebuf_t* sb, const char* s)
@@ -600,7 +504,7 @@ void MSG_WriteString(sizebuf_t* sb, const char* s)
 // reading functions
 //
 int msg_readcount;
-qboolean msg_badread;
+bool msg_badread;
 
 void MSG_BeginReading(void)
 {
@@ -677,21 +581,17 @@ int MSG_ReadLong(void)
 
 float MSG_ReadFloat(void)
 {
-    union {
-        byte b[4];
-        float f;
-        int l;
-    } dat;
+    if (msg_readcount + 4 > net_message.cursize) {
+        msg_badread = true;
+        return -1.0f;
+    }
 
-    dat.b[0] = net_message.data[msg_readcount];
-    dat.b[1] = net_message.data[msg_readcount + 1];
-    dat.b[2] = net_message.data[msg_readcount + 2];
-    dat.b[3] = net_message.data[msg_readcount + 3];
+    uint32_t val;
+    std::memcpy(&val, &net_message.data[msg_readcount], 4);
     msg_readcount += 4;
 
-    dat.l = LittleLong(dat.l);
-
-    return dat.f;
+    val = static_cast<uint32_t>(LittleLong(static_cast<int>(val)));
+    return std::bit_cast<float>(val);
 }
 
 char* MSG_ReadString(void)
@@ -779,26 +679,13 @@ void SZ_Print(sizebuf_t* buf, const char* data)
 COM_FileExtension
 ============
 */
-char* COM_FileExtension(char* in)
+std::string_view COM_FileExtension(std::string_view in)
 {
-    static char exten[8];
-    int i;
-
-    while (*in && *in != '.') {
-        in++;
+    auto dot_pos = in.find('.');
+    if (dot_pos == std::string_view::npos) {
+        return "";
     }
-    if (!*in) {
-        exten[0] = 0;
-        return exten;
-    }
-
-    in++;
-    for (i = 0; i < 7 && *in; i++, in++) {
-        exten[i] = *in;
-    }
-    exten[i] = 0;
-
-    return exten;
+    return in.substr(dot_pos + 1, 7);
 }
 
 /*
@@ -808,24 +695,23 @@ COM_FileBase
 */
 void COM_FileBase(const char* in, char* out)
 {
-    const char *s, *s2;
-
-    s = in + strlen(in) - 1;
-
-    while (s != in && *s != '.') {
-        s--;
+    std::string_view path(in);
+    auto dot_pos = path.find_last_of('.');
+    if (dot_pos == std::string_view::npos) {
+        strcpy_s(out, 32, "?model?");
+        return;
     }
 
-    for (s2 = s; *s2 && *s2 != '/'; s2--) {
-        ;
-    }
+    auto filename = path.substr(0, dot_pos);
+    auto last_slash = filename.find_last_of("/\\");
+    std::string_view base = (last_slash == std::string_view::npos) ? filename : filename.substr(last_slash + 1);
 
-    if (s - s2 < 2) {
+    if (base.empty()) {
         strcpy_s(out, 32, "?model?");
     } else {
-        s--;
-        strncpy_s(out, 32, s2 + 1, s - s2);
-        out[s - s2] = 0;
+        size_t copy_len = std::min(base.size(), size_t{31});
+        std::memcpy(out, base.data(), copy_len);
+        out[copy_len] = '\0';
     }
 }
 
@@ -836,19 +722,12 @@ COM_DefaultExtension
 */
 void COM_DefaultExtension(char* path, const char* extension)
 {
-    char* src;
-    //
-    // if path doesn't have a .EXT, append extension
-    // (extension should include the .)
-    //
-    src = path + strlen(path) - 1;
+    std::string_view path_view(path);
+    auto last_slash = path_view.find_last_of("/\\");
+    std::string_view filename = (last_slash == std::string_view::npos) ? path_view : path_view.substr(last_slash + 1);
 
-    while (*src != '/' && src != path) {
-        if (*src == '.') {
-            return; // it has an extension
-        }
-
-        src--;
+    if (filename.find('.') != std::string_view::npos) {
+        return; // it has an extension
     }
 
     strcat_s(path, 256, extension);
@@ -863,72 +742,72 @@ Parse a token out of a string
 */
 const char* COM_Parse(const char* data)
 {
-    int c;
-    int len;
-
-    len = 0;
-    com_token[0] = 0;
-
     if (!data) {
-        return NULL;
+        return nullptr;
     }
 
-// skip whitespace
-skipwhite:
-    while ((c = *data) <= ' ') {
-        if (c == 0) {
-            return NULL; // end of file;
-        }
+    int len = 0;
+    com_token[0] = '\0';
 
-        data++;
-    }
-
-    // skip // comments
-    if (c == '/' && data[1] == '/') {
-        while (*data && *data != '\n') {
+    while (true) {
+        // Skip whitespace
+        while (*data && static_cast<unsigned char>(*data) <= ' ') {
             data++;
         }
-        goto skipwhite;
+
+        if (*data == '\0') {
+            return nullptr;
+        }
+
+        // Skip // comments
+        if (data[0] == '/' && data[1] == '/') {
+            while (*data && *data != '\n') {
+                data++;
+            }
+            continue;
+        }
+
+        break;
     }
 
-    // handle quoted strings specially
+    char c = *data;
+
+    // Handle quoted strings specially
     if (c == '\"') {
         data++;
-        while (1) {
+        while (true) {
             c = *data++;
-            if (c == '\"' || !c) {
-                com_token[len] = 0;
-
+            if (c == '\"' || c == '\0') {
+                com_token[len] = '\0';
                 return data;
             }
-
-            com_token[len] = static_cast<char>(c);
-            len++;
+            if (len < static_cast<int>(sizeof(com_token)) - 1) {
+                com_token[len++] = c;
+            }
         }
     }
 
-    // parse single characters
+    // Parse single characters
     if (c == '{' || c == '}' || c == ')' || c == '(' || c == '\'' || c == ':') {
-        com_token[len] = static_cast<char>(c);
-        len++;
-        com_token[len] = 0;
-
+        com_token[0] = c;
+        com_token[1] = '\0';
         return data + 1;
     }
 
-    // parse a regular word
-    do {
-        com_token[len] = static_cast<char>(c);
-        data++;
-        len++;
+    // Parse a regular word
+    while (true) {
         c = *data;
-        if (c == '{' || c == '}' || c == ')' || c == '(' || c == '\'' || c == ':') {
+        if (c == '\0' || static_cast<unsigned char>(c) <= ' ' ||
+            c == '{' || c == '}' || c == ')' || c == '(' || c == '\'' || c == ':') {
             break;
         }
-    } while (c > 32);
+        if (len < static_cast<int>(sizeof(com_token)) - 1) {
+            com_token[len++] = c;
+        }
+        data++;
+    }
 
-    com_token[len] = 0;
-
+    com_token[len] = '\0';
     return data;
 }
 
@@ -1012,34 +891,29 @@ COM_InitArgv
 */
 void COM_InitArgv(int argc, char** argv)
 {
-    qboolean safe;
-    int i, j, n;
-
     // reconstitute the command line for the cmdline externally visible cvar
-    n = 0;
-
-    for (j = 0; (j < MAX_NUM_ARGVS) && (j < argc); j++) {
-        i = 0;
-
-        while ((n < (CMDLINE_LENGTH - 1)) && argv[j][i]) {
-            com_cmdline[n++] = argv[j][i++];
+    int n = 0;
+    for (int j = 0; j < MAX_NUM_ARGVS && j < argc; ++j) {
+        std::string_view arg(argv[j]);
+        for (char c : arg) {
+            if (n >= CMDLINE_LENGTH - 1) {
+                break;
+            }
+            com_cmdline[n++] = c;
         }
-
-        if (n < (CMDLINE_LENGTH - 1)) {
-            com_cmdline[n++] = ' ';
-        } else {
+        if (n >= CMDLINE_LENGTH - 1) {
             break;
         }
+        com_cmdline[n++] = ' ';
     }
+    com_cmdline[n] = '\0';
 
-    com_cmdline[n] = 0;
-
-    safe = false;
+    bool safe = false;
 
     for (com_argc = 0; (com_argc < MAX_NUM_ARGVS) && (com_argc < argc);
         com_argc++) {
         largv[com_argc] = argv[com_argc];
-        if (!Q_strcmp("-safe", argv[com_argc])) {
+        if (std::string_view(argv[com_argc]) == "-safe") {
             safe = true;
         }
     }
@@ -1047,7 +921,7 @@ void COM_InitArgv(int argc, char** argv)
     if (safe) {
         // force all the safe-mode switches. Note that we reserved extra space in
         // case we need to add these, so we don't need an overflow check
-        for (i = 0; i < NUM_SAFE_ARGVS; i++) {
+        for (int i = 0; i < NUM_SAFE_ARGVS; i++) {
             largv[com_argc] = const_cast<char*>(safeargvs[i]);
             com_argc++;
         }
@@ -1174,13 +1048,12 @@ typedef struct {
 char com_cachedir[MAX_OSPATH];
 char com_gamedir[MAX_OSPATH];
 
-typedef struct searchpath_s {
-    char filename[MAX_OSPATH];
-    pack_t* pack; // only one of filename / pack will be used
-    struct searchpath_s* next;
-} searchpath_t;
+struct SearchPath {
+    std::string filename;
+    pack_t* pack = nullptr;
+};
 
-searchpath_t* com_searchpaths;
+static std::vector<SearchPath> com_searchpaths;
 
 /*
 ============
@@ -1190,14 +1063,12 @@ COM_Path_f
 */
 void COM_Path_f(void)
 {
-    searchpath_t* s;
-
     Con_Printf("Current search path:\n");
-    for (s = com_searchpaths; s; s = s->next) {
-        if (s->pack) {
-            Con_Printf("%s (%i files)\n", s->pack->filename, s->pack->numfiles);
+    for (const auto& s : com_searchpaths) {
+        if (s.pack) {
+            Con_Printf("%s (%i files)\n", s.pack->filename, s.pack->numfiles);
         } else {
-            Con_Printf("%s\n", s->filename);
+            Con_Printf("%s\n", s.filename.c_str());
         }
     }
 }
@@ -1235,15 +1106,14 @@ COM_CreatePath
 Only used for CopyFile
 ============
 */
-void COM_CreatePath(char* path)
+void COM_CreatePath(const char* path)
 {
-    char* ofs;
-
-    for (ofs = path + 1; *ofs; ofs++) {
-        if (*ofs == '/') { // create the directory
-            *ofs = 0;
-            Sys_mkdir(path);
-            *ofs = '/';
+    std::string temp(path);
+    for (size_t i = 1; i < temp.size(); ++i) {
+        if (temp[i] == '/') {
+            temp[i] = '\0';
+            Sys_mkdir(temp.data());
+            temp[i] = '/';
         }
     }
 }
@@ -1256,23 +1126,23 @@ Copies a file over from the net to the local cache, creating any directories
 needed.  This is for the convenience of developers using ISDN from home.
 ===========
 */
-void COM_CopyFile(char* netpath, char* cachepath)
+void COM_CopyFile(const char* netpath, const char* cachepath)
 {
     int in, out;
-    int remaining, count;
-    char buf[4096];
-
-    remaining = Sys_FileOpenRead(netpath, &in);
-    COM_CreatePath(cachepath); // create directories up to the cache file
+    int remaining = Sys_FileOpenRead(netpath, &in);
+    if (remaining == -1) {
+        return;
+    }
+    COM_CreatePath(cachepath);
     out = Sys_FileOpenWrite(cachepath);
+    if (out == -1) {
+        Sys_FileClose(in);
+        return;
+    }
 
-    while (remaining) {
-        if (remaining < static_cast<int>(sizeof(buf))) {
-            count = remaining;
-        } else {
-            count = sizeof(buf);
-        }
-
+    char buf[4096];
+    while (remaining > 0) {
+        int count = std::min(remaining, static_cast<int>(sizeof(buf)));
         Sys_FileRead(in, buf, count);
         Sys_FileWrite(out, buf, count);
         remaining -= count;
@@ -1292,10 +1162,8 @@ Sets com_filesize and one of handle or file
 */
 int COM_FindFile(const char* filename, int* handle, FILE** file)
 {
-    searchpath_t* search;
     char netpath[MAX_OSPATH];
     char cachepath[MAX_OSPATH];
-    pack_t* pak;
     int i;
     int findtime, cachetime;
 
@@ -1310,20 +1178,23 @@ int COM_FindFile(const char* filename, int* handle, FILE** file)
     //
     // search through the path, one element at a time
     //
-    search = com_searchpaths;
+    auto it = com_searchpaths.begin();
     if (proghack) { // gross hack to use quake 1 progs with quake 2 maps
-        if (!strcmp(filename, "progs.dat")) {
-            search = search->next;
+        if (std::strcmp(filename, "progs.dat") == 0) {
+            if (it != com_searchpaths.end()) {
+                ++it;
+            }
         }
     }
 
-    for (; search; search = search->next) {
+    for (; it != com_searchpaths.end(); ++it) {
+        const auto& search = *it;
         // is the element a pak file?
-        if (search->pack) {
+        if (search.pack) {
             // look through all the pak file elements
-            pak = search->pack;
+            pack_t* pak = search.pack;
             for (i = 0; i < pak->numfiles; i++) {
-                if (!strcmp(pak->files[i].name, filename)) { // found it!
+                if (std::strcmp(pak->files[i].name, filename) == 0) { // found it!
                     Sys_Printf("PackFile: %s : %s\n", pak->filename, filename);
                     if (handle) {
                         *handle = pak->handle;
@@ -1348,7 +1219,7 @@ int COM_FindFile(const char* filename, int* handle, FILE** file)
                 }
             }
 
-            sprintf_s(netpath, sizeof(netpath), "%s/%s", search->filename, filename);
+            sprintf_s(netpath, sizeof(netpath), "%s/%s", search.filename.c_str(), filename);
 
             findtime = Sys_FileTime(netpath);
             if (findtime == -1) {
@@ -1405,10 +1276,8 @@ If it is a pak file handle, don't really close it
 */
 void COM_CloseFile(int h)
 {
-    searchpath_t* s;
-
-    for (s = com_searchpaths; s; s = s->next) {
-        if (s->pack && s->pack->handle == h) {
+    for (const auto& s : com_searchpaths) {
+        if (s.pack && s.pack->handle == h) {
             return;
         }
     }
@@ -1424,43 +1293,47 @@ Filename are reletive to the quake directory.
 Allways appends a 0 byte.
 ============
 */
-cache_user_t* loadcache;
-byte* loadbuf;
-int loadsize;
+cache_user_t* loadcache = nullptr;
+byte* loadbuf = nullptr;
+int loadsize = 0;
 
-byte* COM_LoadFile(const char* path, int usehunk)
+byte* COM_LoadFile(const char* path, HunkType usehunk)
 {
     int h;
-    byte* buf;
+    byte* buf = nullptr;
     char base[32];
     int len;
-
-    buf = NULL; // quiet compiler warning
 
     // look for it in the filesystem or pack files
     len = COM_OpenFile(path, &h);
     if (h == -1) {
-        return NULL;
+        return nullptr;
     }
 
     // extract the filename base name for hunk tag
     COM_FileBase(path, base);
 
-    if (usehunk == 1) {
-        buf = (byte *) Hunk_Alloc(len + 1, base);
-    } else if (usehunk == 2) {
-        buf = (byte *) Hunk_TempAlloc(len + 1);
-    } else if (usehunk == 0) {
-        buf = (byte *) Z_Malloc(len + 1);
-    } else if (usehunk == 3) {
-        buf = (byte *) Cache_Alloc(loadcache, len + 1, base);
-    } else if (usehunk == 4) {
+    switch (usehunk) {
+    case HunkType::Hunk:
+        buf = static_cast<byte*>(Hunk_Alloc(len + 1, base));
+        break;
+    case HunkType::HunkTemp:
+        buf = static_cast<byte*>(Hunk_TempAlloc(len + 1));
+        break;
+    case HunkType::Zone:
+        buf = static_cast<byte*>(Z_Malloc(len + 1));
+        break;
+    case HunkType::Cache:
+        buf = static_cast<byte*>(Cache_Alloc(loadcache, len + 1, base));
+        break;
+    case HunkType::Stack:
         if (len + 1 > loadsize) {
-            buf = (byte *) Hunk_TempAlloc(len + 1);
+            buf = static_cast<byte*>(Hunk_TempAlloc(len + 1));
         } else {
             buf = loadbuf;
         }
-    } else {
+        break;
+    default:
         Sys_Error("COM_LoadFile: bad usehunk");
     }
 
@@ -1468,7 +1341,7 @@ byte* COM_LoadFile(const char* path, int usehunk)
         Sys_Error("COM_LoadFile: not enough space for %s", path);
     }
 
-    ((byte*)buf)[len] = 0;
+    buf[len] = 0;
 
     Draw_BeginDisc();
     Sys_FileRead(h, buf, len);
@@ -1481,19 +1354,15 @@ byte* COM_LoadFile(const char* path, int usehunk)
 void COM_LoadCacheFile(const char* path, struct cache_user_s* cu)
 {
     loadcache = cu;
-    COM_LoadFile(path, 3);
+    COM_LoadFile(path, HunkType::Cache);
 }
 
 // uses temp hunk if larger than bufsize
 byte* COM_LoadStackFile(const char* path, void* buffer, int bufsize)
 {
-    byte* buf;
-
-    loadbuf = (byte*)buffer;
+    loadbuf = static_cast<byte*>(buffer);
     loadsize = bufsize;
-    buf = COM_LoadFile(path, 4);
-
-    return buf;
+    return COM_LoadFile(path, HunkType::Stack);
 }
 
 /*
@@ -1580,10 +1449,9 @@ Sets com_gamedir, adds the directory to the head of the path,
 then loads and adds pak1.pak pak2.pak ...
 ================
 */
-void COM_AddGameDirectory(char* dir)
+void COM_AddGameDirectory(const char* dir)
 {
     int i;
-    searchpath_t* search;
     pack_t* pak;
     char pakfile[MAX_OSPATH];
 
@@ -1592,10 +1460,9 @@ void COM_AddGameDirectory(char* dir)
     //
     // add the directory to the search path
     //
-    search = (searchpath_t *) Hunk_Alloc(sizeof(searchpath_t));
-    strcpy_s(search->filename, sizeof(search->filename), dir);
-    search->next = com_searchpaths;
-    com_searchpaths = search;
+    SearchPath search;
+    search.filename = dir;
+    com_searchpaths.insert(com_searchpaths.begin(), search);
 
     //
     // add any pak files in the format pak0.pak pak1.pak, ...
@@ -1607,10 +1474,9 @@ void COM_AddGameDirectory(char* dir)
             break;
         }
 
-        search = (searchpath_t *) Hunk_Alloc(sizeof(searchpath_t));
-        search->pack = pak;
-        search->next = com_searchpaths;
-        com_searchpaths = search;
+        SearchPath sp;
+        sp.pack = pak;
+        com_searchpaths.insert(com_searchpaths.begin(), sp);
     }
 
     //
@@ -1627,7 +1493,6 @@ void COM_InitFilesystem(void)
 {
     int i, j;
     char basedir[MAX_OSPATH];
-    searchpath_t* search;
 
     //
     // -basedir <path>
@@ -1696,24 +1561,23 @@ void COM_InitFilesystem(void)
     i = COM_CheckParm("-path");
     if (i) {
         com_modified = true;
-        com_searchpaths = NULL;
+        com_searchpaths.clear();
         while (++i < com_argc) {
             if (!com_argv[i] || com_argv[i][0] == '+' || com_argv[i][0] == '-') {
                 break;
             }
 
-            search = (searchpath_t *) Hunk_Alloc(sizeof(searchpath_t));
-            if (!strcmp(COM_FileExtension(com_argv[i]), "pak")) {
-                search->pack = COM_LoadPackFile(com_argv[i]);
-                if (!search->pack) {
+            SearchPath sp;
+            if (COM_FileExtension(com_argv[i]) == "pak") {
+                sp.pack = COM_LoadPackFile(com_argv[i]);
+                if (!sp.pack) {
                     Sys_Error("Couldn't load packfile: %s", com_argv[i]);
                 }
             } else {
-                strcpy_s(search->filename, sizeof(search->filename), com_argv[i]);
+                sp.filename = com_argv[i];
             }
 
-            search->next = com_searchpaths;
-            com_searchpaths = search;
+            com_searchpaths.insert(com_searchpaths.begin(), sp);
         }
     }
 
