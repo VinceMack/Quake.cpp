@@ -1,196 +1,204 @@
-// bspfile.h -- BSP map file format structures and constants
+// bspfile.hpp -- BSP map file format structures and constants
 #pragma once
 
-#define MAX_MAP_HULLS 4
+#include <cstdint>
+#include "common.hpp"
+#include "mathlib.hpp"
 
-#define MAX_MAP_MODELS 256
-#define MAX_MAP_BRUSHES 4096
-#define MAX_MAP_ENTITIES 1024
-#define MAX_MAP_ENTSTRING 65536
+inline constexpr int MAX_MAP_HULLS = 4;
 
-#define MAX_MAP_PLANES 32767
-#define MAX_MAP_NODES 32767     // because negative shorts are contents
-#define MAX_MAP_CLIPNODES 32767 //
-#define MAX_MAP_LEAFS 8192
-#define MAX_MAP_VERTS 65535
-#define MAX_MAP_FACES 65535
-#define MAX_MAP_MARKSURFACES 65535
-#define MAX_MAP_TEXINFO 4096
-#define MAX_MAP_EDGES 256000
-#define MAX_MAP_SURFEDGES 512000
-#define MAX_MAP_TEXTURES 512
-#define MAX_MAP_MIPTEX 0x200000
-#define MAX_MAP_LIGHTING 0x100000
-#define MAX_MAP_VISIBILITY 0x100000
+inline constexpr int MAX_MAP_MODELS = 256;
+inline constexpr int MAX_MAP_BRUSHES = 4096;
+inline constexpr int MAX_MAP_ENTITIES = 1024;
+inline constexpr int MAX_MAP_ENTSTRING = 65536;
 
-#define MAX_MAP_PORTALS 65536
+inline constexpr int MAX_MAP_PLANES = 32767;
+inline constexpr int MAX_MAP_NODES = 32767;     // because negative shorts are contents
+inline constexpr int MAX_MAP_CLIPNODES = 32767;
+inline constexpr int MAX_MAP_LEAFS = 8192;
+inline constexpr int MAX_MAP_VERTS = 65535;
+inline constexpr int MAX_MAP_FACES = 65535;
+inline constexpr int MAX_MAP_MARKSURFACES = 65535;
+inline constexpr int MAX_MAP_TEXINFO = 4096;
+inline constexpr int MAX_MAP_EDGES = 256000;
+inline constexpr int MAX_MAP_SURFEDGES = 512000;
+inline constexpr int MAX_MAP_TEXTURES = 512;
+inline constexpr int MAX_MAP_MIPTEX = 0x200000;
+inline constexpr int MAX_MAP_LIGHTING = 0x100000;
+inline constexpr int MAX_MAP_VISIBILITY = 0x100000;
+
+inline constexpr int MAX_MAP_PORTALS = 65536;
 
 // key / value pair sizes
 
-#define MAX_KEY 32
-#define MAX_VALUE 1024
+inline constexpr int MAX_KEY = 32;
+inline constexpr int MAX_VALUE = 1024;
 
 //=============================================================================
 
-#define BSPVERSION 29
-#define TOOLVERSION 2
+inline constexpr int BSPVERSION = 29;
+inline constexpr int TOOLVERSION = 2;
 
-typedef struct {
-    int fileofs, filelen;
-} lump_t;
+struct lump_t {
+    int32_t fileofs;
+    int32_t filelen;
+};
 
-#define LUMP_ENTITIES 0
-#define LUMP_PLANES 1
-#define LUMP_TEXTURES 2
-#define LUMP_VERTEXES 3
-#define LUMP_VISIBILITY 4
-#define LUMP_NODES 5
-#define LUMP_TEXINFO 6
-#define LUMP_FACES 7
-#define LUMP_LIGHTING 8
-#define LUMP_CLIPNODES 9
-#define LUMP_LEAFS 10
-#define LUMP_MARKSURFACES 11
-#define LUMP_EDGES 12
-#define LUMP_SURFEDGES 13
-#define LUMP_MODELS 14
+inline constexpr int LUMP_ENTITIES = 0;
+inline constexpr int LUMP_PLANES = 1;
+inline constexpr int LUMP_TEXTURES = 2;
+inline constexpr int LUMP_VERTEXES = 3;
+inline constexpr int LUMP_VISIBILITY = 4;
+inline constexpr int LUMP_NODES = 5;
+inline constexpr int LUMP_TEXINFO = 6;
+inline constexpr int LUMP_FACES = 7;
+inline constexpr int LUMP_LIGHTING = 8;
+inline constexpr int LUMP_CLIPNODES = 9;
+inline constexpr int LUMP_LEAFS = 10;
+inline constexpr int LUMP_MARKSURFACES = 11;
+inline constexpr int LUMP_EDGES = 12;
+inline constexpr int LUMP_SURFEDGES = 13;
+inline constexpr int LUMP_MODELS = 14;
 
-#define HEADER_LUMPS 15
+inline constexpr int HEADER_LUMPS = 15;
 
-typedef struct {
-    float mins[3], maxs[3];
+struct dmodel_t {
+    float mins[3];
+    float maxs[3];
     float origin[3];
-    int headnode[MAX_MAP_HULLS];
-    int visleafs; // not including the solid leaf 0
-    int firstface, numfaces;
-} dmodel_t;
+    int32_t headnode[MAX_MAP_HULLS];
+    int32_t visleafs; // not including the solid leaf 0
+    int32_t firstface;
+    int32_t numfaces;
+};
 
-typedef struct {
-    int version;
+struct dheader_t {
+    int32_t version;
     lump_t lumps[HEADER_LUMPS];
-} dheader_t;
+};
 
-typedef struct {
-    int nummiptex;
-    int dataofs[4]; // [nummiptex]
-} dmiptexlump_t;
+struct dmiptexlump_t {
+    int32_t nummiptex;
+    int32_t dataofs[4]; // [nummiptex]
+};
 
-#define MIPLEVELS 4
+inline constexpr int MIPLEVELS = 4;
 
-typedef struct miptex_s {
+struct miptex_t {
     char name[16];
-    unsigned width, height;
-    unsigned offsets[MIPLEVELS]; // four mip maps stored
-} miptex_t;
+    uint32_t width;
+    uint32_t height;
+    uint32_t offsets[MIPLEVELS]; // four mip maps stored
+};
 
-typedef struct {
+struct dvertex_t {
     float point[3];
-} dvertex_t;
+};
 
 // 0-2 are axial planes
-#define PLANE_X 0
-#define PLANE_Y 1
-#define PLANE_Z 2
+inline constexpr int PLANE_X = 0;
+inline constexpr int PLANE_Y = 1;
+inline constexpr int PLANE_Z = 2;
 
 // 3-5 are non-axial planes snapped to the nearest
-#define PLANE_ANYX 3
-#define PLANE_ANYY 4
-#define PLANE_ANYZ 5
+inline constexpr int PLANE_ANYX = 3;
+inline constexpr int PLANE_ANYY = 4;
+inline constexpr int PLANE_ANYZ = 5;
 
-typedef struct {
+struct dplane_t {
     float normal[3];
     float dist;
-    int type; // PLANE_X - PLANE_ANYZ ?remove? trivial to regenerate
-} dplane_t;
+    int32_t type; // PLANE_X - PLANE_ANYZ ?remove? trivial to regenerate
+};
 
-#define CONTENTS_EMPTY -1
-#define CONTENTS_SOLID -2
-#define CONTENTS_WATER -3
-#define CONTENTS_SLIME -4
-#define CONTENTS_LAVA -5
-#define CONTENTS_SKY -6
-#define CONTENTS_ORIGIN -7 // removed at csg time
-#define CONTENTS_CLIP -8   // changed to contents_solid
+inline constexpr int CONTENTS_EMPTY = -1;
+inline constexpr int CONTENTS_SOLID = -2;
+inline constexpr int CONTENTS_WATER = -3;
+inline constexpr int CONTENTS_SLIME = -4;
+inline constexpr int CONTENTS_LAVA = -5;
+inline constexpr int CONTENTS_SKY = -6;
+inline constexpr int CONTENTS_ORIGIN = -7; // removed at csg time
+inline constexpr int CONTENTS_CLIP = -8;   // changed to contents_solid
 
-#define CONTENTS_CURRENT_0 -9
-#define CONTENTS_CURRENT_90 -10
-#define CONTENTS_CURRENT_180 -11
-#define CONTENTS_CURRENT_270 -12
-#define CONTENTS_CURRENT_UP -13
-#define CONTENTS_CURRENT_DOWN -14
+inline constexpr int CONTENTS_CURRENT_0 = -9;
+inline constexpr int CONTENTS_CURRENT_90 = -10;
+inline constexpr int CONTENTS_CURRENT_180 = -11;
+inline constexpr int CONTENTS_CURRENT_270 = -12;
+inline constexpr int CONTENTS_CURRENT_UP = -13;
+inline constexpr int CONTENTS_CURRENT_DOWN = -14;
 
 // !!! if this is changed, it must be changed in asm_i386.h too !!!
-typedef struct {
-    int planenum;
-    short children[2]; // negative numbers are -(leafs+1), not nodes
-    short mins[3];     // for sphere culling
-    short maxs[3];
-    unsigned short firstface;
-    unsigned short numfaces; // counting both sides
-} dnode_t;
+struct dnode_t {
+    int32_t planenum;
+    int16_t children[2]; // negative numbers are -(leafs+1), not nodes
+    int16_t mins[3];     // for sphere culling
+    int16_t maxs[3];
+    uint16_t firstface;
+    uint16_t numfaces; // counting both sides
+};
 
-typedef struct {
-    int planenum;
-    short children[2]; // negative numbers are contents
-} dclipnode_t;
+struct dclipnode_t {
+    int32_t planenum;
+    int16_t children[2]; // negative numbers are contents
+};
 
-typedef struct texinfo_s {
+struct texinfo_t {
     float vecs[2][4]; // [s/t][xyz offset]
-    int miptex;
-    int flags;
-} texinfo_t;
+    int32_t miptex;
+    int32_t flags;
+};
 
-#define TEX_SPECIAL 1 // sky or slime, no lightmap or 256 subdivision
+inline constexpr int TEX_SPECIAL = 1; // sky or slime, no lightmap or 256 subdivision
 
 // note that edge 0 is never used, because negative edge nums are used for
 // counterclockwise use of the edge in a face
-typedef struct {
-    unsigned short v[2]; // vertex numbers
-} dedge_t;
+struct dedge_t {
+    uint16_t v[2]; // vertex numbers
+};
 
-#define MAXLIGHTMAPS 4
+inline constexpr int MAXLIGHTMAPS = 4;
 
-typedef struct {
-    short planenum;
-    short side;
+struct dface_t {
+    int16_t planenum;
+    int16_t side;
 
-    int firstedge; // we must support > 64k edges
-    short numedges;
-    short texinfo;
+    int32_t firstedge; // we must support > 64k edges
+    int16_t numedges;
+    int16_t texinfo;
 
     // lighting info
     byte styles[MAXLIGHTMAPS];
-    int lightofs; // start of [numstyles*surfsize] samples
-} dface_t;
+    int32_t lightofs; // start of [numstyles*surfsize] samples
+};
 
-#define AMBIENT_WATER 0
-#define AMBIENT_SKY 1
-#define AMBIENT_SLIME 2
-#define AMBIENT_LAVA 3
+inline constexpr int AMBIENT_WATER = 0;
+inline constexpr int AMBIENT_SKY = 1;
+inline constexpr int AMBIENT_SLIME = 2;
+inline constexpr int AMBIENT_LAVA = 3;
 
-#define NUM_AMBIENTS 4 // automatic ambient sounds
+inline constexpr int NUM_AMBIENTS = 4; // automatic ambient sounds
 
 // leaf 0 is the generic CONTENTS_SOLID leaf, used for all solid areas
 // all other leafs need visibility info
-typedef struct {
-    int contents;
-    int visofs; // -1 = no visibility info
+struct dleaf_t {
+    int32_t contents;
+    int32_t visofs; // -1 = no visibility info
 
-    short mins[3]; // for frustum culling
-    short maxs[3];
+    int16_t mins[3]; // for frustum culling
+    int16_t maxs[3];
 
-    unsigned short firstmarksurface;
-    unsigned short nummarksurfaces;
+    uint16_t firstmarksurface;
+    uint16_t nummarksurfaces;
 
     byte ambient_level[NUM_AMBIENTS];
-} dleaf_t;
+};
 
 //============================================================================
 
 #ifndef QUAKE_GAME
 
-#define ANGLE_UP -1
-#define ANGLE_DOWN -2
+inline constexpr int ANGLE_UP = -1;
+inline constexpr int ANGLE_DOWN = -2;
 
 // the utilities get to be lazy and just use large static arrays
 
@@ -239,41 +247,41 @@ extern unsigned short dmarksurfaces[MAX_MAP_MARKSURFACES];
 extern int numsurfedges;
 extern int dsurfedges[MAX_MAP_SURFEDGES];
 
-void DecompressVis(byte* in, byte* decompressed);
-int CompressVis(byte* vis, byte* dest);
+void DecompressVis(const byte* in, byte* decompressed);
+int CompressVis(const byte* vis, byte* dest);
 
-void LoadBSPFile(char* filename);
-void WriteBSPFile(char* filename);
-void PrintBSPFileSizes(void);
+void LoadBSPFile(const char* filename);
+void WriteBSPFile(const char* filename);
+void PrintBSPFileSizes();
 
 //===============
 
-typedef struct epair_s {
-    struct epair_s* next;
-    char* key;
-    char* value;
-} epair_t;
+struct epair_t {
+    epair_t* next = nullptr;
+    char* key = nullptr;
+    char* value = nullptr;
+};
 
-typedef struct {
+struct entity_t {
     Vector3 origin;
-    int firstbrush;
-    int numbrushes;
-    epair_t* epairs;
-} entity_t;
+    int firstbrush = 0;
+    int numbrushes = 0;
+    epair_t* epairs = nullptr;
+};
 
 extern int num_entities;
 extern entity_t entities[MAX_MAP_ENTITIES];
 
-void ParseEntities(void);
-void UnparseEntities(void);
+void ParseEntities();
+void UnparseEntities();
 
-void SetKeyValue(entity_t* ent, char* key, char* value);
-char* ValueForKey(entity_t* ent, char* key);
+void SetKeyValue(entity_t* ent, const char* key, const char* value);
+const char* ValueForKey(entity_t* ent, const char* key);
 // will return "" if not present
 
-vec_t FloatForKey(entity_t* ent, char* key);
-void GetVectorForKey(entity_t* ent, char* key, Vector3& vec);
+vec_t FloatForKey(entity_t* ent, const char* key);
+void GetVectorForKey(entity_t* ent, const char* key, Vector3& vec);
 
-epair_t* ParseEpair(void);
+epair_t* ParseEpair();
 
 #endif
