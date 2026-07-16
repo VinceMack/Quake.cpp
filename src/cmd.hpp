@@ -1,10 +1,14 @@
 // cmd.h -- Command buffer and command execution
 #pragma once
 #include <string_view>
-
-typedef void (*xcommand_t)(void);
+#include <functional>
+#include <map>
+#include <string>
+#include <vector>
 
 namespace Cmd {
+
+using xcommand_t = std::function<void()>;
 
 enum class Source {
     Client,
@@ -15,16 +19,18 @@ struct State {
     Source source = Source::Command;
 };
 
-struct cmdalias_t {
-    cmdalias_t* next;
-    char name[32]; // MAX_ALIAS_NAME
-    char* value;
-};
-
-struct cmd_function_t {
-    cmd_function_t* next;
-    char* name;
-    xcommand_t function;
+struct CaseInsensitiveLess {
+    using is_transparent = void;
+    bool operator()(std::string_view lhs, std::string_view rhs) const {
+        return std::lexicographical_compare(
+            lhs.begin(), lhs.end(),
+            rhs.begin(), rhs.end(),
+            [](char a, char b) {
+                return std::tolower(static_cast<unsigned char>(a)) <
+                       std::tolower(static_cast<unsigned char>(b));
+            }
+        );
+    }
 };
 
 class CommandRegistry {
@@ -46,22 +52,21 @@ public:
     State& GetState() { return state_; }
     const State& GetState() const { return state_; }
 
-    cmd_function_t*& GetFunctions() { return cmd_functions_; }
-    cmdalias_t*& GetAliases() { return cmd_alias_; }
-    sizebuf_t& GetCmdText() { return cmd_text_; }
+    const std::map<std::string, std::string, CaseInsensitiveLess>& GetAliases() const { return aliases_; }
+    std::map<std::string, std::string, CaseInsensitiveLess>& GetAliases() { return aliases_; }
     bool& GetCmdWait() { return cmd_wait_; }
-    int& GetCmdArgc() { return cmd_argc_; }
-    char** GetCmdArgv() { return cmd_argv_; }
-    std::string_view& GetCmdArgs() { return cmd_args_; }
+
+    void AddAlias(std::string_view name, std::string_view value) {
+        aliases_[std::string(name)] = std::string(value);
+    }
 
 private:
     State state_;
-    sizebuf_t cmd_text_;
+    std::string cmd_text_;
     bool cmd_wait_ = false;
-    cmdalias_t* cmd_alias_ = nullptr;
-    cmd_function_t* cmd_functions_ = nullptr;
-    int cmd_argc_ = 0;
-    char* cmd_argv_[80]; // MAX_ARGS
+    std::map<std::string, std::string, CaseInsensitiveLess> aliases_;
+    std::map<std::string, xcommand_t, CaseInsensitiveLess> commands_;
+    std::vector<std::string> cmd_argv_;
     std::string_view cmd_args_;
 };
 
