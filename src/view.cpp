@@ -845,7 +845,7 @@ the entity origin, so any view position inside that will be valid
 */
 void V_RenderView(void)
 {
-    if (con_forcedup) {
+    if (GetConsoleSystem().IsForcedUp()) {
         return;
     }
 

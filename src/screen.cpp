@@ -480,9 +480,9 @@ void SCR_SetUpToDrawConsole(void)
     }
 
     // decide on the height of the console
-    con_forcedup = !cl.worldmodel || cls.signon != SIGNONS;
+    GetConsoleSystem().SetForcedUp(!cl.worldmodel || cls.signon != SIGNONS);
 
-    if (con_forcedup) {
+    if (GetConsoleSystem().IsForcedUp()) {
         scr_conlines = static_cast<float>(vid.height); // full screen
         scr_con_current = scr_conlines;
     } else if (key_dest == key_console) {
@@ -511,9 +511,9 @@ void SCR_SetUpToDrawConsole(void)
         Sbar_Changed();
     } else if (clearnotify++ < vid.numpages) {
         scr_copytop = 1;
-        Draw_TileClear(0, 0, vid.width, con_notifylines);
+        Draw_TileClear(0, 0, vid.width, GetConsoleSystem().GetNotifyLines());
     } else {
-        con_notifylines = 0;
+        GetConsoleSystem().SetNotifyLines(0);
     }
 }
 
@@ -833,7 +833,7 @@ void SCR_UpdateScreen(void)
         return; // stdout only
     }
 
-    if (!scr_initialized || !con_initialized) {
+    if (!scr_initialized || !GetConsoleSystem().IsInitialized()) {
         return; // not initialized yet
     }
 

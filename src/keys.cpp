@@ -240,32 +240,34 @@ void Key_Console(int key)
         return;
     }
 
+    auto& con = GetConsoleSystem();
     if (key == K_PGUP || key == K_MWHEELUP) {
-        con_backscroll += 2;
-        if (con_backscroll > con_totallines - (int)(vid.height >> 3) - 1) {
-            con_backscroll = con_totallines - (int)(vid.height >> 3) - 1;
+        con.SetBackscroll(con.GetBackscroll() + 2);
+        int max_scroll = con.GetTotalLines() - (int)(vid.height >> 3) - 1;
+        if (con.GetBackscroll() > max_scroll) {
+            con.SetBackscroll(max_scroll);
         }
 
         return;
     }
 
     if (key == K_PGDN || key == K_MWHEELDOWN) {
-        con_backscroll -= 2;
-        if (con_backscroll < 0) {
-            con_backscroll = 0;
+        con.SetBackscroll(con.GetBackscroll() - 2);
+        if (con.GetBackscroll() < 0) {
+            con.SetBackscroll(0);
         }
 
         return;
     }
 
     if (key == K_HOME) {
-        con_backscroll = con_totallines - (vid.height >> 3) - 1;
+        con.SetBackscroll(con.GetTotalLines() - (vid.height >> 3) - 1);
 
         return;
     }
 
     if (key == K_END) {
-        con_backscroll = 0;
+        con.SetBackscroll(0);
 
         return;
     }
@@ -713,7 +715,7 @@ void Key_Event(int key, qboolean down)
     //
     // if not a consolekey, send to the interpreter no matter what mode is
     //
-    if ((key_dest == key_menu && menubound[key]) || (key_dest == key_console && !consolekeys[key]) || (key_dest == key_game && (!con_forcedup || !consolekeys[key]))) {
+    if ((key_dest == key_menu && menubound[key]) || (key_dest == key_console && !consolekeys[key]) || (key_dest == key_game && (!GetConsoleSystem().IsForcedUp() || !consolekeys[key]))) {
         kb = keybindings[key];
         if (kb) {
             if (kb[0] == '+') { // button commands add keynum as a parm
