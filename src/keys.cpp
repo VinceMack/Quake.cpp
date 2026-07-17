@@ -1,6 +1,12 @@
 // keys.cpp -- keyboard input handling and key binding
 
 #include "quakedef.hpp"
+#include <array>
+#include <string>
+#include <string_view>
+#include <ostream>
+#include <tuple>
+#include <numeric>
 
 using namespace Client;
 using namespace Common;
@@ -25,16 +31,14 @@ using namespace Wad;
 using namespace Cvar;
 using namespace Cmd;
 
+namespace Keys {
 
-#define MAXCMDLINE 256
-char key_lines[32][MAXCMDLINE];
+std::array<std::array<char, MAXCMDLINE>, 32> key_lines;
 int key_linepos;
 int edit_line = 0;
 int history_line = 0;
-char chat_buffer[32];
-qboolean team_message = false;
-
-namespace Keys {
+std::array<char, 32> chat_buffer;
+bool team_message = false;
 
 /*
 
@@ -49,17 +53,17 @@ keydest_t key_dest;
 
 int key_count; // incremented every key event
 
-char* keybindings[256];
-qboolean consolekeys[256]; // if true, can't be rebound while in console
-qboolean menubound[256];   // if true, can't be rebound while in menu
-int keyshift[256];         // key to map to if shift held down in console
-int key_repeats[256];      // if > 1, it is autorepeating
-qboolean keydown[256];
+std::array<std::string, 256> keybindings;
+std::array<bool, 256> consolekeys; // if true, can't be rebound while in console
+std::array<bool, 256> menubound;   // if true, can't be rebound while in menu
+std::array<int, 256> keyshift;     // key to map to if shift held down in console
+std::array<int, 256> key_repeats;  // if > 1, it is autorepeating
+std::array<bool, 256> keydown;
 
-typedef struct {
+struct keyname_t {
     const char* name;
     int keynum;
-} keyname_t;
+};
 
 keyname_t keynames[] = {
     { "TAB", K_TAB },
@@ -145,7 +149,7 @@ keyname_t keynames[] = {
 
     { "SEMICOLON", ';' }, // because a raw semicolon seperates commands
 
-    { NULL, 0 }
+    { nullptr, 0 }
 };
 
 /*
@@ -166,9 +170,9 @@ Interactive line editing and console scrollback
 void Key_Console(int key)
 {
     if (key == K_ENTER) {
-        Cmd::BufferAddText(key_lines[edit_line] + 1); // skip the >
+        Cmd::BufferAddText(key_lines[edit_line].data() + 1); // skip the >
         Cmd::BufferAddText("\n");
-        Con_Printf("%s\n", key_lines[edit_line]);
+        Con_Printf("%s\n", key_lines[edit_line].data());
         edit_line = (edit_line + 1) & 31;
         history_line = edit_line;
         key_lines[edit_line][0] = ']';
@@ -182,14 +186,14 @@ void Key_Console(int key)
     }
 
     if (key == K_TAB) { // command completion
-        std::string_view cmd_view = Cmd::CompleteCommand(key_lines[edit_line] + 1);
+        std::string_view cmd_view = Cmd::CompleteCommand(key_lines[edit_line].data() + 1);
         if (cmd_view.empty()) {
-            cmd_view = Cvar::CompleteVariable(key_lines[edit_line] + 1);
+            cmd_view = Cvar::CompleteVariable(key_lines[edit_line].data() + 1);
         }
 
         if (!cmd_view.empty()) {
             std::string cmd_str(cmd_view);
-            Q_strcpy(key_lines[edit_line] + 1, cmd_str.c_str());
+            Q_strcpy(key_lines[edit_line].data() + 1, cmd_str.c_str());
             key_linepos = Q_strlen(cmd_str.c_str()) + 1;
             key_lines[edit_line][key_linepos] = ' ';
             key_linepos++;
@@ -215,8 +219,8 @@ void Key_Console(int key)
             history_line = (edit_line + 1) & 31;
         }
 
-        Q_strcpy(key_lines[edit_line], key_lines[history_line]);
-        key_linepos = Q_strlen(key_lines[edit_line]);
+        Q_strcpy(key_lines[edit_line].data(), key_lines[history_line].data());
+        key_linepos = Q_strlen(key_lines[edit_line].data());
 
         return;
     }
@@ -233,8 +237,8 @@ void Key_Console(int key)
             key_lines[edit_line][0] = ']';
             key_linepos = 1;
         } else {
-            Q_strcpy(key_lines[edit_line], key_lines[history_line]);
-            key_linepos = Q_strlen(key_lines[edit_line]);
+            Q_strcpy(key_lines[edit_line].data(), key_lines[history_line].data());
+            key_linepos = Q_strlen(key_lines[edit_line].data());
         }
 
         return;
@@ -296,7 +300,7 @@ void Key_Message(int key)
             Cmd::BufferAddText("say \"");
         }
 
-        Cmd::BufferAddText(chat_buffer);
+        Cmd::BufferAddText(chat_buffer.data());
         Cmd::BufferAddText("\"\n");
 
         key_dest = key_game;
@@ -408,25 +412,11 @@ Key_SetBinding
 */
 void Key_SetBinding(int keynum, const char* binding)
 {
-    char* new_binding;
-    int l;
-
-    if (keynum == -1) {
+    if (keynum < 0 || keynum >= 256) {
         return;
     }
 
-    // free old bindings
-    if (keybindings[keynum]) {
-        Z_Free(keybindings[keynum]);
-        keybindings[keynum] = NULL;
-    }
-
-    // allocate memory for new binding
-    l = Q_strlen(binding);
-    new_binding = (char*)Z_Malloc(l + 1);
-    Q_strcpy(new_binding, binding);
-    new_binding[l] = 0;
-    keybindings[keynum] = new_binding;
+    keybindings[keynum] = binding;
 }
 
 /*
@@ -434,7 +424,7 @@ void Key_SetBinding(int keynum, const char* binding)
 Key_Unbind_f
 ===================
 */
-void Key_Unbind_f(void)
+void Key_Unbind_f()
 {
     int b;
 
@@ -454,13 +444,11 @@ void Key_Unbind_f(void)
     Key_SetBinding(b, "");
 }
 
-void Key_Unbindall_f(void)
+void Key_Unbindall_f()
 {
-    int i;
-
-    for (i = 0; i < 256; i++) {
-        if (keybindings[i]) {
-            Key_SetBinding(i, "");
+    for (int i = 0; i < 256; i++) {
+        if (!keybindings[i].empty()) {
+            keybindings[i].clear();
         }
     }
 }
@@ -470,7 +458,7 @@ void Key_Unbindall_f(void)
 Key_Bind_f
 ===================
 */
-void Key_Bind_f(void)
+void Key_Bind_f()
 {
     int i, c, b;
     char cmd[1024];
@@ -491,8 +479,8 @@ void Key_Bind_f(void)
     }
 
     if (c == 2) {
-        if (keybindings[b]) {
-            Con_Printf("\"%s\" = \"%s\"\n", Cmd::Argv(1), keybindings[b]);
+        if (!keybindings[b].empty()) {
+            Con_Printf("\"%s\" = \"%s\"\n", Cmd::Argv(1), keybindings[b].c_str());
         } else {
             Con_Printf("\"%s\" is not bound\n", Cmd::Argv(1));
         }
@@ -523,10 +511,8 @@ Writes lines containing "bind key value"
 void Key_WriteBindings(std::ostream& f)
 {
     for (int i = 0; i < 256; i++) {
-        if (keybindings[i]) {
-            if (*keybindings[i]) {
-                f << "bind \"" << Key_KeynumToString(i) << "\" \"" << keybindings[i] << "\"\n";
-            }
+        if (!keybindings[i].empty()) {
+            f << "bind \"" << Key_KeynumToString(i) << "\" \"" << keybindings[i] << "\"\n";
         }
     }
 }
@@ -536,7 +522,7 @@ void Key_WriteBindings(std::ostream& f)
 Key_Init
 ===================
 */
-void Key_Init(void)
+void Key_Init()
 {
     int i;
 
@@ -616,9 +602,8 @@ Called by the system between frames for both key up and key down events
 Should NOT be called during an interrupt!
 ===================
 */
-void Key_Event(int key, qboolean down)
+void Key_Event(int key, bool down)
 {
-    char* kb;
     char cmd[1024];
 
     keydown[key] = down;
@@ -640,7 +625,7 @@ void Key_Event(int key, qboolean down)
             return; // ignore most autorepeats
         }
 
-        if (key >= 200 && !keybindings[key]) {
+        if (key >= 200 && keybindings[key].empty()) {
             Con_Printf("%s is unbound, hit F4 to set.\n", Key_KeynumToString(key));
         }
     }
@@ -683,16 +668,16 @@ void Key_Event(int key, qboolean down)
     // downs can be matched with ups
     //
     if (!down) {
-        kb = keybindings[key];
-        if (kb && kb[0] == '+') {
-            sprintf_s(cmd, sizeof(cmd), "-%s %i\n", kb + 1, key);
+        const auto& kb = keybindings[key];
+        if (!kb.empty() && kb[0] == '+') {
+            sprintf_s(cmd, sizeof(cmd), "-%s %i\n", kb.c_str() + 1, key);
             Cmd::BufferAddText(cmd);
         }
 
         if (keyshift[key] != key) {
-            kb = keybindings[keyshift[key]];
-            if (kb && kb[0] == '+') {
-                sprintf_s(cmd, sizeof(cmd), "-%s %i\n", kb + 1, key);
+            const auto& kb_shift = keybindings[keyshift[key]];
+            if (!kb_shift.empty() && kb_shift[0] == '+') {
+                sprintf_s(cmd, sizeof(cmd), "-%s %i\n", kb_shift.c_str() + 1, key);
                 Cmd::BufferAddText(cmd);
             }
         }
@@ -713,13 +698,13 @@ void Key_Event(int key, qboolean down)
     // if not a consolekey, send to the interpreter no matter what mode is
     //
     if ((key_dest == key_menu && menubound[key]) || (key_dest == key_console && !consolekeys[key]) || (key_dest == key_game && (!GetConsoleSystem().IsForcedUp() || !consolekeys[key]))) {
-        kb = keybindings[key];
-        if (kb) {
+        const auto& kb = keybindings[key];
+        if (!kb.empty()) {
             if (kb[0] == '+') { // button commands add keynum as a parm
-                sprintf_s(cmd, sizeof(cmd), "%s %i\n", kb, key);
+                sprintf_s(cmd, sizeof(cmd), "%s %i\n", kb.c_str(), key);
                 Cmd::BufferAddText(cmd);
             } else {
-                Cmd::BufferAddText(kb);
+                Cmd::BufferAddText(kb.c_str());
                 Cmd::BufferAddText("\n");
             }
         }

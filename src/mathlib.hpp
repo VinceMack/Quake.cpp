@@ -1,6 +1,9 @@
 // mathlib.hpp -- 3D math primitives (vectors, matrices, fixed-point)
 #pragma once
 #include <cmath>
+#include <utility>
+#include <numeric>
+#include <numbers>
 
 struct Vector3 {
     float x;
@@ -13,10 +16,14 @@ struct Vector3 {
 
     // Array subscript operators
     constexpr float operator[](size_t index) const {
-        return (&x)[index];
+        if (index == 0) return x;
+        if (index == 1) return y;
+        return z;
     }
     constexpr float& operator[](size_t index) {
-        return (&x)[index];
+        if (index == 0) return x;
+        if (index == 1) return y;
+        return z;
     }
 
     // Implicit conversions to raw pointers
@@ -105,7 +112,7 @@ typedef int fixed16_t;
 
 struct mplane_s;
 
-#define IS_NAN(x) (((*(int*)&x) & nanmask) == nanmask)
+#define IS_NAN(x) std::isnan(x)
 
 // Modern C++ template functions replacing legacy macros
 template <typename T, typename U>
@@ -136,8 +143,7 @@ inline constexpr void VectorCopy(const T& a, U&& b) {
 
 namespace Math {
 
-extern Vector3 vec3_origin;
-extern int nanmask;
+inline constexpr Vector3 vec3_origin = { 0.0f, 0.0f, 0.0f };
 
 // Implement all vector math operations as templates in the header
 template <typename T, typename U, typename V>
@@ -188,7 +194,7 @@ inline void VectorScale(const T& in, vec_t scale, U&& out) {
 void R_ConcatRotations(float in1[3][3], float in2[3][3], float out[3][3]);
 void R_ConcatTransforms(float in1[3][4], float in2[3][4], float out[3][4]);
 
-void FloorDivMod(double numer, double denom, int* quotient, int* rem);
+std::pair<int, int> FloorDivMod(double numer, double denom);
 int GreatestCommonDivisor(int i1, int i2);
 
 template <typename T, typename U, typename V, typename W>
@@ -196,13 +202,13 @@ inline void AngleVectors(const T& angles, U&& forward, V&& right, W&& up) {
     float angle;
     float sr, sp, sy, cr, cp, cy;
 
-    angle = angles[1] * (3.14159265358979323846f * 2 / 360); // YAW
+    angle = angles[1] * (std::numbers::pi_v<float> * 2 / 360); // YAW
     sy = std::sin(angle);
     cy = std::cos(angle);
-    angle = angles[0] * (3.14159265358979323846f * 2 / 360); // PITCH
+    angle = angles[0] * (std::numbers::pi_v<float> * 2 / 360); // PITCH
     sp = std::sin(angle);
     cp = std::cos(angle);
-    angle = angles[2] * (3.14159265358979323846f * 2 / 360); // ROLL
+    angle = angles[2] * (std::numbers::pi_v<float> * 2 / 360); // ROLL
     sr = std::sin(angle);
     cr = std::cos(angle);
 
@@ -279,9 +285,18 @@ float anglemod(float a);
 
 } // namespace Math
 
+template <typename T, typename U, typename P>
+inline int BoxOnPlaneSideFast(const T& emins, const U& emaxs, const P* p) {
+    if (p->type < 3) {
+        if (p->dist <= emins[p->type]) {
+            return 1;
+        }
+        if (p->dist >= emaxs[p->type]) {
+            return 2;
+        }
+        return 3;
+    }
+    return Math::BoxOnPlaneSide(emins, emaxs, const_cast<P*>(p));
+}
 
-#define BOX_ON_PLANE_SIDE(emins, emaxs, p)                                    \
-    (((p)->type < 3) ? (((p)->dist <= (emins)[(p)->type])                     \
-                               ? 1                                            \
-                               : (((p)->dist >= (emaxs)[(p)->type]) ? 2 : 3)) \
-                      : BoxOnPlaneSide((emins), (emaxs), (p)))
+#define BOX_ON_PLANE_SIDE(emins, emaxs, p) BoxOnPlaneSideFast(emins, emaxs, p)

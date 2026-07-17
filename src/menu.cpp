@@ -1412,15 +1412,15 @@ void M_FindKeysForCommand(const char* command, int* twokeys)
     int count;
     int j;
     int l;
-    char* b;
+    const char* b;
 
     twokeys[0] = twokeys[1] = -1;
     l = (int)strlen(command);
     count = 0;
 
     for (j = 0; j < 256; j++) {
-        b = keybindings[j];
-        if (!b) {
+        b = keybindings[j].c_str();
+        if (keybindings[j].empty()) {
             continue;
         }
 
@@ -1438,13 +1438,13 @@ void M_UnbindCommand(const char* command)
 {
     int j;
     int l;
-    char* b;
+    const char* b;
 
     l = (int)strlen(command);
 
     for (j = 0; j < 256; j++) {
-        b = keybindings[j];
-        if (!b) {
+        b = keybindings[j].c_str();
+        if (keybindings[j].empty()) {
             continue;
         }
 

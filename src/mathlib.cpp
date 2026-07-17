@@ -1,6 +1,8 @@
 // mathlib.cpp -- math primitives
 
-#include <math.h>
+#include <cmath>
+#include <numeric>
+#include <utility>
 #include "quakedef.hpp"
 
 using namespace Client;
@@ -26,11 +28,7 @@ using namespace Wad;
 using namespace Cvar;
 using namespace Cmd;
 
-
 namespace Math {
-
-Vector3 vec3_origin = { 0, 0, 0 };
-int nanmask = 255 << 23;
 
 /*-----------------------------------------------------------------*/
 
@@ -52,7 +50,7 @@ BOPS_Error
 Split out like this for ASM to call.
 ==================
 */
-void BOPS_Error(void)
+void BOPS_Error()
 {
     Sys_Error("BoxOnPlaneSide:  Bad signbits");
 }
@@ -106,30 +104,29 @@ quotient must fit in 32 bits.
 ====================
 */
 
-void FloorDivMod(double numer, double denom, int* quotient, int* rem)
+std::pair<int, int> FloorDivMod(double numer, double denom)
 {
     int q, r;
     double x;
 
     if (numer >= 0.0) {
-        x = floor(numer / denom);
-        q = (int)x;
-        r = (int)floor(numer - (x * denom));
+        x = std::floor(numer / denom);
+        q = static_cast<int>(x);
+        r = static_cast<int>(std::floor(numer - (x * denom)));
     } else {
         //
         // perform operations with positive values, and fix mod to make floor-based
         //
-        x = floor(-numer / denom);
-        q = -(int)x;
-        r = (int)floor(-numer - (x * denom));
+        x = std::floor(-numer / denom);
+        q = -static_cast<int>(x);
+        r = static_cast<int>(std::floor(-numer - (x * denom)));
         if (r != 0) {
             q--;
-            r = (int)denom - r;
+            r = static_cast<int>(denom) - r;
         }
     }
 
-    *quotient = q;
-    *rem = r;
+    return {q, r};
 }
 
 /*
@@ -139,19 +136,7 @@ GreatestCommonDivisor
 */
 int GreatestCommonDivisor(int i1, int i2)
 {
-    if (i1 > i2) {
-        if (i2 == 0) {
-            return (i1);
-        }
-
-        return GreatestCommonDivisor(i2, i1 % i2);
-    } else {
-        if (i1 == 0) {
-            return (i2);
-        }
-
-        return GreatestCommonDivisor(i1, i2 % i1);
-    }
+    return std::gcd(i1, i2);
 }
 
 } // namespace Math

@@ -2013,7 +2013,7 @@ void PF_setorigin(void)
     SV_LinkEdict(e, false);
 }
 
-void SetMinMaxSize(edict_t* e, float* min, float* max, qboolean rotate)
+void SetMinMaxSize(edict_t* e, const float* min, const float* max, qboolean rotate)
 {
     float* angles;
     Vector3 rmin, rmax;

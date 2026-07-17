@@ -409,7 +409,7 @@ void ConsoleSystem::DrawInput()
         return; // don't draw anything
     }
 
-    char* text = key_lines[edit_line];
+    char* text = key_lines[edit_line].data();
 
     // add the cursor frame
     text[key_linepos] = static_cast<char>(10 + ((int)(realtime * cursorspeed_) & 1));

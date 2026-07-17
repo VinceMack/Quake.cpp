@@ -4,6 +4,8 @@
 //              d_scan.cpp, d_sky.cpp, d_surf.cpp, d_sprite.cpp, d_polyse.cpp
 
 #include "quakedef.hpp"
+#include <tuple>
+#include <utility>
 
 using namespace Client;
 using namespace Common;
@@ -1851,7 +1853,7 @@ void D_PolysetSetUpForLineScan(fixed8_t startvertu,
     dm = (double)tm;
     dn = (double)tn;
 
-    FloorDivMod(dm, dn, &ubasestep, &erroradjustup);
+    std::tie(ubasestep, erroradjustup) = FloorDivMod(dm, dn);
 
     erroradjustdown = tn;
 }
