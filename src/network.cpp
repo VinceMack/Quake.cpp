@@ -2096,14 +2096,14 @@ static qsocket_t* _Datagram_Connect(const char* host)
     if (ret == 0) {
         reason = "No Response";
         Con_Printf("%s\n", reason);
-        Q_strcpy(m_return_reason, reason);
+        m_return_reason = reason;
         goto ErrorReturn;
     }
 
     if (ret == -1) {
         reason = "Network Error";
         Con_Printf("%s\n", reason);
-        Q_strcpy(m_return_reason, reason);
+        m_return_reason = reason;
         goto ErrorReturn;
     }
 
@@ -2111,7 +2111,7 @@ static qsocket_t* _Datagram_Connect(const char* host)
     if (ret == CCREP_REJECT) {
         reason = MSG_ReadString();
         Con_Printf(reason);
-        Q_strncpy(m_return_reason, reason, 31);
+        m_return_reason = reason;
         goto ErrorReturn;
     }
 
@@ -2121,7 +2121,7 @@ static qsocket_t* _Datagram_Connect(const char* host)
     } else {
         reason = "Bad Response";
         Con_Printf("%s\n", reason);
-        Q_strcpy(m_return_reason, reason);
+        m_return_reason = reason;
         goto ErrorReturn;
     }
 
@@ -2134,7 +2134,7 @@ static qsocket_t* _Datagram_Connect(const char* host)
     if (dfunc.Connect(newsock, &sock->addr) == -1) {
         reason = "Connect to Game failed";
         Con_Printf("%s\n", reason);
-        Q_strcpy(m_return_reason, reason);
+        m_return_reason = reason;
         goto ErrorReturn;
     }
 

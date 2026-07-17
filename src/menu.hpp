@@ -1,24 +1,45 @@
 // menu.h -- menu system declarations
 #pragma once
-#define MNET_IPX 1
-#define MNET_TCP 2
 
-extern int m_activenet;
+#include <string>
 
 namespace Menu {
 
-void M_Init(void);
+enum class MenuState {
+    None,
+    Main,
+    SinglePlayer,
+    Load,
+    Save,
+    MultiPlayer,
+    Setup,
+    Net,
+    Options,
+    Video,
+    Keys,
+    Help,
+    Quit,
+    SerialConfig,
+    ModemConfig,
+    LanConfig,
+    GameOptions,
+    Search,
+    SList
+};
+
+void M_Init();
 void M_Keydown(int key);
-void M_Draw(void);
-void M_ToggleMenu_f(void);
-void M_Menu_Main_f(void);
-void M_Menu_Quit_f(void);
+void M_Draw();
+void M_ToggleMenu_f();
+void M_Menu_Main_f();
+void M_Menu_Quit_f();
 
 void M_DrawPic(int x, int y, qpic_t* pic);
 
-extern int m_state;
-extern int m_return_state;
-extern qboolean m_return_onerror;
-extern char m_return_reason[32];
+extern MenuState m_state;
+extern MenuState m_return_state;
+extern bool m_return_onerror;
+extern std::string m_return_reason;
 
 } // namespace Menu
+
