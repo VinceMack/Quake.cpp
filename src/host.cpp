@@ -1,5 +1,9 @@
 // host.cpp -- coordinates spawning and killing of local servers
 
+#include <fstream>
+#include <string>
+#include <string_view>
+#include <limits>
 #include "quakedef.hpp"
 
 using namespace Client;
@@ -144,13 +148,11 @@ This shuts down both the client and server
 Host_FindMaxClients
 ================
 */
-void Host_FindMaxClients(void)
+void Host_FindMaxClients()
 {
-    int i;
-
     svs.maxclients = 1;
 
-    i = COM_CheckParm("-dedicated");
+    int i = COM_CheckParm("-dedicated");
     if (i) {
         cls.state = ca_dedicated;
         if (i != (com_argc - 1)) {
@@ -186,7 +188,7 @@ void Host_FindMaxClients(void)
         svs.maxclientslimit = 4;
     }
 
-    svs.clients = (client_s *) Hunk_Alloc(svs.maxclientslimit * sizeof(client_t), "clients");
+    svs.clients = static_cast<client_t*>(Hunk_Alloc(svs.maxclientslimit * sizeof(client_t), "clients"));
 
     if (svs.maxclients > 1) {
         Cvar::SetValue("deathmatch", 1.0);
@@ -200,7 +202,7 @@ void Host_FindMaxClients(void)
 Host_InitLocal
 ======================
 */
-void Host_InitLocal(void)
+void Host_InitLocal()
 {
     Host_InitCommands();
 
@@ -236,15 +238,14 @@ Host_WriteConfiguration
 Writes key bindings and archived cvars to config.cfg
 ===============
 */
-void Host_WriteConfiguration(void)
+void Host_WriteConfiguration()
 {
-    FILE* f;
-
     // dedicated servers initialize the host but don't parse and set the
     // config.cfg cvars
-    if (host_initialized & !isDedicated) {
-        fopen_s(&f, va("%s/config.cfg", com_gamedir), "w");
-        if (!f) {
+    if (host_initialized && !isDedicated) {
+        std::string config_path = std::string(com_gamedir) + "/config.cfg";
+        std::ofstream f(config_path);
+        if (!f.is_open()) {
             Con_Printf("Couldn't write config.cfg.\n");
 
             return;
@@ -252,8 +253,6 @@ void Host_WriteConfiguration(void)
 
         Key_WriteBindings(f);
         Cvar::WriteVariables(f);
-
-        fclose(f);
     }
 }
 
@@ -295,13 +294,12 @@ void SV_BroadcastPrintf(const char* fmt, ...)
 {
     va_list argptr;
     char string[1024];
-    int i;
 
     va_start(argptr, fmt);
     vsprintf_s(string, sizeof(string), fmt, argptr);
     va_end(argptr);
 
-    for (i = 0; i < svs.maxclients; i++) {
+    for (int i = 0; i < svs.maxclients; i++) {
         if (svs.clients[i].active && svs.clients[i].spawned) {
             MSG_WriteByte(&svs.clients[i].message, svc_print);
             MSG_WriteString(&svs.clients[i].message, string);
@@ -321,10 +319,6 @@ if (crash = true), don't bother sending signofs
 */
 void SV_DropClient(qboolean crash)
 {
-    int saveSelf;
-    int i;
-    client_t* client;
-
     if (!crash) {
         // send any final messages (don't check for errors)
         if (NET_CanSendMessage(host_client->netconnection)) {
@@ -335,7 +329,7 @@ void SV_DropClient(qboolean crash)
         if (host_client->edict && host_client->spawned) {
             // call the prog function for removing a client
             // this will set the body to a dead frame, among other things
-            saveSelf = pr_global_struct->self;
+            int saveSelf = pr_global_struct->self;
             pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(host_client->edict));
             PR_ExecuteProgram(pr_global_struct->ClientDisconnect);
             pr_global_struct->self = saveSelf;
@@ -355,7 +349,8 @@ void SV_DropClient(qboolean crash)
     net_activeconnections--;
 
     // send notification to all clients
-    for (i = 0, client = svs.clients; i < svs.maxclients; i++, client++) {
+    for (int i = 0; i < svs.maxclients; i++) {
+        client_t* client = &svs.clients[i];
         if (!client->active) {
             continue;
         }
@@ -405,12 +400,6 @@ This only happens at the end of a game, not between levels
 */
 void Host_ShutdownServer(qboolean crash)
 {
-    int i;
-    int count;
-    sizebuf_t buf;
-    char message[4];
-    double start;
-
     if (!sv.active) {
         return;
     }
@@ -423,11 +412,12 @@ void Host_ShutdownServer(qboolean crash)
     }
 
     // flush any pending messages - like the score!!!
-    start = Sys_FloatTime();
+    double start = Sys_FloatTime();
+    int count;
     do {
         count = 0;
-        for (i = 0, host_client = svs.clients; i < svs.maxclients;
-            i++, host_client++) {
+        for (int i = 0; i < svs.maxclients; i++) {
+            host_client = &svs.clients[i];
             if (host_client->active && host_client->message.cursize) {
                 if (NET_CanSendMessage(host_client->netconnection)) {
                     NET_SendMessage(host_client->netconnection, &host_client->message);
@@ -444,6 +434,8 @@ void Host_ShutdownServer(qboolean crash)
     } while (count);
 
     // make sure all the clients know we're disconnecting
+    char message[4];
+    sizebuf_t buf;
     buf.data = (byte*)message;
     buf.maxsize = 4;
     buf.cursize = 0;
@@ -454,8 +446,8 @@ void Host_ShutdownServer(qboolean crash)
             count);
     }
 
-    for (i = 0, host_client = svs.clients; i < svs.maxclients;
-        i++, host_client++) {
+    for (int i = 0; i < svs.maxclients; i++) {
+        host_client = &svs.clients[i];
         if (host_client->active) {
             SV_DropClient(crash);
         }
@@ -465,7 +457,7 @@ void Host_ShutdownServer(qboolean crash)
     // clear structures
     //
     memset(&sv, 0, sizeof(sv));
-    for (i = 0; i < svs.maxclientslimit; i++) {
+    for (int i = 0; i < svs.maxclientslimit; i++) {
         svs.clients[i] = {};
     }
 }
@@ -478,7 +470,7 @@ This clears all the memory used by both the client and server, but does
 not reinitialize anything.
 ================
 */
-void Host_ClearMemory(void)
+void Host_ClearMemory()
 {
     Con_DPrintf("Clearing memory\n");
     D_FlushCaches();
@@ -534,12 +526,10 @@ Host_GetConsoleCommands
 Add them exactly as if they had been typed at the console
 ===================
 */
-void Host_GetConsoleCommands(void)
+void Host_GetConsoleCommands()
 {
-    char* cmd;
-
     while (1) {
-        cmd = Sys_ConsoleInput();
+        char* cmd = Sys_ConsoleInput();
         if (!cmd) {
             break;
         }
@@ -556,7 +546,7 @@ Host_ServerFrame
 */
 #ifdef FPS_20
 
-void _Host_ServerFrame(void)
+void _Host_ServerFrame()
 {
     // run the world state
     pr_global_struct->frametime = host_frametime;
@@ -571,11 +561,8 @@ void _Host_ServerFrame(void)
     }
 }
 
-void Host_ServerFrame(void)
+void Host_ServerFrame()
 {
-    float save_host_frametime;
-    float temp_host_frametime;
-
     // run the world state
     pr_global_struct->frametime = host_frametime;
 
@@ -585,7 +572,8 @@ void Host_ServerFrame(void)
     // check for new clients
     SV_CheckForNewClients();
 
-    temp_host_frametime = save_host_frametime = host_frametime;
+    float save_host_frametime = host_frametime;
+    float temp_host_frametime = host_frametime;
     while (temp_host_frametime > (1.0 / 72.0)) {
         if (temp_host_frametime > 0.05) {
             host_frametime = 0.05;
@@ -604,7 +592,7 @@ void Host_ServerFrame(void)
 
 #else
 
-void Host_ServerFrame(void)
+void Host_ServerFrame()
 {
     // run the world state
     pr_global_struct->frametime = static_cast<float>(host_frametime);
@@ -642,7 +630,6 @@ void _Host_Frame(float time)
     static double time1 = 0;
     static double time2 = 0;
     static double time3 = 0;
-    int pass1, pass2, pass3;
 
     try {
         // keep the random time dependent
@@ -722,10 +709,10 @@ void _Host_Frame(float time)
 
 
         if (host_speeds.value) {
-            pass1 = static_cast<int>((time1 - time3) * 1000);
+            int pass1 = static_cast<int>((time1 - time3) * 1000);
             time3 = Sys_FloatTime();
-            pass2 = static_cast<int>((time2 - time1) * 1000);
-            pass3 = static_cast<int>((time3 - time2) * 1000);
+            int pass2 = static_cast<int>((time2 - time1) * 1000);
+            int pass3 = static_cast<int>((time3 - time2) * 1000);
             Con_Printf("%3i tot %3i server %3i gfx %3i snd\n", pass1 + pass2 + pass3,
                 pass1, pass2, pass3);
         }
@@ -738,10 +725,8 @@ void _Host_Frame(float time)
 
 void Host_Frame(float time)
 {
-    double time1, time2;
     static double timetotal;
     static int timecount;
-    int i, c, m;
 
     if (!serverprofile.value) {
         _Host_Frame(time);
@@ -749,9 +734,9 @@ void Host_Frame(float time)
         return;
     }
 
-    time1 = Sys_FloatTime();
+    double time1 = Sys_FloatTime();
     _Host_Frame(time);
-    time2 = Sys_FloatTime();
+    double time2 = Sys_FloatTime();
 
     timetotal += time2 - time1;
     timecount++;
@@ -760,11 +745,11 @@ void Host_Frame(float time)
         return;
     }
 
-    m = static_cast<int>(timetotal * 1000 / timecount);
+    int m = static_cast<int>(timetotal * 1000 / timecount);
     timecount = 0;
     timetotal = 0;
-    c = 0;
-    for (i = 0; i < svs.maxclients; i++) {
+    int c = 0;
+    for (int i = 0; i < svs.maxclients; i++) {
         if (svs.clients[i].active) {
             c++;
         }
@@ -781,9 +766,6 @@ void Host_Frame(float time)
 
 void Host_InitVCR(quakeparms_t* parms)
 {
-    int i, len, n;
-    char* p;
-
     if (COM_CheckParm("-playback")) {
         if (com_argc != 2) {
             Sys_Error("No other parameters allowed with -playback\n");
@@ -794,17 +776,19 @@ void Host_InitVCR(quakeparms_t* parms)
             Sys_Error("playback file not found\n");
         }
 
-        Sys_FileRead(vcrFile, &i, sizeof(int));
-        if (i != VCR_SIGNATURE) {
+        int signature = 0;
+        Sys_FileRead(vcrFile, &signature, sizeof(int));
+        if (signature != VCR_SIGNATURE) {
             Sys_Error("Invalid signature in vcr file\n");
         }
 
         Sys_FileRead(vcrFile, &com_argc, sizeof(int));
-        com_argv = (char**)malloc(com_argc * sizeof(char*));
+        com_argv = static_cast<char**>(malloc(com_argc * sizeof(char*)));
         com_argv[0] = parms->argv[0];
-        for (i = 0; i < com_argc; i++) {
+        for (int i = 0; i < com_argc; i++) {
+            int len = 0;
             Sys_FileRead(vcrFile, &len, sizeof(int));
-            p = (char*)malloc(len);
+            char* p = static_cast<char*>(malloc(len));
             Sys_FileRead(vcrFile, p, len);
             com_argv[i + 1] = p;
         }
@@ -813,22 +797,23 @@ void Host_InitVCR(quakeparms_t* parms)
         parms->argv = com_argv;
     }
 
-    if ((n = COM_CheckParm("-record")) != 0) {
+    int n = COM_CheckParm("-record");
+    if (n != 0) {
         vcrFile = Sys_FileOpenWrite("quake.vcr");
 
-        i = VCR_SIGNATURE;
-        Sys_FileWrite(vcrFile, &i, sizeof(int));
-        i = com_argc - 1;
-        Sys_FileWrite(vcrFile, &i, sizeof(int));
-        for (i = 1; i < com_argc; i++) {
+        int signature = VCR_SIGNATURE;
+        Sys_FileWrite(vcrFile, &signature, sizeof(int));
+        int count = com_argc - 1;
+        Sys_FileWrite(vcrFile, &count, sizeof(int));
+        for (int i = 1; i < com_argc; i++) {
             if (i == n) {
-                len = 10;
+                int len = 10;
                 Sys_FileWrite(vcrFile, &len, sizeof(int));
                 Sys_FileWrite(vcrFile, "-playback", len);
                 continue;
             }
 
-            len = Q_strlen(com_argv[i]) + 1;
+            int len = Q_strlen(com_argv[i]) + 1;
             Sys_FileWrite(vcrFile, &len, sizeof(int));
             Sys_FileWrite(vcrFile, com_argv[i], len);
         }
@@ -927,7 +912,7 @@ FIXME: this is a callback from Sys_Quit and Sys_Error.  It would be better
 to run quit through here before the final handoff to the sys code.
 ===============
 */
-void Host_Shutdown(void)
+void Host_Shutdown()
 {
     static qboolean isdown = false;
 

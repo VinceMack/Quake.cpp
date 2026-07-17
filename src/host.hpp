@@ -4,14 +4,14 @@
 #include "common.hpp"
 #include "cvar.hpp"
 
-typedef struct {
+struct quakeparms_t {
     const char* basedir;
     const char* cachedir;
     int argc;
     char** argv;
     void* membase;
     int memsize;
-} quakeparms_t;
+};
 
 namespace Host {
 

@@ -1,5 +1,6 @@
 // keys.h -- keycode definitions and key event declarations
 #pragma once
+#include <ostream>
 #define K_TAB 9
 #define K_ENTER 13
 #define K_ESCAPE 27
@@ -115,7 +116,7 @@ extern int key_lastpress;
 
 void Key_Event(int key, qboolean down);
 void Key_Init(void);
-void Key_WriteBindings(FILE* f);
+void Key_WriteBindings(std::ostream& f);
 void Key_SetBinding(int keynum, const char* binding);
 const char* Key_KeynumToString(int keynum);
 

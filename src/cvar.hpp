@@ -3,6 +3,7 @@
 #include <string>
 #include <string_view>
 #include <cstdio>
+#include <ostream>
 #include <unordered_map>
 
 struct cvar_s {
@@ -30,7 +31,7 @@ public:
     std::string_view VariableString(std::string_view var_name);
     std::string_view CompleteVariable(std::string_view partial);
     bool Command();
-    void WriteVariables(std::FILE* f);
+    void WriteVariables(std::ostream& f);
     cvar_t* FindVar(std::string_view var_name);
 
     State& GetState() { return state_; }
@@ -52,7 +53,7 @@ float VariableValue(std::string_view var_name);
 std::string_view VariableString(std::string_view var_name);
 std::string_view CompleteVariable(std::string_view partial);
 bool Command();
-void WriteVariables(std::FILE* f);
+void WriteVariables(std::ostream& f);
 cvar_t* FindVar(std::string_view var_name);
 
 } // namespace Cvar

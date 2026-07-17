@@ -191,11 +191,11 @@ bool CvarRegistry::Command()
 WriteVariables
 ============
 */
-void CvarRegistry::WriteVariables(std::FILE* f)
+void CvarRegistry::WriteVariables(std::ostream& f)
 {
     for (cvar_t* var = state_.vars; var; var = var->next) {
         if (var->archive) {
-            std::fprintf(f, "%s \"%s\"\n", var->name.c_str(), var->string.c_str());
+            f << var->name << " \"" << var->string << "\"\n";
         }
     }
 }
@@ -241,7 +241,7 @@ bool Command()
     return GetCvarRegistry().Command();
 }
 
-void WriteVariables(std::FILE* f)
+void WriteVariables(std::ostream& f)
 {
     GetCvarRegistry().WriteVariables(f);
 }
