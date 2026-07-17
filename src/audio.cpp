@@ -1102,8 +1102,12 @@ void S_LocalSound(std::string_view sound)
     }
 
     sfx_t* sfx = S_FindName(sound);
-    if (!sfx || !Cache_Check(&sfx->cache)) {
-        Con_Printf("WARNING: S_LocalSound attempted to play non-precached sound: %.*s\n", 
+    if (!sfx) {
+        return;
+    }
+
+    if (!S_LoadSound(sfx)) {
+        Con_Printf("WARNING: S_LocalSound: can't load %.*s\n", 
                    static_cast<int>(sound.length()), sound.data());
         return;
     }
