@@ -28,11 +28,11 @@ extern byte* host_colormap;
 extern int host_framecount;
 extern double realtime;
 
-void Host_ClearMemory(void);
-void Host_ServerFrame(void);
-void Host_InitCommands(void);
+void Host_ClearMemory();
+void Host_ServerFrame();
+void Host_InitCommands();
 void Host_Init(quakeparms_t* parms);
-void Host_Shutdown(void);
+void Host_Shutdown();
 class HostException : public std::runtime_error {
 public:
     explicit HostException(const std::string& msg) : std::runtime_error(msg) {}
@@ -51,7 +51,7 @@ public:
 [[noreturn]] void Host_Error(const char* error, ...);
 [[noreturn]] void Host_EndGame(const char* message, ...);
 void Host_Frame(float time);
-void Host_Quit_f(void);
+void Host_Quit_f();
 void Host_ClientCommands(const char* fmt, ...);
 void Host_ShutdownServer(qboolean crash);
 

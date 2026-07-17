@@ -503,33 +503,28 @@ ED_Write
 For savegames
 =============
 */
-void ED_Write(FILE* f, edict_t* ed)
+void ED_Write(std::ostream& f, edict_t* ed)
 {
-    ddef_t* d;
-    int* v;
-    int i, j;
-    char* name;
-    int type;
-
-    fprintf(f, "{\n");
+    f << "{\n";
 
     if (ed->free) {
-        fprintf(f, "}\n");
+        f << "}\n";
 
         return;
     }
 
-    for (i = 1; i < progs->numfielddefs; i++) {
-        d = &pr_fielddefs[i];
-        name = PR_GetString(d->s_name);
+    for (int i = 1; i < progs->numfielddefs; i++) {
+        ddef_t* d = &pr_fielddefs[i];
+        const char* name = PR_GetString(d->s_name);
         if (name[strlen(name) - 2] == '_') {
             continue; // skip _x, _y, _z vars
         }
 
-        v = (int*)((char*)&ed->v + d->ofs * 4);
+        int* v = (int*)((char*)&ed->v + d->ofs * 4);
 
         // if the value is still all 0, skip the field
-        type = d->type & ~DEF_SAVEGLOBAL;
+        int type = d->type & ~DEF_SAVEGLOBAL;
+        int j;
         for (j = 0; j < type_size[type]; j++) {
             if (v[j]) {
                 break;
@@ -539,11 +534,11 @@ void ED_Write(FILE* f, edict_t* ed)
             continue;
         }
 
-        fprintf(f, "\"%s\" ", name);
-        fprintf(f, "\"%s\"\n", PR_UglyValueString((etype_t)d->type, (eval_t*)v));
+        f << "\"" << name << "\" ";
+        f << "\"" << PR_UglyValueString(static_cast<etype_t>(d->type), reinterpret_cast<eval_t*>(v)) << "\"\n";
     }
 
-    fprintf(f, "}\n");
+    f << "}\n";
 }
 
 inline void ED_PrintNum(int ent)
@@ -644,17 +639,12 @@ FIXME: need to tag constants, doesn't really work
 ED_WriteGlobals
 =============
 */
-void ED_WriteGlobals(FILE* f)
+void ED_WriteGlobals(std::ostream& f)
 {
-    ddef_t* def;
-    int i;
-    char* name;
-    int type;
-
-    fprintf(f, "{\n");
-    for (i = 0; i < progs->numglobaldefs; i++) {
-        def = &pr_globaldefs[i];
-        type = def->type;
+    f << "{\n";
+    for (int i = 0; i < progs->numglobaldefs; i++) {
+        ddef_t* def = &pr_globaldefs[i];
+        int type = def->type;
         if (!(def->type & DEF_SAVEGLOBAL)) {
             continue;
         }
@@ -665,12 +655,11 @@ void ED_WriteGlobals(FILE* f)
             continue;
         }
 
-        name = PR_GetString(def->s_name);
-        fprintf(f, "\"%s\" ", name);
-        fprintf(f, "\"%s\"\n",
-            PR_UglyValueString((etype_t)type, (eval_t*)&pr_globals[def->ofs]));
+        const char* name = PR_GetString(def->s_name);
+        f << "\"" << name << "\" ";
+        f << "\"" << PR_UglyValueString(static_cast<etype_t>(type), reinterpret_cast<eval_t*>(&pr_globals[def->ofs])) << "\"\n";
     }
-    fprintf(f, "}\n");
+    f << "}\n";
 }
 
 /*
