@@ -5,6 +5,12 @@
 #pragma warning(disable : 4229) // mgraph gets this
 
 #include <windows.h>
+#ifdef GetMessage
+#undef GetMessage
+#endif
+#ifdef SendMessage
+#undef SendMessage
+#endif
 #define WM_MOUSEWHEEL 0x020A
 
 #ifndef SERVERONLY

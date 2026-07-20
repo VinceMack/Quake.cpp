@@ -1,6 +1,15 @@
 // network.hpp -- quake's interface to the networking layer
 #pragma once
 
+#ifdef _WIN32
+#ifdef GetMessage
+#undef GetMessage
+#endif
+#ifdef SendMessage
+#undef SendMessage
+#endif
+#endif
+
 #include <EASTL/array.h>
 #include <EASTL/vector.h>
 #include <EASTL/unique_ptr.h>

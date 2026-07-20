@@ -37,6 +37,13 @@ using namespace Cmd;
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#ifdef GetMessage
+#undef GetMessage
+#endif
+#ifdef SendMessage
+#undef SendMessage
+#endif
+
 #define ioctl ioctlsocket
 #define close closesocket
 #ifndef EWOULDBLOCK
