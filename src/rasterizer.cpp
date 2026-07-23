@@ -543,6 +543,7 @@ void D_WarpScreen()
     eastl::array<byte*, MAXHEIGHT + (AMP2 * 2)> rowptr{};
     eastl::array<int, MAXWIDTH + (AMP2 * 2)> column{};
     float wratio, hratio;
+    const auto& scr_vrect = GetScreenSystem().GetVrect();
 
     w = r_refdef.vrect.width;
     h = r_refdef.vrect.height;

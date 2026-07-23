@@ -1992,7 +1992,7 @@ static qsocket_t* _Datagram_Connect(const char* host)
 
     // send the connection request
     Con_Printf("trying...\n");
-    SCR_UpdateScreen();
+    Screen::GetScreenSystem().UpdateScreen();
     start_time = net_time;
 
     for (reps = 0; reps < 3; reps++) {
@@ -2015,7 +2015,7 @@ static qsocket_t* _Datagram_Connect(const char* host)
                     Con_Printf("wrong reply address\n");
                     Con_Printf("Expected: %s\n", StrAddr(&sendaddr));
                     Con_Printf("Received: %s\n", StrAddr(&readaddr));
-                    SCR_UpdateScreen();
+                    Screen::GetScreenSystem().UpdateScreen();
 #endif
                     ret = 0;
                     continue;
@@ -2052,7 +2052,7 @@ static qsocket_t* _Datagram_Connect(const char* host)
         }
 
         Con_Printf("still trying...\n");
-        SCR_UpdateScreen();
+        Screen::GetScreenSystem().UpdateScreen();
         start_time = SetNetTime();
     }
 

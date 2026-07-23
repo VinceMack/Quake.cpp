@@ -1105,7 +1105,7 @@ void SV_SpawnServer(char* server)
         Cvar::Set("hostname", "UNNAMED");
     }
 
-    Screen::scr_centertime_off = 0;
+    Screen::GetScreenSystem().SetCentertimeOff(0.0f);
 
     Con_DPrintf("SpawnServer: %s\n", server);
     svs.changelevel_issued = false; // now safe to issue another

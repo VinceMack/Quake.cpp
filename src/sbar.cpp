@@ -802,7 +802,7 @@ Sbar_Draw
 */
 void Sbar_Draw()
 {
-    if (scr_con_current == vid.height) {
+    if (Screen::GetScreenSystem().GetConCurrent() == vid.height) {
         return; // console is full screen
     }
 
@@ -810,7 +810,7 @@ void Sbar_Draw()
         return;
     }
 
-    scr_copyeverything = 1;
+    Screen::GetScreenSystem().SetCopyeverything(1);
 
     sb_updates++;
 
@@ -960,8 +960,8 @@ Sbar_DeathmatchOverlay
 */
 void Sbar_DeathmatchOverlay()
 {
-    scr_copyeverything = 1;
-    scr_fullupdate = 0;
+    Screen::GetScreenSystem().SetCopyeverything(1);
+    Screen::GetScreenSystem().SetFullupdate(0);
 
     qpic_t* pic = Draw_CachePic("gfx/ranking.lmp");
     M_DrawPic((320 - pic->width) / 2, 8, pic);
@@ -1022,8 +1022,8 @@ void Sbar_MiniDeathmatchOverlay()
         return;
     }
 
-    scr_copyeverything = 1;
-    scr_fullupdate = 0;
+    Screen::GetScreenSystem().SetCopyeverything(1);
+    Screen::GetScreenSystem().SetFullupdate(0);
 
     // scores
     Sbar_SortFrags();
@@ -1103,8 +1103,8 @@ Sbar_IntermissionOverlay
 */
 void Sbar_IntermissionOverlay()
 {
-    scr_copyeverything = 1;
-    scr_fullupdate = 0;
+    Screen::GetScreenSystem().SetCopyeverything(1);
+    Screen::GetScreenSystem().SetFullupdate(0);
 
     if (cl.gametype == GAME_DEATHMATCH) {
         Sbar_DeathmatchOverlay();
@@ -1143,7 +1143,7 @@ Sbar_FinaleOverlay
 */
 void Sbar_FinaleOverlay()
 {
-    scr_copyeverything = 1;
+    Screen::GetScreenSystem().SetCopyeverything(1);
 
     qpic_t* pic = Draw_CachePic("gfx/finale.lmp");
     Draw_TransPic((vid.width - pic->width) / 2, 16, pic);

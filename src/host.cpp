@@ -120,7 +120,7 @@ This shuts down both the client and server
 
     inerror = true;
 
-    SCR_EndLoadingPlaque(); // reenable screen updates
+    Screen::GetScreenSystem().EndLoadingPlaque(); // reenable screen updates
 
     va_start(argptr, error);
     vsprintf_s(string, sizeof(string), error, argptr);
@@ -692,7 +692,7 @@ void _Host_Frame(float time)
         time1 = Sys_FloatTime();
     }
 
-    SCR_UpdateScreen();
+    Screen::GetScreenSystem().UpdateScreen();
 
     if (host_speeds.value) {
         time2 = Sys_FloatTime();
@@ -882,7 +882,7 @@ void Host_Init(quakeparms_t* parms)
         VID_Init(host_basepal);
 
         Draw_Init();
-        SCR_Init();
+        Screen::GetScreenSystem().Init();
         R_Init();
         S_Init();
         Sbar_Init();
@@ -921,7 +921,7 @@ void Host_Shutdown()
     isdown = true;
 
     // keep Con_Printf from trying to update the screen
-    scr_disabled_for_loading = true;
+    Screen::GetScreenSystem().SetDisabledForLoading(true);
 
     Host_WriteConfiguration();
 

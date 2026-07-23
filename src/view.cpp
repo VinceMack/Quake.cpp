@@ -788,13 +788,14 @@ void V_CalcRefdef(void)
     // fudge position around to keep amount of weapon visible
     // roughly equal with different FOV
 
-    if (scr_viewsize.value == 110) {
+    float viewsize_val = Screen::GetScreenSystem().GetViewsize().value;
+    if (viewsize_val == 110) {
         view->origin[2] += 1;
-    } else if (scr_viewsize.value == 100) {
+    } else if (viewsize_val == 100) {
         view->origin[2] += 2;
-    } else if (scr_viewsize.value == 90) {
+    } else if (viewsize_val == 90) {
         view->origin[2] += 1;
-    } else if (scr_viewsize.value == 80) {
+    } else if (viewsize_val == 80) {
         view->origin[2] += 0.5;
     }
 
@@ -902,8 +903,9 @@ void V_RenderView(void)
     }
 
     if (crosshair.value) {
-        Draw_Character(static_cast<int>(scr_vrect.x + scr_vrect.width / 2 + cl_crossx.value),
-            static_cast<int>(scr_vrect.y + scr_vrect.height / 2 + cl_crossy.value), '+');
+        const auto& vrect = Screen::GetScreenSystem().GetVrect();
+        Draw_Character(static_cast<int>(vrect.x + vrect.width / 2 + cl_crossx.value),
+            static_cast<int>(vrect.y + vrect.height / 2 + cl_crossy.value), '+');
     }
 
 }

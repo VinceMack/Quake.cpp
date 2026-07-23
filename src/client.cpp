@@ -269,7 +269,7 @@ void CL_SignonReply()
         break;
 
     case 4:
-        SCR_EndLoadingPlaque(); // allow normal screen updates
+        Screen::GetScreenSystem().EndLoadingPlaque(); // allow normal screen updates
         break;
     }
 }
@@ -287,7 +287,7 @@ void CL_NextDemo()
         return; // don't play demos
     }
 
-    SCR_BeginLoadingPlaque();
+    Screen::GetScreenSystem().BeginLoadingPlaque();
 
     if (!cls.demos[cls.demonum][0] || cls.demonum == MAX_DEMOS) {
         cls.demonum = 0;
@@ -2008,7 +2008,7 @@ void CL_ParseServerMessage()
             break;
 
         case svc_centerprint:
-            SCR_CenterPrint(MSG_ReadString());
+            Screen::GetScreenSystem().CenterPrint(MSG_ReadString());
             break;
 
         case svc_stufftext:
@@ -2160,14 +2160,14 @@ void CL_ParseServerMessage()
             cl.intermission = 2;
             cl.completed_time = static_cast<int>(cl.time);
             vid.recalc_refdef = true; // go to full screen
-            SCR_CenterPrint(MSG_ReadString());
+            Screen::GetScreenSystem().CenterPrint(MSG_ReadString());
             break;
 
         case svc_cutscene:
             cl.intermission = 3;
             cl.completed_time = static_cast<int>(cl.time);
             vid.recalc_refdef = true; // go to full screen
-            SCR_CenterPrint(MSG_ReadString());
+            Screen::GetScreenSystem().CenterPrint(MSG_ReadString());
             break;
 
         case svc_sellscreen:

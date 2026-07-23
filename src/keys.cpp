@@ -178,7 +178,7 @@ void Key_Console(int key)
         key_lines[edit_line][0] = ']';
         key_linepos = 1;
         if (cls.state == ca_disconnected) {
-            SCR_UpdateScreen(); // force an update, because the command
+            Screen::GetScreenSystem().UpdateScreen(); // force an update, because the command
         }
 
         // may take some time

@@ -423,7 +423,7 @@ void M_SinglePlayer_Key(int key)
         switch (m_singleplayer_cursor) {
         case 0:
             if (sv.active) {
-                if (!SCR_ModalMessage(
+                if (!Screen::GetScreenSystem().ModalMessage(
                         "Are you sure you want to\nstart a new game?\n")) {
                     break;
                 }
@@ -578,7 +578,7 @@ void M_Load_Key(int k)
 
         // Host_Loadgame_f can't bring up the loading plaque because too much
         // stack space has been used, so do it now
-        SCR_BeginLoadingPlaque();
+        Screen::GetScreenSystem().BeginLoadingPlaque();
 
         // issue the load command
         Cmd::BufferAddText(va("load s%i\n", load_cursor));
@@ -1123,16 +1123,16 @@ void M_AdjustSliders(int dir)
 
     switch (options_cursor) {
     case 3: // screen size
-        scr_viewsize.value += dir * 10;
-        if (scr_viewsize.value < 30) {
-            scr_viewsize.value = 30;
+        Screen::GetScreenSystem().GetViewsize().value += dir * 10;
+        if (Screen::GetScreenSystem().GetViewsize().value < 30) {
+            Screen::GetScreenSystem().GetViewsize().value = 30;
         }
 
-        if (scr_viewsize.value > 120) {
-            scr_viewsize.value = 120;
+        if (Screen::GetScreenSystem().GetViewsize().value > 120) {
+            Screen::GetScreenSystem().GetViewsize().value = 120;
         }
 
-        Cvar::SetValue("viewsize", scr_viewsize.value);
+        Cvar::SetValue("viewsize", Screen::GetScreenSystem().GetViewsize().value);
         break;
     case 4: // gamma
         v_gamma.value -= static_cast<float>(dir * 0.05);
@@ -1251,7 +1251,7 @@ void M_Options_Draw()
     M_Print(16, 48, "     Reset to defaults");
 
     M_Print(16, 56, "           Screen size");
-    r = (scr_viewsize.value - 30) / (120 - 30);
+    r = (Screen::GetScreenSystem().GetViewsize().value - 30) / (120 - 30);
     M_DrawSlider(220, 56, r);
 
     M_Print(16, 64, "            Brightness");
@@ -2778,7 +2778,7 @@ void M_GameOptions_Key(int key)
 
             Cmd::BufferAddText("listen 0\n"); // so host_netport will be re-examined
             Cmd::BufferAddText(va("maxplayers %u\n", maxplayers));
-            SCR_BeginLoadingPlaque();
+            Screen::GetScreenSystem().BeginLoadingPlaque();
 
             if (hipnotic) {
                 Cmd::BufferAddText(
@@ -2995,9 +2995,9 @@ void M_Draw()
     }
 
     if (!m_recursiveDraw) {
-        scr_copyeverything = 1;
+        Screen::GetScreenSystem().SetCopyeverything(1);
 
-        if (scr_con_current) {
+        if (Screen::GetScreenSystem().GetConCurrent()) {
             Draw_ConsoleBackground(vid.height);
             VID_UnlockBuffer();
             S_ExtraUpdate();
@@ -3006,7 +3006,7 @@ void M_Draw()
             Draw_FadeScreen();
         }
 
-        scr_fullupdate = 0;
+        Screen::GetScreenSystem().SetFullupdate(0);
     } else {
         m_recursiveDraw = false;
     }

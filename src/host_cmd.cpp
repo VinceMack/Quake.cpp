@@ -272,7 +272,7 @@ void Host_Map_f()
     Host_ShutdownServer(false);
 
     key_dest = key_game; // remove console or menu
-    SCR_BeginLoadingPlaque();
+    Screen::GetScreenSystem().BeginLoadingPlaque();
 
     std::string mapstring;
     for (int i = 0; i < Cmd::Argc(); i++) {
@@ -364,7 +364,7 @@ This is sent just before a server changes levels
 */
 void Host_Reconnect_f()
 {
-    SCR_BeginLoadingPlaque();
+    Screen::GetScreenSystem().BeginLoadingPlaque();
     cls.signon = 0; // need new connection messages
 }
 

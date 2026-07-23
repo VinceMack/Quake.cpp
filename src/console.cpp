@@ -73,7 +73,7 @@ void ConsoleSystem::ToggleConsole()
         key_dest = key_console;
     }
 
-    SCR_EndLoadingPlaque();
+    Screen::GetScreenSystem().EndLoadingPlaque();
     std::fill(times_.begin(), times_.end(), 0.0f);
 }
 
@@ -355,11 +355,11 @@ void ConsoleSystem::Printf(const char* fmt, ...)
     Print(msg);
 
     // update the screen if the console is displayed
-    if (cls.signon != SIGNONS && !scr_disabled_for_loading) {
+    if (cls.signon != SIGNONS && !Screen::GetScreenSystem().GetDisabledForLoading()) {
         // protect against infinite loop if something in SCR_UpdateScreen calls Con_Print
         if (!inupdate) {
             inupdate = true;
-            SCR_UpdateScreen();
+            Screen::GetScreenSystem().UpdateScreen();
             inupdate = false;
         }
     }
@@ -461,8 +461,8 @@ void ConsoleSystem::DrawNotify()
 
         char* text_ptr = text_.data() + (i % totallines_) * linewidth_;
 
-        clearnotify = 0;
-        scr_copytop = 1;
+        Screen::GetScreenSystem().SetClearnotify(0);
+        Screen::GetScreenSystem().SetCopytop(1);
 
         for (int x = 0; x < linewidth_; x++) {
             Draw_Character((x + 1) << 3, v, text_ptr[x]);
@@ -472,8 +472,8 @@ void ConsoleSystem::DrawNotify()
     }
 
     if (key_dest == key_message) {
-        clearnotify = 0;
-        scr_copytop = 1;
+        Screen::GetScreenSystem().SetClearnotify(0);
+        Screen::GetScreenSystem().SetCopytop(1);
 
         int x = 0;
 
