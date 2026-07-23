@@ -9,8 +9,4 @@ namespace Common {
 void CRC_Init(std::uint16_t& crcvalue) noexcept;
 void CRC_ProcessByte(std::uint16_t& crcvalue, byte data) noexcept;
 
-// Pointer-based overloads for backward compatibility
-void CRC_Init(std::uint16_t* crcvalue) noexcept;
-void CRC_ProcessByte(std::uint16_t* crcvalue, byte data) noexcept;
-
 } // namespace Common

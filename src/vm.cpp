@@ -1017,7 +1017,7 @@ void PR_LoadProgs(void)
         gefvCache[i].field[0] = 0;
     }
 
-    CRC_Init(&pr_crc);
+    CRC_Init(pr_crc);
 
     progs = (dprograms_t*)COM_LoadHunkFile("progs.dat");
     if (!progs) {
@@ -1027,7 +1027,7 @@ void PR_LoadProgs(void)
     Con_DPrintf("Programs occupy %iK.\n", com_filesize / 1024);
 
     for (i = 0; i < com_filesize; i++) {
-        CRC_ProcessByte(&pr_crc, ((byte*)progs)[i]);
+        CRC_ProcessByte(pr_crc, ((byte*)progs)[i]);
     }
 
     // byte swap the header

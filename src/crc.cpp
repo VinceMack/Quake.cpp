@@ -53,18 +53,4 @@ void CRC_ProcessByte(std::uint16_t& crcvalue, byte data) noexcept
     crcvalue = (crcvalue << 8) ^ crctable[(crcvalue >> 8) ^ data];
 }
 
-void CRC_Init(std::uint16_t* crcvalue) noexcept
-{
-    if (crcvalue) {
-        CRC_Init(*crcvalue);
-    }
-}
-
-void CRC_ProcessByte(std::uint16_t* crcvalue, byte data) noexcept
-{
-    if (crcvalue) {
-        CRC_ProcessByte(*crcvalue, data);
-    }
-}
-
 } // namespace Common

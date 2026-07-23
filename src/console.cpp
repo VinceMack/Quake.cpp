@@ -196,10 +196,10 @@ void ConsoleSystem::Init()
     // register our commands
     Cvar::Register(&con_notifytime);
 
-    Cmd::AddCommand("toggleconsole", Con_ToggleConsole_f);
+    Cmd::AddCommand("toggleconsole", ConsoleSystem::ToggleConsole_f);
     Cmd::AddCommand("messagemode", Con_MessageMode_f);
     Cmd::AddCommand("messagemode2", Con_MessageMode2_f);
-    Cmd::AddCommand("clear", Con_Clear_f);
+    Cmd::AddCommand("clear", ConsoleSystem::Clear_f);
     initialized_ = true;
 }
 
@@ -534,20 +534,14 @@ void ConsoleSystem::DrawConsole(int lines, bool drawinput)
     }
 }
 
-// Delegate functions to maintain compatibility with other modules:
-void Con_CheckResize()
+void ConsoleSystem::Clear_f()
 {
-    GetConsoleSystem().CheckResize();
+    GetConsoleSystem().Clear();
 }
 
-void Con_Init()
+void ConsoleSystem::ToggleConsole_f()
 {
-    GetConsoleSystem().Init();
-}
-
-void Con_DrawConsole(int lines, bool drawinput)
-{
-    GetConsoleSystem().DrawConsole(lines, drawinput);
+    GetConsoleSystem().ToggleConsole();
 }
 
 void Con_Printf(const char* fmt, ...)
@@ -557,7 +551,7 @@ void Con_Printf(const char* fmt, ...)
     va_start(argptr, fmt);
     vsprintf_s(msg, sizeof(msg), fmt, argptr);
     va_end(argptr);
-    
+
     GetConsoleSystem().Printf("%s", msg);
 }
 
@@ -570,26 +564,6 @@ void Con_DPrintf(const char* fmt, ...)
     va_end(argptr);
 
     GetConsoleSystem().DPrintf("%s", msg);
-}
-
-void Con_Clear_f()
-{
-    GetConsoleSystem().Clear();
-}
-
-void Con_DrawNotify()
-{
-    GetConsoleSystem().DrawNotify();
-}
-
-void Con_ClearNotify()
-{
-    GetConsoleSystem().ClearNotify();
-}
-
-void Con_ToggleConsole_f()
-{
-    GetConsoleSystem().ToggleConsole();
 }
 
 } // namespace Console

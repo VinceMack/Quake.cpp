@@ -22,6 +22,9 @@ public:
     void ClearNotify();
     void ToggleConsole();
 
+    static void Clear_f();
+    static void ToggleConsole_f();
+
     // Getters and setters for encapsulating the state:
     bool IsInitialized() const { return initialized_; }
     
@@ -60,15 +63,8 @@ private:
 
 ConsoleSystem& GetConsoleSystem();
 
-// Delegate functions to maintain external API compatibility
-void Con_CheckResize();
-void Con_Init();
-void Con_DrawConsole(int lines, bool drawinput);
+// Print utilities matching C function signature for function pointer compatibility
 void Con_Printf(const char* fmt, ...);
 void Con_DPrintf(const char* fmt, ...);
-void Con_Clear_f();
-void Con_DrawNotify();
-void Con_ClearNotify();
-void Con_ToggleConsole_f();
 
 } // namespace Console

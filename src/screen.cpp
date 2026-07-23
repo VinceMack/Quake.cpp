@@ -348,7 +348,7 @@ CONSOLE DRAWING SETUP
 
 void ScreenSystem::SetUpToDrawConsole()
 {
-    Con_CheckResize();
+    GetConsoleSystem().CheckResize();
 
     if (drawloading_) {
         return;
@@ -394,11 +394,11 @@ void ScreenSystem::DrawConsole()
 {
     if (con_current_) {
         copyeverything_ = 1;
-        Con_DrawConsole(static_cast<int>(con_current_), true);
+        GetConsoleSystem().DrawConsole(static_cast<int>(con_current_), true);
         clearconsole_ = 0;
     } else {
         if (key_dest == key_game || key_dest == key_message) {
-            Con_DrawNotify();
+            GetConsoleSystem().DrawNotify();
         }
     }
 }
@@ -524,7 +524,7 @@ void ScreenSystem::BeginLoadingPlaque()
         return;
     }
 
-    Con_ClearNotify();
+    GetConsoleSystem().ClearNotify();
     centertime_off_ = 0.0f;
     con_current_ = 0.0f;
 
@@ -543,7 +543,7 @@ void ScreenSystem::EndLoadingPlaque()
 {
     disabled_for_loading_ = false;
     fullupdate_ = 0;
-    Con_ClearNotify();
+    GetConsoleSystem().ClearNotify();
 }
 
 void ScreenSystem::DrawNotifyString()

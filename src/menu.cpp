@@ -269,7 +269,7 @@ void M_ToggleMenu_f()
     }
 
     if (key_dest == key_console) {
-        Con_ToggleConsole_f();
+        ConsoleSystem::ToggleConsole_f();
     } else {
         M_Menu_Main_f();
     }
@@ -1305,7 +1305,7 @@ void M_Options_Key(int k)
             break;
         case 1:
             m_state = MenuState::None;
-            Con_ToggleConsole_f();
+            ConsoleSystem::ToggleConsole_f();
             break;
         case 2:
             Cmd::BufferAddText("exec default.cfg\n");
