@@ -1,10 +1,10 @@
 // console.cpp -- console text display and input
 
-#include <vector>
-#include <array>
-#include <string_view>
-#include <string>
-#include <algorithm>
+#include <EASTL/vector.h>
+#include <EASTL/array.h>
+#include <EASTL/string_view.h>
+#include <EASTL/string.h>
+#include <EASTL/algorithm.h>
 #include <fstream>
 #include <filesystem>
 #include <cstdarg>
@@ -74,7 +74,7 @@ void ConsoleSystem::ToggleConsole()
     }
 
     Screen::GetScreenSystem().EndLoadingPlaque();
-    std::fill(times_.begin(), times_.end(), 0.0f);
+    eastl::fill(times_.begin(), times_.end(), 0.0f);
 }
 
 /*
@@ -84,7 +84,7 @@ ConsoleSystem::Clear
 */
 void ConsoleSystem::Clear()
 {
-    std::fill(text_.begin(), text_.end(), ' ');
+    eastl::fill(text_.begin(), text_.end(), ' ');
 }
 
 /*
@@ -94,7 +94,7 @@ ConsoleSystem::ClearNotify
 */
 void ConsoleSystem::ClearNotify()
 {
-    std::fill(times_.begin(), times_.end(), 0.0f);
+    eastl::fill(times_.begin(), times_.end(), 0.0f);
 }
 
 /*
@@ -137,7 +137,7 @@ void ConsoleSystem::CheckResize()
     if (width < 1) { // video hasn't been initialized yet
         linewidth_ = 38;
         totallines_ = CON_TEXTSIZE / linewidth_;
-        std::fill(text_.begin(), text_.end(), ' ');
+        eastl::fill(text_.begin(), text_.end(), ' ');
     } else {
         int oldwidth = linewidth_;
         linewidth_ = width;
@@ -156,7 +156,7 @@ void ConsoleSystem::CheckResize()
         }
 
         eastl::vector<char> tbuf = text_;
-        std::fill(text_.begin(), text_.end(), ' ');
+        eastl::fill(text_.begin(), text_.end(), ' ');
 
         for (int i = 0; i < numlines; i++) {
             for (int j = 0; j < numchars; j++) {
@@ -182,12 +182,12 @@ void ConsoleSystem::Init()
     debuglog_ = COM_CheckParm("-condebug") != 0;
 
     if (debuglog_) {
-        std::string log_path = std::string(com_gamedir) + "/qconsole.log";
+        eastl::string log_path = eastl::string(com_gamedir) + "/qconsole.log";
         std::error_code ec;
-        std::filesystem::remove(log_path, ec);
+        std::filesystem::remove(log_path.c_str(), ec);
     }
 
-    std::fill(text_.begin(), text_.end(), ' ');
+    eastl::fill(text_.begin(), text_.end(), ' ');
     linewidth_ = -1;
     CheckResize();
 
@@ -216,7 +216,7 @@ void ConsoleSystem::Linefeed()
 
     x_ = 0;
     current_++;
-    std::fill(text_.begin() + (current_ % totallines_) * linewidth_,
+    eastl::fill(text_.begin() + (current_ % totallines_) * linewidth_,
               text_.begin() + (current_ % totallines_) * linewidth_ + linewidth_,
               ' ');
 }
@@ -230,7 +230,7 @@ All console printing must go through this in order to be logged to disk
 If no console is visible, the notify window will pop up.
 ================
 */
-void ConsoleSystem::Print(std::string_view txt)
+void ConsoleSystem::Print(eastl::string_view txt)
 {
     if (!initialized_) {
         return;
@@ -309,9 +309,9 @@ void ConsoleSystem::Print(std::string_view txt)
 ConsoleSystem::DebugLog
 ================
 */
-void ConsoleSystem::DebugLog(std::string_view file, std::string_view text)
+void ConsoleSystem::DebugLog(eastl::string_view file, eastl::string_view text)
 {
-    std::ofstream log_file(std::string(file), std::ios::app | std::ios::binary);
+    std::ofstream log_file(file.data(), std::ios::app | std::ios::binary);
     if (log_file) {
         log_file.write(text.data(), text.size());
     }
@@ -339,8 +339,8 @@ void ConsoleSystem::Printf(const char* fmt, ...)
 
     // log all messages to file
     if (debuglog_) {
-        std::string log_file_path = std::string(com_gamedir) + "/qconsole.log";
-        DebugLog(log_file_path, msg);
+        eastl::string log_file_path = eastl::string(com_gamedir) + "/qconsole.log";
+        DebugLog(log_file_path.c_str(), msg);
     }
 
     if (!initialized_) {

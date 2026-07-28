@@ -3,8 +3,9 @@
 
 #include "quakedef.hpp"
 #include <EASTL/vector.h>
-#include <memory>
+#include <EASTL/unique_ptr.h>
 #include <EASTL/string.h>
+#include <EASTL/string_view.h>
 #include <algorithm>
 #include <cstring>
 
@@ -56,41 +57,43 @@ struct CachePic {
     cache_user_t cache{};
 };
 
-static eastl::vector<std::unique_ptr<CachePic>> menu_cachepics;
+static eastl::vector<eastl::unique_ptr<CachePic>> menu_cachepics;
 
 /*
 ================
 Draw_CachePic
 ================
 */
-qpic_t* Draw_CachePic(std::string_view path)
+qpic_t* Draw_CachePic(eastl::string_view path)
 {
     for (const auto& pic : menu_cachepics) {
-        if (std::string_view(pic->name.data(), pic->name.length()) == path) {
+        if (eastl::string_view(pic->name.data(), pic->name.length()) == path) {
             if (auto* dat = static_cast<qpic_t*>(Cache_Check(&pic->cache))) {
                 return dat;
             }
             
-            COM_LoadCacheFile(std::string(path).c_str(), &pic->cache);
+            eastl::string path_str(path.data(), path.length());
+            COM_LoadCacheFile(path_str.c_str(), &pic->cache);
             auto* dat = static_cast<qpic_t*>(pic->cache.data);
             if (!dat) {
-                Sys_Error("Draw_CachePic: failed to load %s", std::string(path).c_str());
+                Sys_Error("Draw_CachePic: failed to load %s", path_str.c_str());
             }
             SwapPic(dat);
             return dat;
         }
     }
 
-    auto new_pic = std::make_unique<CachePic>();
+    auto new_pic = eastl::make_unique<CachePic>();
     new_pic->name.assign(path.data(), path.length());
     
     auto* pic_ptr = new_pic.get();
-    menu_cachepics.push_back(std::move(new_pic));
+    menu_cachepics.push_back(eastl::move(new_pic));
 
-    COM_LoadCacheFile(std::string(path).c_str(), &pic_ptr->cache);
+    eastl::string path_str(path.data(), path.length());
+    COM_LoadCacheFile(path_str.c_str(), &pic_ptr->cache);
     auto* dat = static_cast<qpic_t*>(pic_ptr->cache.data);
     if (!dat) {
-        Sys_Error("Draw_CachePic: failed to load %s", std::string(path).c_str());
+        Sys_Error("Draw_CachePic: failed to load %s", path_str.c_str());
     }
     SwapPic(dat);
 
@@ -187,7 +190,7 @@ void Draw_Character(int x, int y, int num)
 Draw_String
 ================
 */
-void Draw_String(int x, int y, std::string_view str)
+void Draw_String(int x, int y, eastl::string_view str)
 {
     for (const char c : str) {
         Draw_Character(x, y, c);

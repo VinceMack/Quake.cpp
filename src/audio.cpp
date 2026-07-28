@@ -4,14 +4,15 @@
 
 #include <SDL.h>
 #include "quakedef.hpp"
-#include <span>
-#include <array>
-#include <string_view>
+#include <EASTL/span.h>
+#include <EASTL/array.h>
+#include <EASTL/string_view.h>
+#include <EASTL/string.h>
+#include <EASTL/numeric_limits.h>
+#include <EASTL/algorithm.h>
 #include <cstring>
 #include <cstdio>
-#include <algorithm>
 #include <bit>
-#include <limits>
 #include <new>
 #include <random>
 #include <charconv>
@@ -66,7 +67,7 @@ struct AudioCommand {
     Vector3 v_forward;
     Vector3 v_right;
     Vector3 v_up;
-    std::array<int, NUM_AMBIENTS> ambient_vols;
+    eastl::array<int, NUM_AMBIENTS> ambient_vols;
     float host_frametime;
     float ambient_fade;
     bool snd_ambient;
@@ -102,7 +103,7 @@ public:
     }
 
 private:
-    std::array<T, Capacity> buffer_;
+    eastl::array<T, Capacity> buffer_;
     alignas(64) std::atomic<size_t> write_idx_{0};
     alignas(64) std::atomic<size_t> read_idx_{0};
 };
@@ -121,24 +122,28 @@ void S_UpdateInternal(const Vector3& origin,
     const Vector3& right,
     const Vector3& up,
     float vol_val,
-    const std::array<int, NUM_AMBIENTS>& ambient_vols,
+    const eastl::array<int, NUM_AMBIENTS>& ambient_vols,
     float host_frametime_val,
     float ambient_fade_val,
     bool snd_ambient_val);
 void ExecuteAudioCommand(const AudioCommand& cmd);
 
 template <typename T>
-[[nodiscard]] constexpr T byteswap(T val) noexcept {
+inline constexpr T byteswap(T val)
+{
     static_assert(std::is_integral_v<T>, "byteswap requires integral type");
-    if constexpr (sizeof(T) == 2) {
-        return static_cast<T>((static_cast<unsigned short>(val) << 8) | (static_cast<unsigned short>(val) >> 8));
+    if constexpr (sizeof(T) == 1) {
+        return val;
+    } else if constexpr (sizeof(T) == 2) {
+        uint16_t u = static_cast<uint16_t>(val);
+        return static_cast<T>((u >> 8) | (u << 8));
     } else if constexpr (sizeof(T) == 4) {
-        unsigned int u = static_cast<unsigned int>(val);
+        uint32_t u = static_cast<uint32_t>(val);
         return static_cast<T>(
-            ((u << 24) & 0xFF000000) |
-            ((u << 8)  & 0x00FF0000) |
-            ((u >> 8)  & 0x0000FF00) |
-            ((u >> 24) & 0x000000FF)
+            ((u & 0xff000000) >> 24) |
+            ((u & 0x00ff0000) >> 8) |
+            ((u & 0x0000ff00) << 8) |
+            ((u & 0x000000ff) << 24)
         );
     } else {
         return val;
@@ -384,7 +389,7 @@ S_FindName
 */
 namespace {
 
-[[nodiscard]] sfx_t* S_FindName(std::string_view name)
+[[nodiscard]] sfx_t* S_FindName(eastl::string_view name)
 {
     if (name.empty()) {
         Sys_Error("S_FindName: NULL\n");
@@ -395,7 +400,7 @@ namespace {
     }
 
     // see if already loaded
-    for (auto& sfx : std::span(known_sfx, num_sfx)) {
+    for (auto& sfx : eastl::span(known_sfx, num_sfx)) {
         if (sfx.name == name) {
             return &sfx;
         }
@@ -422,7 +427,7 @@ S_TouchSound
 
 ==================
 */
-void S_TouchSound(std::string_view name)
+void S_TouchSound(eastl::string_view name)
 {
     if (!sound_started) {
         return;
@@ -438,7 +443,7 @@ S_PrecacheSound
 
 ==================
 */
-sfx_t* S_PrecacheSound(std::string_view name)
+sfx_t* S_PrecacheSound(eastl::string_view name)
 {
     if (!sound_started || nosound.value) {
         return nullptr;
@@ -465,8 +470,8 @@ channel_t* SND_PickChannel(int entnum, int entchannel)
 {
     // Check for replacement sound, or find the best one to replace
     channel_t* first_to_die = nullptr;
-    int life_left = std::numeric_limits<int>::max();
-    for (auto& chan : std::span(channels).subspan(NUM_AMBIENTS, MAX_DYNAMIC_CHANNELS)) {
+    int life_left = eastl::numeric_limits<int>::max();
+    for (auto& chan : eastl::span(channels).subspan(NUM_AMBIENTS, MAX_DYNAMIC_CHANNELS)) {
         if (entchannel != 0                                                                                            // channel 0 never overrides
             && chan.entnum == entnum && (chan.entchannel == entchannel || entchannel == -1)) { // allways override sound from same entity
             first_to_die = &chan;
@@ -599,7 +604,7 @@ void S_StartSoundInternal(int entnum,
 
     // if an identical sound has also been started this frame, offset the pos
     // a bit to keep it from just making the first one louder
-    for (auto& check : std::span(channels).subspan(NUM_AMBIENTS, MAX_DYNAMIC_CHANNELS)) {
+    for (auto& check : eastl::span(channels).subspan(NUM_AMBIENTS, MAX_DYNAMIC_CHANNELS)) {
         if (&check == target_chan) {
             continue;
         }
@@ -622,7 +627,7 @@ void S_StartSoundInternal(int entnum,
 
 void S_StopSoundInternal(int entnum, int entchannel)
 {
-    for (auto& chan : std::span(channels).first(MAX_DYNAMIC_CHANNELS)) {
+    for (auto& chan : eastl::span(channels).first(MAX_DYNAMIC_CHANNELS)) {
         if (chan.entnum == entnum && chan.entchannel == entchannel) {
             chan.end = 0;
             chan.sfx = nullptr;
@@ -835,7 +840,7 @@ void S_UpdateInternal(const Vector3& origin,
     const Vector3& right,
     const Vector3& up,
     float vol_val,
-    const std::array<int, NUM_AMBIENTS>& ambient_vols,
+    const eastl::array<int, NUM_AMBIENTS>& ambient_vols,
     float host_frametime_val,
     float ambient_fade_val,
     bool snd_ambient_val)
@@ -851,7 +856,7 @@ void S_UpdateInternal(const Vector3& origin,
 
     // update general area ambient sound sources (thread-safe volume interpolation on the audio thread)
     if (!snd_ambient_val) {
-        for (auto& ambient_chan : std::span(channels).first(NUM_AMBIENTS)) {
+        for (auto& ambient_chan : eastl::span(channels).first(NUM_AMBIENTS)) {
             ambient_chan.sfx = nullptr;
         }
     } else {
@@ -882,7 +887,7 @@ void S_UpdateInternal(const Vector3& origin,
 
     // update spatialization for static and dynamic sounds
     int i = NUM_AMBIENTS;
-    for (auto& ch : std::span(channels).subspan(NUM_AMBIENTS, total_channels - NUM_AMBIENTS)) {
+    for (auto& ch : eastl::span(channels).subspan(NUM_AMBIENTS, total_channels - NUM_AMBIENTS)) {
         if (!ch.sfx) {
             i++;
             continue;
@@ -935,7 +940,7 @@ void S_UpdateInternal(const Vector3& origin,
     // debugging output (only printed if fakedma is active to preserve real-time safety of background audio thread)
     if (fakedma && snd_show.value) {
         total = 0;
-        for (auto& ch : std::span(channels).first(total_channels)) {
+        for (auto& ch : eastl::span(channels).first(total_channels)) {
             if (ch.sfx && (ch.leftvol || ch.rightvol)) {
                 total++;
             }
@@ -1025,15 +1030,15 @@ void S_Play(void)
 
     int i = 1;
     while (i < Cmd::Argc()) {
-        std::string name;
+        eastl::string name;
         auto arg = Cmd::Argv(i);
-        if (arg.find('.') == std::string_view::npos) {
-            name = std::string(arg) + ".wav";
+        if (arg.find('.') == eastl::string_view::npos) {
+            name = eastl::string(arg.data(), arg.length()) + ".wav";
         } else {
-            name = std::string(arg);
+            name = eastl::string(arg.data(), arg.length());
         }
 
-        sfx = S_PrecacheSound(name);
+        sfx = S_PrecacheSound(name.c_str());
         Vector3 play_origin = cl_entities[cl.viewentity].origin;
         S_StartSound(hash++, 0, sfx, play_origin, 1.0, 1.0);
         i++;
@@ -1050,15 +1055,15 @@ void S_PlayVol(void)
 
     int i = 1;
     while (i < Cmd::Argc()) {
-        std::string name;
+        eastl::string name;
         auto arg = Cmd::Argv(i);
-        if (arg.find('.') == std::string_view::npos) {
-            name = std::string(arg) + ".wav";
+        if (arg.find('.') == eastl::string_view::npos) {
+            name = eastl::string(arg.data(), arg.length()) + ".wav";
         } else {
-            name = std::string(arg);
+            name = eastl::string(arg.data(), arg.length());
         }
 
-        sfx = S_PrecacheSound(name);
+        sfx = S_PrecacheSound(name.c_str());
         auto arg_vol = Cmd::Argv(i + 1);
         vol = 1.0f;
         std::from_chars(arg_vol.data(), arg_vol.data() + arg_vol.size(), vol);
@@ -1074,7 +1079,7 @@ void S_SoundList(void)
     int size, total;
 
     total = 0;
-    for (auto& sfx : std::span(known_sfx, num_sfx)) {
+    for (auto& sfx : eastl::span(known_sfx, num_sfx)) {
         sc = static_cast<sfxcache_t*>(Cache_Check(&sfx.cache));
         if (!sc) {
             continue;
@@ -1095,7 +1100,7 @@ void S_SoundList(void)
 
 } // namespace
 
-void S_LocalSound(std::string_view sound)
+void S_LocalSound(eastl::string_view sound)
 {
     if (nosound.value || !sound_started) {
         return;
@@ -1219,7 +1224,7 @@ sfxcache_t* S_LoadSound(sfx_t* s)
     int len;
     float stepscale;
     sfxcache_t* sc;
-    std::array<byte, 1024> stackbuf; // avoid dirtying the cache heap
+    eastl::array<byte, 1024> stackbuf; // avoid dirtying the cache heap
 
     // see if still in memory
     sc = static_cast<sfxcache_t*>(Cache_Check(&s->cache));
@@ -1228,7 +1233,7 @@ sfxcache_t* S_LoadSound(sfx_t* s)
     }
 
     // load it in using stack allocation for path construction (no heap alloc)
-    std::array<char, MAX_QPATH + 16> namebuffer;
+    eastl::array<char, MAX_QPATH + 16> namebuffer;
     std::snprintf(namebuffer.data(), namebuffer.size(), "sound/%s", s->name);
 
     data = COM_LoadStackFile(namebuffer.data(), stackbuf.data(), sizeof(stackbuf));
@@ -1239,8 +1244,8 @@ sfxcache_t* S_LoadSound(sfx_t* s)
         return nullptr;
     }
 
-    // Call GetWavinfo using a std::span for strict bounds checking
-    info = GetWavinfo(s->name, std::span<const byte>(data, com_filesize));
+    // Call GetWavinfo using an eastl::span for strict bounds checking
+    info = GetWavinfo(s->name, eastl::span<const byte>(data, com_filesize));
     if (info.channels != 1) {
         Con_Printf("%s is a stereo sample\n", s->name);
 
@@ -1280,10 +1285,10 @@ namespace {
 
 class WavParser {
 public:
-    explicit WavParser(std::span<const byte> wav_data)
+    explicit WavParser(eastl::span<const byte> wav_data)
         : file_data_(wav_data), iff_data_offset_(0), last_chunk_offset_(0), current_chunk_offset_(wav_data.size()), iff_chunk_len_(0) {}
 
-    [[nodiscard]] bool FindNextChunk(std::string_view name) {
+    [[nodiscard]] bool FindNextChunk(eastl::string_view name) {
         while (true) {
             size_t offset = last_chunk_offset_;
             if (offset + 8 > file_data_.size()) {
@@ -1304,13 +1309,13 @@ public:
             current_chunk_offset_ = offset;
             last_chunk_offset_ = offset + 8 + ((iff_chunk_len_ + 1) & ~1);
 
-            if (std::string_view(reinterpret_cast<const char*>(&file_data_[offset]), 4) == name) {
+            if (eastl::string_view(reinterpret_cast<const char*>(&file_data_[offset]), 4) == name) {
                 return true;
             }
         }
     }
 
-    void FindChunk(std::string_view name) {
+    void FindChunk(eastl::string_view name) {
         last_chunk_offset_ = iff_data_offset_;
         static_cast<void>(FindNextChunk(name));
     }
@@ -1353,7 +1358,7 @@ public:
     }
 
 private:
-    std::span<const byte> file_data_;
+    eastl::span<const byte> file_data_;
     size_t iff_data_offset_;
     size_t last_chunk_offset_;
     size_t current_chunk_offset_;
@@ -1367,7 +1372,7 @@ private:
 GetWavinfo
 ============
 */
-wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data)
+wavinfo_t GetWavinfo(eastl::string_view name, eastl::span<const byte> wav_data)
 {
     wavinfo_t info{};
 
@@ -1392,7 +1397,7 @@ wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data)
         return info;
     }
 
-    if (std::string_view(reinterpret_cast<const char*>(&wav_data[riff_payload_offset]), 4) != "WAVE") {
+    if (eastl::string_view(reinterpret_cast<const char*>(&wav_data[riff_payload_offset]), 4) != "WAVE") {
         Con_Printf("Missing WAVE format inside RIFF\n");
 
         return info;

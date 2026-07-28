@@ -2,12 +2,13 @@
 
 #include "quakedef.hpp"
 #include <cstring>
-#include <string>
-#include <vector>
-#include <map>
-#include <functional>
-#include <algorithm>
 #include <cctype>
+#include <EASTL/string.h>
+#include <EASTL/vector.h>
+#include <EASTL/map.h>
+#include <EASTL/functional.h>
+#include <EASTL/algorithm.h>
+#include <EASTL/string_view.h>
 
 using namespace Client;
 using namespace Common;
@@ -62,7 +63,7 @@ void CommandRegistry::BufferInit(void)
     cmd_text_.reserve(8192);
 }
 
-void CommandRegistry::BufferAddText(std::string_view text)
+void CommandRegistry::BufferAddText(eastl::string_view text)
 {
     if (cmd_text_.length() + text.length() >= 8192) {
         Con_Printf("Cmd::BufferAddText: overflow\n");
@@ -71,7 +72,7 @@ void CommandRegistry::BufferAddText(std::string_view text)
     cmd_text_.append(text.data(), text.length());
 }
 
-void CommandRegistry::BufferInsertText(std::string_view text)
+void CommandRegistry::BufferInsertText(eastl::string_view text)
 {
     if (cmd_text_.length() + text.length() >= 8192) {
         Con_Printf("Cmd::BufferAddText: overflow\n");
@@ -105,7 +106,7 @@ void CommandRegistry::BufferExecute(void)
             cmd_text_.erase(0, i + 1);
         }
 
-        ExecuteString(std::string_view(line.data(), line.length()), Source::Command);
+        ExecuteString(eastl::string_view(line.data(), line.length()), Source::Command);
 
         if (cmd_wait_) {
             cmd_wait_ = false;
@@ -158,7 +159,7 @@ static void StuffCmds_f(void)
     }
 
     if (!build.empty()) {
-        Cmd::BufferInsertText(std::string_view(build.data(), build.length()));
+        Cmd::BufferInsertText(eastl::string_view(build.data(), build.length()));
     }
 }
 
@@ -170,7 +171,7 @@ static void Exec_f(void)
     }
 
     int mark = Hunk_LowMark();
-    std::string_view filename = Cmd::Argv(1);
+    eastl::string_view filename = Cmd::Argv(1);
     eastl::string filename_str(filename.data(), filename.length());
     char* f = (char*)COM_LoadHunkFile(filename_str.c_str());
     if (!f) {
@@ -187,7 +188,7 @@ static void Exec_f(void)
 static void Echo_f(void)
 {
     for (int i = 1; i < Cmd::Argc(); i++) {
-        std::string_view arg = Cmd::Argv(i);
+        eastl::string_view arg = Cmd::Argv(i);
         Con_Printf("%.*s ", static_cast<int>(arg.length()), arg.data());
     }
     Con_Printf("\n");
@@ -204,7 +205,7 @@ static void Alias_f(void)
         return;
     }
 
-    std::string_view alias_name = Cmd::Argv(1);
+    eastl::string_view alias_name = Cmd::Argv(1);
     if (alias_name.length() >= 32) { // MAX_ALIAS_NAME
         Con_Printf("Alias name is too long\n");
         return;
@@ -213,13 +214,13 @@ static void Alias_f(void)
     eastl::string cmd;
     int c = Cmd::Argc();
     for (int i = 2; i < c; ++i) {
-        std::string_view arg = Cmd::Argv(i);
+        eastl::string_view arg = Cmd::Argv(i);
         cmd.append(arg.data(), arg.length());
         cmd += " ";
     }
     cmd += "\n";
 
-    registry.AddAlias(alias_name, std::string_view(cmd.data(), cmd.length()));
+    registry.AddAlias(alias_name, eastl::string_view(cmd.data(), cmd.length()));
 }
 
 //=============================================================================
@@ -236,7 +237,7 @@ void CommandRegistry::Init(void)
     AddCommand("wait", Wait_f);
 }
 
-void CommandRegistry::AddCommand(std::string_view cmd_name, xcommand_t function)
+void CommandRegistry::AddCommand(eastl::string_view cmd_name, xcommand_t function)
 {
     if (host_initialized) {
         Sys_Error("Cmd::AddCommand after host_initialized");
@@ -255,12 +256,12 @@ void CommandRegistry::AddCommand(std::string_view cmd_name, xcommand_t function)
     commands_.emplace(eastl::string(cmd_name.data(), cmd_name.length()), std::move(function));
 }
 
-bool CommandRegistry::Exists(std::string_view cmd_name)
+bool CommandRegistry::Exists(eastl::string_view cmd_name)
 {
     return commands_.count(cmd_name) > 0;
 }
 
-std::string_view CommandRegistry::CompleteCommand(std::string_view partial)
+eastl::string_view CommandRegistry::CompleteCommand(eastl::string_view partial)
 {
     if (partial.empty()) {
         return "";
@@ -268,11 +269,11 @@ std::string_view CommandRegistry::CompleteCommand(std::string_view partial)
 
     auto it = commands_.lower_bound(partial);
     if (it != commands_.end()) {
-        std::string_view cmd_name(it->first.data(), it->first.length());
+        eastl::string_view cmd_name(it->first.data(), it->first.length());
         if (cmd_name.length() >= partial.length()) {
-            std::string_view prefix = cmd_name.substr(0, partial.length());
+            eastl::string_view prefix = cmd_name.substr(0, partial.length());
             if (Q_strcasecmp(eastl::string(prefix.data(), prefix.length()).c_str(), eastl::string(partial.data(), partial.length()).c_str()) == 0) {
-                return std::string_view(it->first.data(), it->first.length());
+                return eastl::string_view(it->first.data(), it->first.length());
             }
         }
     }
@@ -284,20 +285,20 @@ int CommandRegistry::Argc(void)
     return static_cast<int>(cmd_argv_.size());
 }
 
-std::string_view CommandRegistry::Argv(int arg)
+eastl::string_view CommandRegistry::Argv(int arg)
 {
     if (arg < 0 || static_cast<size_t>(arg) >= cmd_argv_.size()) {
         return "";
     }
-    return std::string_view(cmd_argv_[arg].data(), cmd_argv_[arg].length());
+    return eastl::string_view(cmd_argv_[arg].data(), cmd_argv_[arg].length());
 }
 
-std::string_view CommandRegistry::Args(void)
+eastl::string_view CommandRegistry::Args(void)
 {
     return cmd_args_;
 }
 
-void CommandRegistry::TokenizeString(std::string_view text)
+void CommandRegistry::TokenizeString(eastl::string_view text)
 {
     cmd_argv_.clear();
     cmd_args_ = "";
@@ -324,7 +325,7 @@ void CommandRegistry::TokenizeString(std::string_view text)
         }
 
         if (command_parsed && cmd_args_.empty()) {
-            cmd_args_ = std::string_view(ptr);
+            cmd_args_ = eastl::string_view(ptr);
         }
 
         const char* next_ptr = COM_Parse(ptr);
@@ -343,7 +344,7 @@ void CommandRegistry::TokenizeString(std::string_view text)
     }
 }
 
-void CommandRegistry::ExecuteString(std::string_view text, Source src)
+void CommandRegistry::ExecuteString(eastl::string_view text, Source src)
 {
     state_.source = src;
     TokenizeString(text);
@@ -362,7 +363,7 @@ void CommandRegistry::ExecuteString(std::string_view text, Source src)
 
     auto alias_it = aliases_.find(cmd_name);
     if (alias_it != aliases_.end()) {
-        BufferInsertText(std::string_view(alias_it->second.data(), alias_it->second.length()));
+        BufferInsertText(eastl::string_view(alias_it->second.data(), alias_it->second.length()));
         return;
     }
 
@@ -374,7 +375,7 @@ void CommandRegistry::ExecuteString(std::string_view text, Source src)
 void ForwardToServer(void)
 {
     if (cls.state != ca_connected) {
-        std::string_view cmd_name = Argv(0);
+        eastl::string_view cmd_name = Argv(0);
         Con_Printf("Can't \"%.*s\", not connected\n", static_cast<int>(cmd_name.length()), cmd_name.data());
         return;
     }
@@ -402,16 +403,16 @@ void ForwardToServer(void)
 // Wrapper APIs forwarding to the singleton registry
 
 void BufferInit(void) { GetCommandRegistry().BufferInit(); }
-void BufferAddText(std::string_view text) { GetCommandRegistry().BufferAddText(text); }
-void BufferInsertText(std::string_view text) { GetCommandRegistry().BufferInsertText(text); }
+void BufferAddText(eastl::string_view text) { GetCommandRegistry().BufferAddText(text); }
+void BufferInsertText(eastl::string_view text) { GetCommandRegistry().BufferInsertText(text); }
 void BufferExecute(void) { GetCommandRegistry().BufferExecute(); }
 void Init(void) { GetCommandRegistry().Init(); }
-void AddCommand(std::string_view cmd_name, xcommand_t function) { GetCommandRegistry().AddCommand(cmd_name, function); }
-bool Exists(std::string_view cmd_name) { return GetCommandRegistry().Exists(cmd_name); }
-std::string_view CompleteCommand(std::string_view partial) { return GetCommandRegistry().CompleteCommand(partial); }
+void AddCommand(eastl::string_view cmd_name, xcommand_t function) { GetCommandRegistry().AddCommand(cmd_name, function); }
+bool Exists(eastl::string_view cmd_name) { return GetCommandRegistry().Exists(cmd_name); }
+eastl::string_view CompleteCommand(eastl::string_view partial) { return GetCommandRegistry().CompleteCommand(partial); }
 int Argc(void) { return GetCommandRegistry().Argc(); }
-std::string_view Argv(int arg) { return GetCommandRegistry().Argv(arg); }
-std::string_view Args(void) { return GetCommandRegistry().Args(); }
-void ExecuteString(std::string_view text, Source src) { GetCommandRegistry().ExecuteString(text, src); }
+eastl::string_view Argv(int arg) { return GetCommandRegistry().Argv(arg); }
+eastl::string_view Args(void) { return GetCommandRegistry().Args(); }
+void ExecuteString(eastl::string_view text, Source src) { GetCommandRegistry().ExecuteString(text, src); }
 
 } // namespace Cmd

@@ -1,23 +1,33 @@
-// wad.h -- WAD file format structures
+// wad.hpp -- WAD file format structures
 #pragma once
+
+#include "quakedef.hpp"
+#include <EASTL/string_view.h>
+#include <EASTL/span.h>
 
 //===============
 //   TYPES
 //===============
 
-#define CMP_NONE 0
-#define CMP_LZSS 1
+enum class WadCompression : uint8_t {
+    None = 0,
+    LZSS = 1
+};
 
-#define TYP_NONE 0
-#define TYP_LABEL 1
+enum class LumpType : uint8_t {
+    None = 0,
+    Label = 1,
+    Lumpy = 64,
+    Palette = 64,
+    QTex = 65,
+    QPic = 66,
+    Sound = 67,
+    MipTex = 68
+};
 
-#define TYP_LUMPY 64 // 64 + grab command number
-#define TYP_PALETTE 64
-#define TYP_QTEX 65
-#define TYP_QPIC 66
-#define TYP_SOUND 67
-#define TYP_MIPTEX 68
+constexpr int TYP_QPIC = 66;
 
+#pragma pack(push, 1)
 typedef struct {
     int width, height;
     byte data[4]; // variably sized
@@ -38,6 +48,7 @@ typedef struct {
     char pad1, pad2;
     char name[16]; // must be null terminated
 } lumpinfo_t;
+#pragma pack(pop)
 
 namespace Wad {
 
@@ -45,11 +56,12 @@ extern int wad_numlumps;
 extern lumpinfo_t* wad_lumps;
 extern byte* wad_base;
 
-void W_LoadWadFile(const char* filename);
-void W_CleanupName(const char* in, char* out);
-lumpinfo_t* W_GetLumpinfo(const char* name);
-void* W_GetLumpName(const char* name);
+void W_LoadWadFile(eastl::string_view filename);
+void W_CleanupName(eastl::string_view in, eastl::span<char, 16> out);
+[[nodiscard]] lumpinfo_t* W_GetLumpinfo(eastl::string_view name);
+[[nodiscard]] void* W_GetLumpName(eastl::string_view name);
 
 void SwapPic(qpic_t* pic);
 
 } // namespace Wad
+

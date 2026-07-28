@@ -249,7 +249,9 @@ void SV_ClearWorld(void)
 {
     SV_InitBoxHull();
 
-    memset(sv_areanodes, 0, sizeof(sv_areanodes));
+    for (auto& node : sv_areanodes) {
+        node = areanode_t{};
+    }
     sv_numareanodes = 0;
     SV_CreateAreaNode(0, sv.worldmodel->mins, sv.worldmodel->maxs);
 }
@@ -724,14 +726,13 @@ trace_t SV_ClipMoveToEntity(edict_t* ent,
     const Vector3& maxs,
     const Vector3& end)
 {
-    trace_t trace;
     Vector3 offset;
     Vector3 start_l, end_l;
     hull_t* hull;
 
     // fill in a default trace
-    memset(&trace, 0, sizeof(trace_t));
-    trace.fraction = 1;
+    trace_t trace{};
+    trace.fraction = 1.0f;
     trace.allsolid = true;
     trace.endpos = end;
 

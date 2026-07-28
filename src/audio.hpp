@@ -1,10 +1,10 @@
 // audio.hpp -- client sound i/o functions
 #pragma once
 
-#include <array>
-#include <string_view>
+#include <EASTL/array.h>
+#include <EASTL/string_view.h>
+#include <EASTL/span.h>
 #include <atomic>
-#include <span>
 
 namespace Audio {
 
@@ -90,8 +90,8 @@ void S_ClearBuffer(void);
 void S_Update(const Vector3& origin, const Vector3& v_forward, const Vector3& v_right, const Vector3& v_up);
 void S_ExtraUpdate(void);
 
-[[nodiscard]] sfx_t* S_PrecacheSound(std::string_view sample);
-void S_TouchSound(std::string_view sample);
+[[nodiscard]] sfx_t* S_PrecacheSound(eastl::string_view sample);
+void S_TouchSound(eastl::string_view sample);
 void S_BeginPrecaching(void);
 void S_EndPrecaching(void);
 void S_PaintChannels(int endtime);
@@ -124,10 +124,10 @@ extern cvar_t volume;
 
 extern int snd_blocked;
 
-void S_LocalSound(std::string_view s);
+void S_LocalSound(eastl::string_view s);
 [[nodiscard]] sfxcache_t* S_LoadSound(sfx_t* s);
 
-[[nodiscard]] wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data);
+[[nodiscard]] wavinfo_t GetWavinfo(eastl::string_view name, eastl::span<const byte> wav_data);
 
 void SND_InitScaletable(void);
 void SNDDMA_Submit(void);

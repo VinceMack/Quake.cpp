@@ -1,7 +1,7 @@
 // menu.h -- menu system declarations
 #pragma once
 
-#include <string>
+#include <EASTL/string.h>
 
 namespace Menu {
 
@@ -39,7 +39,7 @@ void M_DrawPic(int x, int y, qpic_t* pic);
 extern MenuState m_state;
 extern MenuState m_return_state;
 extern bool m_return_onerror;
-extern std::string m_return_reason;
+extern eastl::string m_return_reason;
 
 } // namespace Menu
 

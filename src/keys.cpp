@@ -1,12 +1,10 @@
 // keys.cpp -- keyboard input handling and key binding
 
 #include "quakedef.hpp"
-#include <array>
-#include <string>
-#include <string_view>
+#include <EASTL/array.h>
+#include <EASTL/string.h>
+#include <EASTL/string_view.h>
 #include <ostream>
-#include <tuple>
-#include <numeric>
 
 using namespace Client;
 using namespace Common;
@@ -33,11 +31,11 @@ using namespace Cmd;
 
 namespace Keys {
 
-std::array<std::array<char, MAXCMDLINE>, 32> key_lines;
+eastl::array<eastl::array<char, MAXCMDLINE>, 32> key_lines;
 int key_linepos;
 int edit_line = 0;
 int history_line = 0;
-std::array<char, 32> chat_buffer;
+eastl::array<char, 32> chat_buffer;
 bool team_message = false;
 
 /*
@@ -53,12 +51,12 @@ keydest_t key_dest;
 
 int key_count; // incremented every key event
 
-std::array<std::string, 256> keybindings;
-std::array<bool, 256> consolekeys; // if true, can't be rebound while in console
-std::array<bool, 256> menubound;   // if true, can't be rebound while in menu
-std::array<int, 256> keyshift;     // key to map to if shift held down in console
-std::array<int, 256> key_repeats;  // if > 1, it is autorepeating
-std::array<bool, 256> keydown;
+eastl::array<eastl::string, 256> keybindings;
+eastl::array<bool, 256> consolekeys; // if true, can't be rebound while in console
+eastl::array<bool, 256> menubound;   // if true, can't be rebound while in menu
+eastl::array<int, 256> keyshift;     // key to map to if shift held down in console
+eastl::array<int, 256> key_repeats;  // if > 1, it is autorepeating
+eastl::array<bool, 256> keydown;
 
 struct keyname_t {
     const char* name;
@@ -186,13 +184,13 @@ void Key_Console(int key)
     }
 
     if (key == K_TAB) { // command completion
-        std::string_view cmd_view = Cmd::CompleteCommand(key_lines[edit_line].data() + 1);
+        eastl::string_view cmd_view = Cmd::CompleteCommand(key_lines[edit_line].data() + 1);
         if (cmd_view.empty()) {
             cmd_view = Cvar::CompleteVariable(key_lines[edit_line].data() + 1);
         }
 
         if (!cmd_view.empty()) {
-            std::string cmd_str(cmd_view);
+            eastl::string cmd_str(cmd_view.data(), cmd_view.length());
             Q_strcpy(key_lines[edit_line].data() + 1, cmd_str.c_str());
             key_linepos = Q_strlen(cmd_str.c_str()) + 1;
             key_lines[edit_line][key_linepos] = ' ';
@@ -350,7 +348,7 @@ the given string.  Single ascii characters return themselves, while
 the K_* names are matched up.
 ===================
 */
-int Key_StringToKeynum(std::string_view str)
+int Key_StringToKeynum(eastl::string_view str)
 {
     keyname_t* kn;
 
@@ -512,7 +510,7 @@ void Key_WriteBindings(std::ostream& f)
 {
     for (int i = 0; i < 256; i++) {
         if (!keybindings[i].empty()) {
-            f << "bind \"" << Key_KeynumToString(i) << "\" \"" << keybindings[i] << "\"\n";
+            f << "bind \"" << Key_KeynumToString(i) << "\" \"" << keybindings[i].c_str() << "\"\n";
         }
     }
 }

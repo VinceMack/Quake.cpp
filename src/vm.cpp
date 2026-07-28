@@ -49,7 +49,7 @@ int pr_edict_size; // in bytes
 
 unsigned short pr_crc;
 
-int type_size[8] = {
+eastl::array<int, 8> type_size = {
     1, static_cast<int>(sizeof(string_t) / 4), 1, 3, 1, 1, static_cast<int>(sizeof(func_t) / 4), static_cast<int>(sizeof(void*) / 4)
 };
 

@@ -38,9 +38,9 @@ CvarRegistry& GetCvarRegistry()
 FindVar
 ============
 */
-cvar_t* CvarRegistry::FindVar(std::string_view var_name)
+cvar_t* CvarRegistry::FindVar(eastl::string_view var_name)
 {
-    auto it = vars_map_.find(eastl::string_view(var_name.data(), var_name.length()));
+    auto it = vars_map_.find(var_name);
     if (it != vars_map_.end()) {
         return it->second;
     }
@@ -52,7 +52,7 @@ cvar_t* CvarRegistry::FindVar(std::string_view var_name)
 VariableValue
 ============
 */
-float CvarRegistry::VariableValue(std::string_view var_name)
+float CvarRegistry::VariableValue(eastl::string_view var_name)
 {
     cvar_t* var = FindVar(var_name);
     if (!var) {
@@ -66,13 +66,13 @@ float CvarRegistry::VariableValue(std::string_view var_name)
 VariableString
 ============
 */
-std::string_view CvarRegistry::VariableString(std::string_view var_name)
+eastl::string_view CvarRegistry::VariableString(eastl::string_view var_name)
 {
     cvar_t* var = FindVar(var_name);
     if (!var) {
         return "";
     }
-    return std::string_view(var->string.data(), var->string.length());
+    return eastl::string_view(var->string.data(), var->string.length());
 }
 
 /*
@@ -80,16 +80,16 @@ std::string_view CvarRegistry::VariableString(std::string_view var_name)
 CompleteVariable
 ============
 */
-std::string_view CvarRegistry::CompleteVariable(std::string_view partial)
+eastl::string_view CvarRegistry::CompleteVariable(eastl::string_view partial)
 {
     if (partial.empty()) {
         return "";
     }
 
     for (cvar_t* var = state_.vars; var; var = var->next) {
-        std::string_view var_name(var->name.data(), var->name.length());
+        eastl::string_view var_name(var->name.data(), var->name.length());
         if (var_name.starts_with(partial)) {
-            return std::string_view(var->name.data(), var->name.length());
+            return eastl::string_view(var->name.data(), var->name.length());
         }
     }
     return "";
@@ -100,7 +100,7 @@ std::string_view CvarRegistry::CompleteVariable(std::string_view partial)
 Set
 ============
 */
-void CvarRegistry::Set(std::string_view var_name, std::string_view value)
+void CvarRegistry::Set(eastl::string_view var_name, eastl::string_view value)
 {
     cvar_t* var = FindVar(var_name);
     if (!var) {
@@ -108,7 +108,7 @@ void CvarRegistry::Set(std::string_view var_name, std::string_view value)
         return;
     }
 
-    bool changed = (value != std::string_view(var->string.data(), var->string.length()));
+    bool changed = (value != eastl::string_view(var->string.data(), var->string.length()));
 
     var->string = eastl::string(value.data(), value.length());
     var->value = Q_atof(var->string.c_str());
@@ -125,7 +125,7 @@ void CvarRegistry::Set(std::string_view var_name, std::string_view value)
 SetValue
 ============
 */
-void CvarRegistry::SetValue(std::string_view var_name, float value)
+void CvarRegistry::SetValue(eastl::string_view var_name, float value)
 {
     char val[32];
     std::snprintf(val, sizeof(val), "%f", value);
@@ -144,13 +144,13 @@ void CvarRegistry::Register(cvar_t* variable)
     }
 
     // check to see if it has allready been defined
-    if (FindVar(std::string_view(variable->name.data(), variable->name.length()))) {
+    if (FindVar(eastl::string_view(variable->name.data(), variable->name.length()))) {
         Con_Printf("Can't register variable %s, allready defined\n", variable->name.c_str());
         return;
     }
 
     // check for overlap with a command
-    if (Cmd::Exists(std::string_view(variable->name.data(), variable->name.length()))) {
+    if (Cmd::Exists(eastl::string_view(variable->name.data(), variable->name.length()))) {
         Con_Printf("Cvar::Register: %s is a command\n", variable->name.c_str());
         return;
     }
@@ -183,7 +183,7 @@ bool CvarRegistry::Command()
         return true;
     }
 
-    Set(std::string_view(v->name.data(), v->name.length()), Cmd::Argv(1));
+    Set(eastl::string_view(v->name.data(), v->name.length()), Cmd::Argv(1));
     return true;
 }
 
@@ -202,32 +202,32 @@ void CvarRegistry::WriteVariables(std::ostream& f)
 }
 
 // Wrapper APIs forwarding to the singleton registry
-cvar_t* FindVar(std::string_view var_name)
+cvar_t* FindVar(eastl::string_view var_name)
 {
     return GetCvarRegistry().FindVar(var_name);
 }
 
-float VariableValue(std::string_view var_name)
+float VariableValue(eastl::string_view var_name)
 {
     return GetCvarRegistry().VariableValue(var_name);
 }
 
-std::string_view VariableString(std::string_view var_name)
+eastl::string_view VariableString(eastl::string_view var_name)
 {
     return GetCvarRegistry().VariableString(var_name);
 }
 
-std::string_view CompleteVariable(std::string_view partial)
+eastl::string_view CompleteVariable(eastl::string_view partial)
 {
     return GetCvarRegistry().CompleteVariable(partial);
 }
 
-void Set(std::string_view var_name, std::string_view value)
+void Set(eastl::string_view var_name, eastl::string_view value)
 {
     GetCvarRegistry().Set(var_name, value);
 }
 
-void SetValue(std::string_view var_name, float value)
+void SetValue(eastl::string_view var_name, float value)
 {
     GetCvarRegistry().SetValue(var_name, value);
 }

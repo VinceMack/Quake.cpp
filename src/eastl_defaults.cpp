@@ -69,3 +69,14 @@ void operator delete[](void* ptr, std::align_val_t /*alignment*/) noexcept {
 void operator delete[](void* ptr, size_t /*size*/, std::align_val_t /*alignment*/) noexcept {
     aligned_free_helper(ptr);
 }
+
+#include <cstdio>
+#include <cstdarg>
+
+namespace EA {
+namespace StdC {
+int Vsnprintf(char* pDestination, size_t n, const char* pFormat, va_list arguments) {
+    return std::vsnprintf(pDestination, n, pFormat, arguments);
+}
+}
+}

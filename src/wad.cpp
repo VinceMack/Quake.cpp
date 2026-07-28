@@ -1,6 +1,8 @@
 // wad.cpp -- WAD archive loading and lump management
 
 #include "quakedef.hpp"
+#include <EASTL/array.h>
+#include <cctype>
 
 using namespace Client;
 using namespace Common;
@@ -25,12 +27,11 @@ using namespace Wad;
 using namespace Cvar;
 using namespace Cmd;
 
-
 namespace Wad {
 
-int wad_numlumps;
-lumpinfo_t* wad_lumps;
-byte* wad_base;
+int wad_numlumps = 0;
+lumpinfo_t* wad_lumps = nullptr;
+byte* wad_base = nullptr;
 
 void SwapPic(qpic_t* pic);
 
@@ -40,31 +41,24 @@ W_CleanupName
 
 Lowercases name and pads with spaces and a terminating 0 to the length of
 lumpinfo_t->name.
-Used so lumpname lookups can proceed rapidly by comparing 4 chars at a time
-Space padding is so names can be printed nicely in tables.
+Used so lumpname lookups can proceed rapidly by comparing 4 chars at a time.
 Can safely be performed in place.
 ==================
 */
-void W_CleanupName(const char* in, char* out)
+void W_CleanupName(eastl::string_view in, eastl::span<char, 16> out)
 {
-    int i;
-    int c;
+    size_t i = 0;
+    const size_t len = eastl::min(in.length(), static_cast<size_t>(16));
 
-    for (i = 0; i < 16; i++) {
-        c = in[i];
-        if (!c) {
+    for (; i < len; ++i) {
+        if (in[i] == '\0') {
             break;
         }
-
-        if (c >= 'A' && c <= 'Z') {
-            c += ('a' - 'A');
-        }
-
-        out[i] = static_cast<char>(c);
+        out[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(in[i])));
     }
 
-    for (; i < 16; i++) {
-        out[i] = static_cast<char>(0);
+    for (; i < 16; ++i) {
+        out[i] = '\0';
     }
 }
 
@@ -73,34 +67,32 @@ void W_CleanupName(const char* in, char* out)
 W_LoadWadFile
 ====================
 */
-void W_LoadWadFile(const char* filename)
+void W_LoadWadFile(eastl::string_view filename)
 {
-    lumpinfo_t* lump_p;
-    wadinfo_t* header;
-    unsigned i;
-    int infotableofs;
-
-    wad_base = COM_LoadHunkFile(filename);
+    eastl::string fname(filename.data(), filename.length());
+    wad_base = static_cast<byte*>(COM_LoadHunkFile(fname.c_str()));
     if (!wad_base) {
-        Sys_Error("W_LoadWadFile: couldn't load %s", filename);
+        Sys_Error("W_LoadWadFile: couldn't load %s", fname.c_str());
     }
 
-    header = (wadinfo_t*)wad_base;
+    auto* header = reinterpret_cast<wadinfo_t*>(wad_base);
 
-    if (header->identification[0] != 'W' || header->identification[1] != 'A' || header->identification[2] != 'D' || header->identification[3] != '2') {
-        Sys_Error("Wad file %s doesn't have WAD2 id\n", filename);
+    if (header->identification[0] != 'W' || header->identification[1] != 'A' ||
+        header->identification[2] != 'D' || header->identification[3] != '2') {
+        Sys_Error("Wad file %s doesn't have WAD2 id\n", fname.c_str());
     }
 
     wad_numlumps = LittleLong(header->numlumps);
-    infotableofs = LittleLong(header->infotableofs);
-    wad_lumps = (lumpinfo_t*)(wad_base + infotableofs);
+    const int infotableofs = LittleLong(header->infotableofs);
+    wad_lumps = reinterpret_cast<lumpinfo_t*>(wad_base + infotableofs);
 
-    for (i = 0, lump_p = wad_lumps; i < (unsigned)wad_numlumps; i++, lump_p++) {
+    lumpinfo_t* lump_p = wad_lumps;
+    for (int i = 0; i < wad_numlumps; ++i, ++lump_p) {
         lump_p->filepos = LittleLong(lump_p->filepos);
         lump_p->size = LittleLong(lump_p->size);
-        W_CleanupName(lump_p->name, lump_p->name);
+        W_CleanupName(lump_p->name, eastl::span<char, 16>(lump_p->name, 16));
         if (lump_p->type == TYP_QPIC) {
-            SwapPic((qpic_t*)(wad_base + lump_p->filepos));
+            SwapPic(reinterpret_cast<qpic_t*>(wad_base + lump_p->filepos));
         }
     }
 }
@@ -110,30 +102,26 @@ void W_LoadWadFile(const char* filename)
 W_GetLumpinfo
 =============
 */
-lumpinfo_t* W_GetLumpinfo(const char* name)
+lumpinfo_t* W_GetLumpinfo(eastl::string_view name)
 {
-    int i;
-    lumpinfo_t* lump_p;
-    char clean[16];
-
+    eastl::array<char, 16> clean{};
     W_CleanupName(name, clean);
 
-    for (lump_p = wad_lumps, i = 0; i < wad_numlumps; i++, lump_p++) {
-        if (!strcmp(clean, lump_p->name)) {
+    lumpinfo_t* lump_p = wad_lumps;
+    for (int i = 0; i < wad_numlumps; ++i, ++lump_p) {
+        if (eastl::string_view(clean.data()) == lump_p->name) {
             return lump_p;
         }
     }
 
-    Sys_Error("W_GetLumpinfo: %s not found", name);
+    eastl::string name_str(name.data(), name.length());
+    Sys_Error("W_GetLumpinfo: %s not found", name_str.c_str());
 }
 
-void* W_GetLumpName(const char* name)
+void* W_GetLumpName(eastl::string_view name)
 {
-    lumpinfo_t* lump;
-
-    lump = W_GetLumpinfo(name);
-
-    return (void*)(wad_base + lump->filepos);
+    lumpinfo_t* lump = W_GetLumpinfo(name);
+    return reinterpret_cast<void*>(wad_base + lump->filepos);
 }
 
 /*
@@ -146,8 +134,11 @@ automatic byte swapping
 
 void SwapPic(qpic_t* pic)
 {
-    pic->width = LittleLong(pic->width);
-    pic->height = LittleLong(pic->height);
+    if (pic != nullptr) {
+        pic->width = LittleLong(pic->width);
+        pic->height = LittleLong(pic->height);
+    }
 }
 
 } // namespace Wad
+

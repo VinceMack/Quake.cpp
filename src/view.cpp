@@ -253,7 +253,7 @@ cshift_t cshift_lava = { { 255, 80, 0 }, 150 };
 
 cvar_t v_gamma = { "gamma", "1", true };
 
-byte gammatable[256]; // palette is sent through this
+eastl::array<byte, 256> gammatable{}; // palette is sent through this
 
 
 void BuildGammaTable(float g)

@@ -2,12 +2,11 @@
 
 #include <cstring>
 #include <fstream>
-#include <string>
 #include <EASTL/string.h>
-#include <string_view>
-#include <array>
-#include <algorithm>
-#include <limits>
+#include <EASTL/string_view.h>
+#include <EASTL/array.h>
+#include <EASTL/algorithm.h>
+#include <EASTL/numeric_limits.h>
 #include "quakedef.hpp"
 
 using namespace Client;
@@ -104,7 +103,7 @@ bool m_recursiveDraw;
 
 MenuState m_return_state = MenuState::None;
 bool m_return_onerror = false;
-std::string m_return_reason;
+eastl::string m_return_reason;
 
 int m_multiplayer_cursor = 0;
 int m_net_cursor = 0;
@@ -130,7 +129,7 @@ inline void M_DrawCharacter(int cx, int line, int num)
     Draw_Character(cx + ((vid.width - 320) >> 1), line, num);
 }
 
-void M_Print(int cx, int cy, std::string_view str)
+void M_Print(int cx, int cy, eastl::string_view str)
 {
     for (char c : str) {
         M_DrawCharacter(cx, cy, static_cast<unsigned char>(c) + 128);
@@ -138,7 +137,7 @@ void M_Print(int cx, int cy, std::string_view str)
     }
 }
 
-void M_PrintWhite(int cx, int cy, std::string_view str)
+void M_PrintWhite(int cx, int cy, eastl::string_view str)
 {
     for (char c : str) {
         M_DrawCharacter(cx, cy, static_cast<unsigned char>(c));
@@ -156,8 +155,8 @@ void M_DrawPic(int x, int y, qpic_t* pic)
     Draw_Pic(x + ((vid.width - 320) >> 1), y, pic);
 }
 
-std::array<byte, 256> identityTable;
-std::array<byte, 256> translationTable;
+eastl::array<byte, 256> identityTable;
+eastl::array<byte, 256> translationTable;
 
 void M_BuildTranslationTable(int top, int bottom)
 {
@@ -167,7 +166,7 @@ void M_BuildTranslationTable(int top, int bottom)
     translationTable = identityTable;
 
     if (top < 128) { // the artists made some backwards ranges.  sigh.
-        std::copy_n(identityTable.begin() + top, 16, translationTable.begin() + TOP_RANGE);
+        eastl::copy_n(identityTable.begin() + top, 16, translationTable.begin() + TOP_RANGE);
     } else {
         for (int j = 0; j < 16; j++) {
             translationTable[TOP_RANGE + j] = identityTable[top + 15 - j];
@@ -175,7 +174,7 @@ void M_BuildTranslationTable(int top, int bottom)
     }
 
     if (bottom < 128) {
-        std::copy_n(identityTable.begin() + bottom, 16, translationTable.begin() + BOTTOM_RANGE);
+        eastl::copy_n(identityTable.begin() + bottom, 16, translationTable.begin() + BOTTOM_RANGE);
     } else {
         for (int j = 0; j < 16; j++) {
             translationTable[BOTTOM_RANGE + j] = identityTable[bottom + 15 - j];
@@ -455,8 +454,8 @@ void M_SinglePlayer_Key(int key)
 int load_cursor; // 0 < load_cursor < MAX_SAVEGAMES
 
 constexpr int MAX_SAVEGAMES = 12;
-std::array<std::string, MAX_SAVEGAMES> m_filenames;
-std::array<bool, MAX_SAVEGAMES> loadable;
+eastl::array<eastl::string, MAX_SAVEGAMES> m_filenames;
+eastl::array<bool, MAX_SAVEGAMES> loadable;
 
 void M_ScanSaves()
 {
@@ -495,7 +494,7 @@ void M_ScanSaves()
             comment = comment.substr(0, SAVEGAME_COMMENT_LENGTH);
         }
 
-        m_filenames[i] = comment;
+        m_filenames[i] = comment.c_str();
         loadable[i] = true;
     }
 }
@@ -933,7 +932,7 @@ void M_Setup_Key(int k)
 int m_net_items;
 int m_net_saveHeight;
 
-const std::array<std::string_view, 16> net_helpMessage = {
+const eastl::array<eastl::string_view, 16> net_helpMessage = {
     /* .........1.........2.... */
     "                        ", " Two computers connected",
     "   through two modems.  ", "                        ",
@@ -1360,11 +1359,11 @@ void M_Options_Key(int k)
 /* KEYS MENU */
 
 struct BindName {
-    std::string_view command;
-    std::string_view description;
+    eastl::string_view command;
+    eastl::string_view description;
 };
 
-const std::array<BindName, 18> bindnames = {{
+const eastl::array<BindName, 18> bindnames = {{
     { "+attack", "attack" }, { "impulse 10", "change weapon" },
     { "+jump", "jump / swim up" }, { "+forward", "walk forward" },
     { "+back", "backpedal" }, { "+left", "turn left" },
@@ -1386,7 +1385,7 @@ void M_Menu_Keys_f()
     m_entersound = true;
 }
 
-void M_FindKeysForCommand(std::string_view command, std::array<int, 2>& twokeys)
+void M_FindKeysForCommand(eastl::string_view command, eastl::array<int, 2>& twokeys)
 {
     twokeys[0] = twokeys[1] = -1;
     int count = 0;
@@ -1396,7 +1395,7 @@ void M_FindKeysForCommand(std::string_view command, std::array<int, 2>& twokeys)
             continue;
         }
 
-        if (keybindings[j].compare(0, command.length(), command) == 0) {
+        if (keybindings[j] == command) {
             twokeys[count] = j;
             count++;
             if (count == 2) {
@@ -1406,14 +1405,14 @@ void M_FindKeysForCommand(std::string_view command, std::array<int, 2>& twokeys)
     }
 }
 
-void M_UnbindCommand(std::string_view command)
+void M_UnbindCommand(eastl::string_view command)
 {
     for (int j = 0; j < 256; j++) {
         if (keybindings[j].empty()) {
             continue;
         }
 
-        if (keybindings[j].compare(0, command.length(), command) == 0) {
+        if (keybindings[j] == command) {
             Key_SetBinding(j, "");
         }
     }
@@ -1422,7 +1421,7 @@ void M_UnbindCommand(std::string_view command)
 void M_Keys_Draw()
 {
     int y;
-    std::array<int, 2> keys;
+    eastl::array<int, 2> keys;
     const char* name;
     qpic_t* p;
 
@@ -1466,7 +1465,7 @@ void M_Keys_Draw()
 void M_Keys_Key(int k)
 {
     char cmd[80];
-    std::array<int, 2> keys;
+    eastl::array<int, 2> keys;
 
     if (bind_grab) { // defining a key
         S_LocalSound("misc/menu1.wav");
@@ -1609,17 +1608,17 @@ void M_Menu_Quit_f()
 /* SERIAL CONFIG MENU */
 
 int serialConfig_cursor;
-const std::array<int, 6> serialConfig_cursor_table = { 48, 64, 80, 96, 112, 132 };
+const eastl::array<int, 6> serialConfig_cursor_table = { 48, 64, 80, 96, 112, 132 };
 constexpr int NUM_SERIALCONFIG_CMDS = 6;
 
-static const std::array<int, 4> ISA_uarts = { 0x3f8, 0x2f8, 0x3e8, 0x2e8 };
-static const std::array<int, 4> ISA_IRQs = { 4, 3, 4, 3 };
-static const std::array<int, 6> serialConfig_baudrate = { 9600, 14400, 19200, 28800, 38400, 57600 };
+static const eastl::array<int, 4> ISA_uarts = { 0x3f8, 0x2f8, 0x3e8, 0x2e8 };
+static const eastl::array<int, 4> ISA_IRQs = { 4, 3, 4, 3 };
+static const eastl::array<int, 6> serialConfig_baudrate = { 9600, 14400, 19200, 28800, 38400, 57600 };
 
 int serialConfig_comport;
 int serialConfig_irq;
 int serialConfig_baud;
-std::string serialConfig_phone;
+eastl::string serialConfig_phone;
 
 void M_Menu_SerialConfig_f()
 {
@@ -1735,7 +1734,7 @@ void M_SerialConfig_Draw()
     }
 
     if (!m_return_reason.empty()) {
-        M_PrintWhite(basex, 148, m_return_reason);
+        M_PrintWhite(basex, 148, m_return_reason.c_str());
     }
 }
 
@@ -2110,12 +2109,12 @@ void M_ModemConfig_Key(int key)
 /* LAN CONFIG MENU */
 
 int lanConfig_cursor = -1;
-const std::array<int, 3> lanConfig_cursor_table = { 72, 92, 124 };
+const eastl::array<int, 3> lanConfig_cursor_table = { 72, 92, 124 };
 constexpr int NUM_LANCONFIG_CMDS = 3;
 
 int lanConfig_port;
-std::string lanConfig_portname;
-std::string lanConfig_joinname;
+eastl::string lanConfig_portname;
+eastl::string lanConfig_joinname;
 
 void M_Menu_LanConfig_f()
 {
@@ -2123,7 +2122,7 @@ void M_Menu_LanConfig_f()
     m_state = MenuState::LanConfig;
     m_entersound = true;
     if (lanConfig_cursor == -1) {
-        if (JoiningGame() && TCPIPConfig()) {
+        if (JoiningGame()) {
             lanConfig_cursor = 2;
         } else {
             lanConfig_cursor = 1;
@@ -2135,7 +2134,7 @@ void M_Menu_LanConfig_f()
     }
 
     lanConfig_port = DEFAULTnet_hostport;
-    lanConfig_portname = std::to_string(lanConfig_port);
+    lanConfig_portname = eastl::to_string(lanConfig_port);
 
     m_return_onerror = false;
     m_return_reason.clear();
@@ -2203,7 +2202,7 @@ void M_LanConfig_Draw()
     }
 
     if (!m_return_reason.empty()) {
-        M_PrintWhite(basex, 148, m_return_reason);
+        M_PrintWhite(basex, 148, m_return_reason.c_str());
     }
 }
 
@@ -2312,7 +2311,7 @@ void M_LanConfig_Key(int key)
         lanConfig_port = l;
     }
 
-    lanConfig_portname = std::to_string(lanConfig_port);
+    lanConfig_portname = std::to_string(lanConfig_port).c_str();
 }
 
 //=============================================================================
@@ -2918,7 +2917,7 @@ void M_ServerList_Draw()
     M_DrawCharacter(0, 32 + slist_cursor * 8, 12 + ((int)(realtime * 4) & 1));
 
     if (!m_return_reason.empty()) {
-        M_PrintWhite(16, 148, m_return_reason);
+        M_PrintWhite(16, 148, m_return_reason.c_str());
     }
 }
 

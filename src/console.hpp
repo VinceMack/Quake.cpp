@@ -2,7 +2,7 @@
 #pragma once
 
 #include <EASTL/vector.h>
-#include <string_view>
+#include <EASTL/string_view.h>
 
 namespace Console {
 
@@ -14,7 +14,7 @@ public:
     void Init();
     void CheckResize();
     void DrawConsole(int lines, bool drawinput);
-    void Print(std::string_view txt);
+    void Print(eastl::string_view txt);
     void Printf(const char* fmt, ...);
     void DPrintf(const char* fmt, ...);
     void Clear();
@@ -57,7 +57,7 @@ private:
     bool debuglog_ = false;
 
     void Linefeed();
-    void DebugLog(std::string_view file, std::string_view text);
+    void DebugLog(eastl::string_view file, eastl::string_view text);
     void DrawInput();
 };
 

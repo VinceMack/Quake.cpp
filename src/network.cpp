@@ -1295,7 +1295,7 @@ static void Test_Poll(void)
 
 static void Test_f(void)
 {
-    std::string_view host;
+    eastl::string_view host;
     int n;
     int max = MAX_SCOREBOARD;
     struct qsockaddr sendaddr;
@@ -1331,7 +1331,7 @@ static void Test_f(void)
         }
 
         // see if we can resolve the host name
-        if (dfunc.GetAddrFromName(std::string(host).c_str(), &sendaddr) != -1) {
+        if (dfunc.GetAddrFromName(eastl::string(host.data(), host.length()).c_str(), &sendaddr) != -1) {
             break;
         }
     }
@@ -1434,7 +1434,7 @@ Done:
 
 static void Test2_f(void)
 {
-    std::string_view host;
+    eastl::string_view host;
     int n;
     struct qsockaddr sendaddr;
 
@@ -1468,7 +1468,7 @@ static void Test2_f(void)
         }
 
         // see if we can resolve the host name
-        if (dfunc.GetAddrFromName(std::string(host).c_str(), &sendaddr) != -1) {
+        if (dfunc.GetAddrFromName(eastl::string(host.data(), host.length()).c_str(), &sendaddr) != -1) {
             break;
         }
     }

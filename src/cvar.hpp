@@ -2,10 +2,9 @@
 #pragma once
 #include <EASTL/string.h>
 #include <EASTL/string_view.h>
+#include <EASTL/unordered_map.h>
 #include <cstdio>
 #include <ostream>
-#include <EASTL/unordered_map.h>
-#include <string_view>
 
 struct cvar_s {
     eastl::string name;
@@ -26,14 +25,14 @@ struct State {
 class CvarRegistry {
 public:
     void Register(cvar_t* variable);
-    void Set(std::string_view var_name, std::string_view value);
-    void SetValue(std::string_view var_name, float value);
-    float VariableValue(std::string_view var_name);
-    std::string_view VariableString(std::string_view var_name);
-    std::string_view CompleteVariable(std::string_view partial);
+    void Set(eastl::string_view var_name, eastl::string_view value);
+    void SetValue(eastl::string_view var_name, float value);
+    float VariableValue(eastl::string_view var_name);
+    eastl::string_view VariableString(eastl::string_view var_name);
+    eastl::string_view CompleteVariable(eastl::string_view partial);
     bool Command();
     void WriteVariables(std::ostream& f);
-    cvar_t* FindVar(std::string_view var_name);
+    cvar_t* FindVar(eastl::string_view var_name);
 
     State& GetState() { return state_; }
     const State& GetState() const { return state_; }
@@ -48,13 +47,13 @@ CvarRegistry& GetCvarRegistry();
 inline State& state = GetCvarRegistry().GetState();
 
 void Register(cvar_t* variable);
-void Set(std::string_view var_name, std::string_view value);
-void SetValue(std::string_view var_name, float value);
-float VariableValue(std::string_view var_name);
-std::string_view VariableString(std::string_view var_name);
-std::string_view CompleteVariable(std::string_view partial);
+void Set(eastl::string_view var_name, eastl::string_view value);
+void SetValue(eastl::string_view var_name, float value);
+float VariableValue(eastl::string_view var_name);
+eastl::string_view VariableString(eastl::string_view var_name);
+eastl::string_view CompleteVariable(eastl::string_view partial);
 bool Command();
 void WriteVariables(std::ostream& f);
-cvar_t* FindVar(std::string_view var_name);
+cvar_t* FindVar(eastl::string_view var_name);
 
 } // namespace Cvar

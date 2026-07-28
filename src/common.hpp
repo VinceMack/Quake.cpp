@@ -1,6 +1,8 @@
 // common.h -- general type definitions and common macros
 #pragma once
 
+#include <EASTL/string_view.h>
+#include <EASTL/algorithm.h>
 #include <stdint.h>
 
 #if !defined BYTE_DEFINED
@@ -122,13 +124,13 @@ inline float MSG_ReadAngle(void)
 void Q_memset(void* dest, int fill, int count);
 void Q_memcpy(void* dest, const void* src, int count);
 void Q_strcpy(char* dest, const char* src);
-inline void Q_strcpy(char* dest, std::string_view src)
+inline void Q_strcpy(char* dest, eastl::string_view src)
 {
     Q_memcpy(dest, src.data(), static_cast<int>(src.size()));
     dest[src.size()] = 0;
 }
 void Q_strncpy(char* dest, const char* src, int count);
-inline void Q_strncpy(char* dest, std::string_view src, int count)
+inline void Q_strncpy(char* dest, eastl::string_view src, int count)
 {
     int len = static_cast<int>(src.size());
     if (len > count) {
@@ -144,7 +146,7 @@ inline char* Q_strrchr(char* s, char c)
     return const_cast<char*>(Q_strrchr(static_cast<const char*>(s), c));
 }
 void Q_strcat(char* dest, const char* src);
-inline void Q_strcat(char* dest, std::string_view src)
+inline void Q_strcat(char* dest, eastl::string_view src)
 {
     dest += Q_strlen(dest);
     Q_memcpy(dest, src.data(), static_cast<int>(src.size()));
@@ -173,13 +175,13 @@ inline int Q_strcasecmp(const char* s1, const char* s2)
     } while (c1);
     return 0;
 }
-inline int Q_strcmp(std::string_view s1, std::string_view s2)
+inline int Q_strcmp(eastl::string_view s1, eastl::string_view s2)
 {
     return s1.compare(s2);
 }
-inline int Q_strcasecmp(std::string_view s1, std::string_view s2)
+inline int Q_strcasecmp(eastl::string_view s1, eastl::string_view s2)
 {
-    size_t min_len = std::min(s1.size(), s2.size());
+    size_t min_len = eastl::min(s1.size(), s2.size());
     for (size_t i = 0; i < min_len; ++i) {
         char c1 = s1[i];
         char c2 = s2[i];
@@ -192,8 +194,8 @@ inline int Q_strcasecmp(std::string_view s1, std::string_view s2)
     if (s1.size() > s2.size()) return 1;
     return 0;
 }
-int Q_atoi(std::string_view str);
-float Q_atof(std::string_view str);
+int Q_atoi(eastl::string_view str);
+float Q_atof(eastl::string_view str);
 
 //============================================================================
 

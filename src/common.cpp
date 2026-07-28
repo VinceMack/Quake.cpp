@@ -4,10 +4,10 @@
 #include <bit>
 #include <cstring>
 #include <cctype>
-#include <algorithm>
+#include <EASTL/algorithm.h>
 #include <EASTL/vector.h>
 #include <EASTL/string.h>
-#include <string_view>
+#include <EASTL/string_view.h>
 
 using namespace Client;
 using namespace Common;
@@ -153,7 +153,7 @@ void Q_memcpy(void* dest, const void* src, int count)
 void Q_strcpy(char* dest, const char* src)
 {
     std::size_t len = std::strlen(src);
-    std::copy_n(src, len + 1, dest);
+    eastl::copy_n(src, len + 1, dest);
 }
 
 void Q_strncpy(char* dest, const char* src, int count)
@@ -163,10 +163,10 @@ void Q_strncpy(char* dest, const char* src, int count)
     }
     std::size_t len = std::strlen(src);
     if (len < static_cast<std::size_t>(count)) {
-        std::copy_n(src, len, dest);
+        eastl::copy_n(src, len, dest);
         dest[len] = '\0';
     } else {
-        std::copy_n(src, count, dest);
+        eastl::copy_n(src, count, dest);
     }
 }
 
@@ -184,7 +184,7 @@ void Q_strcat(char* dest, const char* src)
 {
     std::size_t dest_len = std::strlen(dest);
     std::size_t src_len = std::strlen(src);
-    std::copy_n(src, src_len + 1, dest + dest_len);
+    eastl::copy_n(src, src_len + 1, dest + dest_len);
 }
 
 int Q_strcmp(const char* s1, const char* s2)
@@ -216,7 +216,7 @@ int Q_strncasecmp(const char* s1, const char* s2, int n)
     return 0;
 }
 
-int Q_atoi(std::string_view str)
+int Q_atoi(eastl::string_view str)
 {
     if (str.empty()) {
         return 0;
@@ -275,7 +275,7 @@ int Q_atoi(std::string_view str)
     return val * sign;
 }
 
-float Q_atof(std::string_view str)
+float Q_atof(eastl::string_view str)
 {
     if (str.empty()) {
         return 0.0f;
@@ -682,10 +682,10 @@ void SZ_Print(sizebuf_t* buf, const char* data)
 COM_FileExtension
 ============
 */
-std::string_view COM_FileExtension(std::string_view in)
+eastl::string_view COM_FileExtension(eastl::string_view in)
 {
     auto dot_pos = in.find('.');
-    if (dot_pos == std::string_view::npos) {
+    if (dot_pos == eastl::string_view::npos) {
         return "";
     }
     return in.substr(dot_pos + 1, 7);
@@ -698,21 +698,21 @@ COM_FileBase
 */
 void COM_FileBase(const char* in, char* out)
 {
-    std::string_view path(in);
+    eastl::string_view path(in);
     auto dot_pos = path.find_last_of('.');
-    if (dot_pos == std::string_view::npos) {
+    if (dot_pos == eastl::string_view::npos) {
         strcpy_s(out, 32, "?model?");
         return;
     }
 
     auto filename = path.substr(0, dot_pos);
     auto last_slash = filename.find_last_of("/\\");
-    std::string_view base = (last_slash == std::string_view::npos) ? filename : filename.substr(last_slash + 1);
+    eastl::string_view base = (last_slash == eastl::string_view::npos) ? filename : filename.substr(last_slash + 1);
 
     if (base.empty()) {
         strcpy_s(out, 32, "?model?");
     } else {
-        size_t copy_len = std::min(base.size(), size_t{31});
+        size_t copy_len = eastl::min(base.size(), size_t{31});
         std::memcpy(out, base.data(), copy_len);
         out[copy_len] = '\0';
     }
@@ -725,11 +725,11 @@ COM_DefaultExtension
 */
 void COM_DefaultExtension(char* path, const char* extension)
 {
-    std::string_view path_view(path);
+    eastl::string_view path_view(path);
     auto last_slash = path_view.find_last_of("/\\");
-    std::string_view filename = (last_slash == std::string_view::npos) ? path_view : path_view.substr(last_slash + 1);
+    eastl::string_view filename = (last_slash == eastl::string_view::npos) ? path_view : path_view.substr(last_slash + 1);
 
-    if (filename.find('.') != std::string_view::npos) {
+    if (filename.find('.') != eastl::string_view::npos) {
         return; // it has an extension
     }
 
@@ -897,7 +897,7 @@ void COM_InitArgv(int argc, char** argv)
     // reconstitute the command line for the cmdline externally visible cvar
     int n = 0;
     for (int j = 0; j < MAX_NUM_ARGVS && j < argc; ++j) {
-        std::string_view arg(argv[j]);
+        eastl::string_view arg(argv[j]);
         for (char c : arg) {
             if (n >= CMDLINE_LENGTH - 1) {
                 break;
@@ -916,7 +916,7 @@ void COM_InitArgv(int argc, char** argv)
     for (com_argc = 0; (com_argc < MAX_NUM_ARGVS) && (com_argc < argc);
         com_argc++) {
         largv[com_argc] = argv[com_argc];
-        if (std::string_view(argv[com_argc]) == "-safe") {
+        if (eastl::string_view(argv[com_argc]) == "-safe") {
             safe = true;
         }
     }
@@ -1111,7 +1111,7 @@ Only used for CopyFile
 */
 void COM_CreatePath(const char* path)
 {
-    std::string temp(path);
+    eastl::string temp(path);
     for (size_t i = 1; i < temp.size(); ++i) {
         if (temp[i] == '/') {
             temp[i] = '\0';
@@ -1145,7 +1145,7 @@ void COM_CopyFile(const char* netpath, const char* cachepath)
 
     char buf[4096];
     while (remaining > 0) {
-        int count = std::min(remaining, static_cast<int>(sizeof(buf)));
+        int count = eastl::min(remaining, static_cast<int>(sizeof(buf)));
         Sys_FileRead(in, buf, count);
         Sys_FileWrite(out, buf, count);
         remaining -= count;

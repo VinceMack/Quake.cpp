@@ -1,8 +1,9 @@
 // keys.hpp -- keycode definitions and key event declarations
 #pragma once
+#include <EASTL/array.h>
+#include <EASTL/string.h>
+#include <EASTL/string_view.h>
 #include <ostream>
-#include <array>
-#include <string>
 
 namespace Keys {
 
@@ -94,10 +95,10 @@ inline constexpr int K_MWHEELDOWN = 240;
 
 inline constexpr int MAXCMDLINE = 256;
 
-extern std::array<std::array<char, MAXCMDLINE>, 32> key_lines;
+extern eastl::array<eastl::array<char, MAXCMDLINE>, 32> key_lines;
 extern int key_linepos;
 extern int edit_line;
-extern std::array<char, 32> chat_buffer;
+extern eastl::array<char, 32> chat_buffer;
 extern bool team_message;
 
 enum keydest_t {
@@ -108,8 +109,8 @@ enum keydest_t {
 };
 
 extern keydest_t key_dest;
-extern std::array<std::string, 256> keybindings;
-extern std::array<int, 256> key_repeats;
+extern eastl::array<eastl::string, 256> keybindings;
+extern eastl::array<int, 256> key_repeats;
 extern int key_count;
 extern int key_lastpress;
 

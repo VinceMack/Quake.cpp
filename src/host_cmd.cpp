@@ -3,9 +3,10 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
-#include <string>
-#include <string_view>
-#include <limits>
+#include <EASTL/string.h>
+#include <EASTL/string_view.h>
+#include <EASTL/vector.h>
+#include <EASTL/numeric_limits.h>
 #include "quakedef.hpp"
 
 using namespace Client;
@@ -274,9 +275,10 @@ void Host_Map_f()
     key_dest = key_game; // remove console or menu
     Screen::GetScreenSystem().BeginLoadingPlaque();
 
-    std::string mapstring;
+    eastl::string mapstring;
     for (int i = 0; i < Cmd::Argc(); i++) {
-        mapstring += Cmd::Argv(i);
+        eastl::string_view arg = Cmd::Argv(i);
+        mapstring.append(arg.data(), arg.length());
         mapstring += " ";
     }
     mapstring += "\n";
@@ -285,16 +287,18 @@ void Host_Map_f()
     svs.serverflags = 0; // haven't completed an episode yet
     
     char name[MAX_QPATH];
-    Q_strcpy(name, Cmd::Argv(1));
+    eastl::string_view arg1 = Cmd::Argv(1);
+    Q_strncpy(name, arg1, sizeof(name) - 1);
     SV_SpawnServer(name);
     if (!sv.active) {
         return;
     }
 
     if (cls.state != ca_dedicated) {
-        std::string spawnparms;
+        eastl::string spawnparms;
         for (int i = 2; i < Cmd::Argc(); i++) {
-            spawnparms += Cmd::Argv(i);
+            eastl::string_view arg = Cmd::Argv(i);
+            spawnparms.append(arg.data(), arg.length());
             spawnparms += " ";
         }
         strcpy_s(cls.spawnparms, sizeof(cls.spawnparms), spawnparms.c_str());
@@ -487,7 +491,8 @@ void Host_Savegame_f()
     }
 
     char name[256];
-    sprintf_s(name, sizeof(name), "%s/%s", com_gamedir, std::string(Cmd::Argv(1)).c_str());
+    eastl::string_view save_arg = Cmd::Argv(1);
+    sprintf_s(name, sizeof(name), "%s/%.*s", com_gamedir, static_cast<int>(save_arg.length()), save_arg.data());
     COM_DefaultExtension(name, ".sav");
 
     Con_Printf("Saving game to %s...\n", name);
@@ -544,7 +549,8 @@ void Host_Loadgame_f()
     cls.demonum = -1; // stop demo loop in case this fails
 
     char name[MAX_OSPATH];
-    sprintf_s(name, sizeof(name), "%s/%s", com_gamedir, std::string(Cmd::Argv(1)).c_str());
+    eastl::string_view load_arg = Cmd::Argv(1);
+    sprintf_s(name, sizeof(name), "%s/%.*s", com_gamedir, static_cast<int>(load_arg.length()), load_arg.data());
     COM_DefaultExtension(name, ".sav");
 
     Con_Printf("Loading game from %s...\n", name);
@@ -709,9 +715,11 @@ void Host_Name_f()
     }
 
     if (Cmd::Argc() == 2) {
-        Q_strncpy(newName, std::string(Cmd::Argv(1)).c_str(), sizeof(newName) - 1);
+        eastl::string_view arg1 = Cmd::Argv(1);
+        Q_strncpy(newName, arg1, sizeof(newName) - 1);
     } else {
-        Q_strncpy(newName, std::string(Cmd::Args()).c_str(), sizeof(newName) - 1);
+        eastl::string_view args = Cmd::Args();
+        Q_strncpy(newName, args, sizeof(newName) - 1);
     }
 
     newName[15] = 0;
@@ -769,7 +777,8 @@ void Host_Say(qboolean teamonly)
 
     client_t* save = host_client;
 
-    std::string arg_str(Cmd::Args());
+    eastl::string_view arg_sv = Cmd::Args();
+    eastl::string arg_str(arg_sv.data(), arg_sv.length());
     // remove quotes if present
     if (!arg_str.empty() && arg_str.front() == '"') {
         arg_str = arg_str.substr(1);
@@ -779,11 +788,11 @@ void Host_Say(qboolean teamonly)
     }
 
     // construct prefix
-    std::string text_str;
+    eastl::string text_str;
     if (Cmd::state.source == Cmd::Source::Command && cls.state == ca_dedicated) {
-        text_str = std::string(1, '\x01') + "<" + hostname.string.c_str() + "> ";
+        text_str = eastl::string(1, '\x01') + "<" + hostname.string.c_str() + "> ";
     } else {
-        text_str = std::string(1, '\x01') + save->name.data() + ": ";
+        text_str = eastl::string(1, '\x01') + save->name.data() + ": ";
     }
 
     // check length & truncate if necessary
@@ -826,9 +835,10 @@ void Host_Tell_f()
         return;
     }
 
-    std::string text_str = std::string(host_client->name.data()) + ": ";
+    eastl::string text_str = eastl::string(host_client->name.data()) + ": ";
 
-    std::string arg_str(Cmd::Args());
+    eastl::string_view arg_sv = Cmd::Args();
+    eastl::string arg_str(arg_sv.data(), arg_sv.length());
     // remove quotes if present
     if (!arg_str.empty() && arg_str.front() == '"') {
         arg_str = arg_str.substr(1);
@@ -1200,9 +1210,10 @@ void Host_Kick_f()
         }
 
         const char* message = nullptr;
-        std::string args_holder;
+        eastl::string args_holder;
         if (Cmd::Argc() > 2) {
-            args_holder = Cmd::Args();
+            eastl::string_view args_sv = Cmd::Args();
+            args_holder = eastl::string(args_sv.data(), args_sv.length());
             const char* ptr = args_holder.c_str();
             ptr = COM_Parse(ptr); // Skip # or name
             if (byNumber) {
@@ -1253,7 +1264,7 @@ void Host_Give_f()
         return;
     }
 
-    std::string_view t = Cmd::Argv(1);
+    eastl::string_view t = Cmd::Argv(1);
     int v = Q_atoi(Cmd::Argv(2));
 
     if (t.empty()) {
@@ -1413,9 +1424,11 @@ void Host_Viewmodel_f()
         return;
     }
 
-    model_t* m = Mod_ForName(std::string(Cmd::Argv(1)).c_str(), false);
+    eastl::string_view arg1 = Cmd::Argv(1);
+    eastl::string arg1_str(arg1.data(), arg1.length());
+    model_t* m = Mod_ForName(arg1_str.c_str(), false);
     if (!m) {
-        Con_Printf("Can't load %s\n", Cmd::Argv(1));
+        Con_Printf("Can't load %.*s\n", static_cast<int>(arg1.length()), arg1.data());
 
         return;
     }
@@ -1534,7 +1547,8 @@ void Host_Startdemos_f()
     Con_Printf("%i demo(s) in loop\n", c);
 
     for (int i = 1; i < c + 1; i++) {
-        Q_strncpy(cls.demos[i - 1], std::string(Cmd::Argv(i)).c_str(), sizeof(cls.demos[0]) - 1);
+        eastl::string_view demo_arg = Cmd::Argv(i);
+        Q_strncpy(cls.demos[i - 1], demo_arg, sizeof(cls.demos[0]) - 1);
     }
 
     if (!sv.active && cls.demonum != -1 && !cls.demoplayback) {

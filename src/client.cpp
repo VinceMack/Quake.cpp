@@ -1,11 +1,11 @@
 // client.cpp -- client subsystem (merged from cl_main.cpp, cl_input.cpp, cl_demo.cpp, cl_parse.cpp, cl_tent.cpp)
 
 #include "quakedef.hpp"
-#include <array>
-#include <string>
-#include <string_view>
-#include <algorithm>
-#include <span>
+#include <EASTL/array.h>
+#include <EASTL/string.h>
+#include <EASTL/string_view.h>
+#include <EASTL/algorithm.h>
+#include <EASTL/span.h>
 #include <cmath>
 
 using namespace Client;
@@ -299,8 +299,10 @@ void CL_NextDemo()
         }
     }
 
-    std::string demoCmd = "playdemo " + std::string(cls.demos[cls.demonum]) + "\n";
-    Cmd::BufferInsertText(demoCmd);
+    eastl::string demoCmd = "playdemo ";
+    demoCmd += cls.demos[cls.demonum];
+    demoCmd += "\n";
+    Cmd::BufferInsertText(demoCmd.c_str());
     cls.demonum++;
 }
 
@@ -312,7 +314,7 @@ CL_PrintEntities_f
 void CL_PrintEntities_f()
 {
     int i = 0;
-    for (const auto& ent : std::span(cl_entities.data(), cl.num_entities)) {
+    for (const auto& ent : eastl::span(cl_entities.data(), cl.num_entities)) {
         Con_Printf("%3i:", i++);
         if (!ent.model) {
             Con_Printf("EMPTY\n");
@@ -451,7 +453,7 @@ void CL_RelinkEntities()
     // start on the entity after the world
     if (cl.num_entities > 1) {
         int i = 1;
-        for (auto& ent : std::span(cl_entities.data() + 1, cl.num_entities - 1)) {
+        for (auto& ent : eastl::span(cl_entities.data() + 1, cl.num_entities - 1)) {
             if (!ent.model) { // empty slot
                 if (ent.forcelink) {
                     R_RemoveEfrags(&ent); // just became empty
@@ -707,7 +709,7 @@ KeyDown
 void KeyDown(kbutton_t* b)
 {
     int k;
-    std::string_view c = Cmd::Argv(1);
+    eastl::string_view c = Cmd::Argv(1);
     if (!c.empty()) {
         k = Q_atoi(c);
     } else {
@@ -737,7 +739,7 @@ void KeyDown(kbutton_t* b)
 void KeyUp(kbutton_t* b)
 {
     int k;
-    std::string_view c = Cmd::Argv(1);
+    eastl::string_view c = Cmd::Argv(1);
     if (!c.empty()) {
         k = Q_atoi(c);
     } else { // typed manually at the console, assume for unsticking, so clear all
@@ -1209,11 +1211,14 @@ void CL_Record_f()
         Con_Printf("Forcing CD track to %i\n", cls.forcetrack);
     }
 
-    std::string name = std::string(com_gamedir) + "/" + std::string(Cmd::Argv(1));
+    eastl::string_view arg1 = Cmd::Argv(1);
+    eastl::string name = eastl::string(com_gamedir) + "/" + eastl::string(arg1.data(), arg1.length());
 
     // start the map up
     if (c > 2) {
-        Cmd::ExecuteString(va("map %s", std::string(Cmd::Argv(2)).c_str()), Cmd::Source::Command);
+        eastl::string_view arg2 = Cmd::Argv(2);
+        eastl::string map_cmd = "map " + eastl::string(arg2.data(), arg2.length());
+        Cmd::ExecuteString(map_cmd.c_str(), Cmd::Source::Command);
     }
 
     // open the demo file
@@ -1257,7 +1262,9 @@ void CL_PlayDemo_f()
 
     // open the demo file
     char name[256];
-    strcpy_s(name, sizeof(name), std::string(Cmd::Argv(1)).c_str());
+    eastl::string_view demo_arg = Cmd::Argv(1);
+    eastl::string demo_name(demo_arg.data(), demo_arg.length());
+    strcpy_s(name, sizeof(name), demo_name.c_str());
     COM_DefaultExtension(name, ".dem");
 
     Con_Printf("Playing demo from %s.\n", name);
@@ -1416,8 +1423,8 @@ void CL_KeepaliveMessage()
 
     // read messages from server, should just be nops
     sizebuf_t old = net_message;
-    std::array<byte, 8192> olddata;
-    std::copy_n(net_message.data, std::min(static_cast<int>(olddata.size()), net_message.cursize), olddata.begin());
+    eastl::array<byte, 8192> olddata;
+    eastl::copy_n(net_message.data, eastl::min(static_cast<int>(olddata.size()), net_message.cursize), olddata.begin());
 
     int ret;
     do {
@@ -1439,7 +1446,7 @@ void CL_KeepaliveMessage()
     } while (ret);
 
     net_message = old;
-    std::copy_n(olddata.begin(), std::min(static_cast<int>(olddata.size()), net_message.cursize), net_message.data);
+    eastl::copy_n(olddata.begin(), eastl::min(static_cast<int>(olddata.size()), net_message.cursize), net_message.data);
 
     // check time
     const float time = static_cast<float>(Sys_FloatTime());
@@ -1861,13 +1868,13 @@ void CL_NewTranslation(int slot)
 
     byte* dest = cl.scores[slot].translations;
     const byte* source = vid.colormap;
-    std::copy_n(vid.colormap, sizeof(cl.scores[slot].translations), dest);
+    eastl::copy_n(vid.colormap, sizeof(cl.scores[slot].translations), dest);
     const int top = cl.scores[slot].colors & 0xf0;
     const int bottom = (cl.scores[slot].colors & 15) << 4;
 
     for (int i = 0; i < VID_GRADES; ++i, dest += 256, source += 256) {
         if (top < 128) { // the artists made some backwards ranges.  sigh.
-            std::copy_n(source + top, 16, dest + TOP_RANGE);
+            eastl::copy_n(source + top, 16, dest + TOP_RANGE);
         } else {
             for (int j = 0; j < 16; ++j) {
                 dest[TOP_RANGE + j] = source[top + 15 - j];
@@ -1875,7 +1882,7 @@ void CL_NewTranslation(int slot)
         }
 
         if (bottom < 128) {
-            std::copy_n(source + bottom, 16, dest + BOTTOM_RANGE);
+            eastl::copy_n(source + bottom, 16, dest + BOTTOM_RANGE);
         } else {
             for (int j = 0; j < 16; ++j) {
                 dest[BOTTOM_RANGE + j] = source[bottom + 15 - j];

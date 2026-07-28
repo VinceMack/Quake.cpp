@@ -1,7 +1,7 @@
 // client.hpp -- client state, connection, and entity structures
 #pragma once
 
-#include <array>
+#include <EASTL/array.h>
 #include <stdio.h>
 
 struct usercmd_t {
@@ -27,7 +27,7 @@ struct scoreboard_t {
 };
 
 struct cshift_t {
-    std::array<int, 3> destcolor;
+    eastl::array<int, 3> destcolor;
     int percent; // 0-256
 };
 
@@ -112,7 +112,7 @@ struct client_static_t {
 namespace Client {
 
 template <typename T, std::size_t N>
-struct compat_array : public std::array<T, N> {
+struct compat_array : public eastl::array<T, N> {
     operator T*() { return this->data(); }
     operator const T*() const { return this->data(); }
 };
@@ -129,23 +129,23 @@ struct client_state_t {
     usercmd_t cmd; // last command sent to the server
 
     // information for local display
-    std::array<int, MAX_CL_STATS> stats; // health, etc
+    eastl::array<int, MAX_CL_STATS> stats; // health, etc
     int items;               // inventory bit flags
-    std::array<float, 32> item_gettime;  // cl.time of aquiring item, for blinking
+    eastl::array<float, 32> item_gettime;  // cl.time of aquiring item, for blinking
     float faceanimtime;      // use anim frame if cl.time < this
 
-    std::array<cshift_t, NUM_CSHIFTS> cshifts;      // color shifts for damage, powerups
-    std::array<cshift_t, NUM_CSHIFTS> prev_cshifts; // and content types
+    eastl::array<cshift_t, NUM_CSHIFTS> cshifts;      // color shifts for damage, powerups
+    eastl::array<cshift_t, NUM_CSHIFTS> prev_cshifts; // and content types
 
     // the client maintains its own idea of view angles, which are
     // sent to the server each frame.  The server sets punchangle when
     // the view is temporarliy offset, and an angle reset commands at the start
     // of each level and after teleporting.
-    std::array<Vector3, 2> mviewangles; // during demo playback viewangles is lerped
+    eastl::array<Vector3, 2> mviewangles; // during demo playback viewangles is lerped
     // between these
     Vector3 viewangles;
 
-    std::array<Vector3, 2> mvelocity; // update by server, used for lean+bob
+    eastl::array<Vector3, 2> mvelocity; // update by server, used for lean+bob
     // (0 is newest)
     Vector3 velocity; // lerped between mvelocity[0] and [1]
 
@@ -168,7 +168,7 @@ struct client_state_t {
     int intermission;   // don't change view angle, full screen, etc
     int completed_time; // latched at intermission start
 
-    std::array<double, 2> mtime; // the timestamp of last two messages
+    eastl::array<double, 2> mtime; // the timestamp of last two messages
     double time;     // clients view of time, should be between
     // servertime and oldservertime to generate
     // a lerp point for other data
@@ -180,8 +180,8 @@ struct client_state_t {
     //
     // information that is static for the entire time connected to a server
     //
-    std::array<model_t*, MAX_MODELS> model_precache;
-    std::array<sfx_t*, MAX_SOUNDS> sound_precache;
+    eastl::array<model_t*, MAX_MODELS> model_precache;
+    eastl::array<sfx_t*, MAX_SOUNDS> sound_precache;
 
     char levelname[40]; // for display on solo scoreboard
     int viewentity;     // cl_entitites[cl.viewentity] = player
