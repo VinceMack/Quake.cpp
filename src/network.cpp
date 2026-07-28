@@ -129,7 +129,7 @@ void Loop_SearchForHosts(qboolean /*xmit*/)
         Q_strcpy(hostcache[0].name, hostname.string.c_str());
     }
 
-    Q_strcpy(hostcache[0].map, sv.name);
+    Q_strcpy(hostcache[0].map, sv.name.data());
     hostcache[0].users = net_activeconnections;
     hostcache[0].maxusers = svs.maxclients;
     hostcache[0].driver = net_driverlevel;
@@ -1611,7 +1611,7 @@ static qsocket_t* _Datagram_CheckNewConnections(void)
         dfunc.GetSocketAddr(acceptsock, &newaddr);
         MSG_WriteString(&net_message, dfunc.AddrToString(&newaddr));
         MSG_WriteString(&net_message, hostname.string.c_str());
-        MSG_WriteString(&net_message, sv.name);
+        MSG_WriteString(&net_message, sv.name.data());
         MSG_WriteByte(&net_message, net_activeconnections);
         MSG_WriteByte(&net_message, svs.maxclients);
         MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
@@ -1648,7 +1648,7 @@ static qsocket_t* _Datagram_CheckNewConnections(void)
         MSG_WriteLong(&net_message, 0);
         MSG_WriteByte(&net_message, CCREP_PLAYER_INFO);
         MSG_WriteByte(&net_message, playerNumber);
-        MSG_WriteString(&net_message, client->name);
+        MSG_WriteString(&net_message, client->name.data());
         MSG_WriteLong(&net_message, client->colors);
         MSG_WriteLong(&net_message, (int)client->edict->v.frags);
         MSG_WriteLong(&net_message,

@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstddef>
 #include <cassert>
+#include <cstdint>
 
 // Helper functions for manual aligned allocation
 static void* aligned_alloc_helper(size_t size, size_t alignment) {
@@ -29,7 +30,7 @@ static void aligned_free_helper(void* ptr) {
 // 1. Standard Allocation Overloads
 void* operator new[](size_t size) {
     void* ptr = aligned_alloc_helper(size, sizeof(void*));
-    if (!ptr) throw std::bad_alloc();
+    assert(ptr != nullptr && "Out of memory");
     return ptr;
 }
 
@@ -48,7 +49,7 @@ void* operator new[](size_t size, size_t alignment, size_t /*alignmentOffset*/, 
 
 void* operator new[](size_t size, std::align_val_t alignment) {
     void* ptr = aligned_alloc_helper(size, static_cast<size_t>(alignment));
-    if (!ptr) throw std::bad_alloc();
+    assert(ptr != nullptr && "Out of memory");
     return ptr;
 }
 

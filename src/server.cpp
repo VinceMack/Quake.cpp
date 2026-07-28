@@ -25,10 +25,9 @@ using namespace Wad;
 using namespace Cvar;
 using namespace Cmd;
 
-
 namespace VM {
 extern cvar_t sv_aim;
-void PF_changeyaw(void);
+void PF_changeyaw();
 }
 
 namespace Server {
@@ -45,14 +44,15 @@ cvar_t fraglimit = { "fraglimit", "0", false, true };
 cvar_t timelimit = { "timelimit", "0", false, true };
 
 // from sv_main.cpp
-ServerSubsystem& GetServerSubsystem()
+ServerSubsystem& GetServerSubsystem() noexcept
 {
     static ServerSubsystem subsystem;
     return subsystem;
 }
-char localmodels[MAX_MODELS][5];
-int fatbytes;
-byte fatpvs[MAX_MAP_LEAFS / 8];
+
+static eastl::array<eastl::array<char, 5>, MAX_MODELS> localmodels{};
+static int fatbytes = 0;
+static eastl::array<byte, MAX_MAP_LEAFS / 8> fatpvs{};
 
 // from sv_phys.cpp
 cvar_t sv_friction = { "sv_friction", "4", false, true };
@@ -62,18 +62,19 @@ cvar_t sv_maxvelocity = { "sv_maxvelocity", "2000" };
 cvar_t sv_nostep = { "sv_nostep", "0" };
 
 // from sv_move.cpp
-int c_yes, c_no;
+static int c_yes = 0;
+static int c_no = 0;
 
 // from sv_user.cpp
-edict_t* sv_player;
+edict_t* sv_player = nullptr;
 cvar_t sv_edgefriction = { "edgefriction", "2" };
-Vector3 wishdir;
-float wishspeed;
-float* angles;
-float* origin;
-float* velocity;
-qboolean onground;
-usercmd_t cmd;
+Vector3 wishdir{};
+float wishspeed{0.0f};
+float* angles{nullptr};
+float* origin{nullptr};
+float* velocity{nullptr};
+qboolean onground{false};
+usercmd_t cmd{};
 cvar_t sv_idealpitchscale = { "sv_idealpitchscale", "0.8" };
 cvar_t sv_maxspeed = { "sv_maxspeed", "320", false, true };
 cvar_t sv_accelerate = { "sv_accelerate", "10" };
@@ -87,10 +88,8 @@ cvar_t sv_accelerate = { "sv_accelerate", "10" };
 SV_Init
 ===============
 */
-void SV_Init(void)
+void SV_Init()
 {
-    int i;
-
     Cvar::Register(&sv_maxvelocity);
     Cvar::Register(&sv_gravity);
     Cvar::Register(&sv_friction);
@@ -102,8 +101,8 @@ void SV_Init(void)
     Cvar::Register(&VM::sv_aim);
     Cvar::Register(&sv_nostep);
 
-    for (i = 0; i < MAX_MODELS; i++) {
-        sprintf_s(localmodels[i], sizeof(localmodels[i]), "*%i", i);
+    for (size_t i = 0; i < MAX_MODELS; ++i) {
+        sprintf_s(localmodels[i].data(), localmodels[i].size(), "*%i", static_cast<int>(i));
     }
 }
 
@@ -116,8 +115,6 @@ Make sure the event gets sent to all clients
 */
 void SV_StartParticle(const Vector3& org, const Vector3& dir, int color, int count)
 {
-    int i, v;
-
     if (sv.datagram.cursize > MAX_DATAGRAM - 16) {
         return;
     }
@@ -126,8 +123,8 @@ void SV_StartParticle(const Vector3& org, const Vector3& dir, int color, int cou
     MSG_WriteCoord(&sv.datagram, org[0]);
     MSG_WriteCoord(&sv.datagram, org[1]);
     MSG_WriteCoord(&sv.datagram, org[2]);
-    for (i = 0; i < 3; i++) {
-        v = static_cast<int>(dir[i] * 16);
+    for (int i = 0; i < 3; ++i) {
+        int v = static_cast<int>(dir[i] * 16.0f);
         if (v > 127) {
             v = 127;
         } else if (v < -128) {
@@ -161,17 +158,12 @@ void SV_StartSound(edict_t* entity,
     int vol,
     float attenuation)
 {
-    int sound_num;
-    int field_mask;
-    int i;
-    int ent;
-
     if (vol < 0 || vol > 255) {
         Sys_Error("SV_StartSound: volume = %i", vol);
     }
 
-    if (attenuation < 0 || attenuation > 4) {
-        Sys_Error("SV_StartSound: attenuation = %f", attenuation);
+    if (attenuation < 0.0f || attenuation > 4.0f) {
+        Sys_Error("SV_StartSound: attenuation = %f", static_cast<double>(attenuation));
     }
 
     if (channel < 0 || channel > 7) {
@@ -183,8 +175,8 @@ void SV_StartSound(edict_t* entity,
     }
 
     // find precache number for sound
-    for (sound_num = 1; sound_num < MAX_SOUNDS && sv.sound_precache[sound_num];
-        sound_num++) {
+    int sound_num = 1;
+    for (; sound_num < MAX_SOUNDS && sv.sound_precache[sound_num]; ++sound_num) {
         if (!strcmp(sample, sv.sound_precache[sound_num])) {
             break;
         }
@@ -192,15 +184,13 @@ void SV_StartSound(edict_t* entity,
 
     if (sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num]) {
         Con_Printf("SV_StartSound: %s not precacheed\n", sample);
-
         return;
     }
 
-    ent = NUM_FOR_EDICT(entity);
-
+    const int ent = NUM_FOR_EDICT(entity);
     channel = (ent << 3) | channel;
 
-    field_mask = 0;
+    int field_mask = 0;
     if (vol != DEFAULT_SOUND_PACKET_VOLUME) {
         field_mask |= SND_VOLUME;
     }
@@ -217,15 +207,14 @@ void SV_StartSound(edict_t* entity,
     }
 
     if (field_mask & SND_ATTENUATION) {
-        MSG_WriteByte(&sv.datagram, static_cast<int>(attenuation * 64));
+        MSG_WriteByte(&sv.datagram, static_cast<int>(attenuation * 64.0f));
     }
 
     MSG_WriteShort(&sv.datagram, channel);
     MSG_WriteByte(&sv.datagram, sound_num);
-    for (i = 0; i < 3; i++) {
-        MSG_WriteCoord(
-            &sv.datagram,
-            static_cast<float>(entity->v.origin[i] + 0.5 * (entity->v.mins[i] + entity->v.maxs[i])));
+    const Vector3 center = entity->v.origin + (entity->v.mins + entity->v.maxs) * 0.5f;
+    for (int i = 0; i < 3; ++i) {
+        MSG_WriteCoord(&sv.datagram, center[i]);
     }
 }
 
@@ -239,12 +228,11 @@ This will be sent on the initial connection and upon each server load.
 */
 void SV_SendServerinfo(client_t* client)
 {
-    char** s;
-    char message[2048];
+    eastl::array<char, 2048> message{};
 
     MSG_WriteByte(&client->message, svc_print);
-    sprintf_s(message, sizeof(message), "%c\nVERSION %4.2f SERVER (%i CRC)", 2, VERSION, pr_crc);
-    MSG_WriteString(&client->message, message);
+    sprintf_s(message.data(), message.size(), "%c\nVERSION %4.2f SERVER (%i CRC)", 2, static_cast<double>(VERSION), pr_crc);
+    MSG_WriteString(&client->message, message.data());
 
     MSG_WriteByte(&client->message, svc_serverinfo);
     MSG_WriteLong(&client->message, PROTOCOL_VERSION);
@@ -256,17 +244,16 @@ void SV_SendServerinfo(client_t* client)
         MSG_WriteByte(&client->message, GAME_COOP);
     }
 
-    sprintf_s(message, sizeof(message), "%s", PR_GetString(sv.edicts->v.message));
+    sprintf_s(message.data(), message.size(), "%s", PR_GetString(sv.edicts->v.message));
+    MSG_WriteString(&client->message, message.data());
 
-    MSG_WriteString(&client->message, message);
-
-    for (s = sv.model_precache + 1; *s; s++) {
-        MSG_WriteString(&client->message, *s);
+    for (size_t i = 1; i < sv.model_precache.size() && sv.model_precache[i]; ++i) {
+        MSG_WriteString(&client->message, sv.model_precache[i]);
     }
     MSG_WriteByte(&client->message, 0);
 
-    for (s = sv.sound_precache + 1; *s; s++) {
-        MSG_WriteString(&client->message, *s);
+    for (size_t i = 1; i < sv.sound_precache.size() && sv.sound_precache[i]; ++i) {
+        MSG_WriteString(&client->message, sv.sound_precache[i]);
     }
     MSG_WriteByte(&client->message, 0);
 
@@ -296,48 +283,39 @@ once for a player each game, not once for each level change.
 */
 void SV_ConnectClient(int clientnum)
 {
-    edict_t* ent;
-    client_t* client;
-    int edictnum;
-    struct qsocket_s* netconnection;
-    int i;
-    float spawn_parms[NUM_SPAWN_PARMS];
-
-    client = svs.clients + clientnum;
+    client_t* client = &svs.GetClients()[static_cast<size_t>(clientnum)];
 
     Con_DPrintf("Client %s connected\n", client->netconnection->address);
 
-    edictnum = clientnum + 1;
-
-    ent = EDICT_NUM(edictnum);
+    const int edictnum = clientnum + 1;
+    edict_t* ent = EDICT_NUM(edictnum);
 
     // set up the client_t
-    netconnection = client->netconnection;
+    qsocket_s* netconnection = client->netconnection;
 
+    eastl::array<float, NUM_SPAWN_PARMS> spawn_parms{};
     if (sv.loadgame) {
-        memcpy(spawn_parms, client->spawn_parms, sizeof(spawn_parms));
+        eastl::copy(client->spawn_parms.begin(), client->spawn_parms.end(), spawn_parms.begin());
     }
 
-    memset(client, 0, sizeof(*client));
+    client->Reset();
     client->netconnection = netconnection;
-
-    strcpy_s(client->name, sizeof(client->name), "unconnected");
+    client->SetName("unconnected");
     client->active = true;
     client->spawned = false;
     client->edict = ent;
-    client->message.data = client->msgbuf;
-    client->message.maxsize = sizeof(client->msgbuf);
+    client->message.data = client->msgbuf.data();
+    client->message.maxsize = static_cast<int>(client->msgbuf.size());
     client->message.allowoverflow = true; // we can catch it
-
     client->privileged = false;
 
     if (sv.loadgame) {
-        memcpy(client->spawn_parms, spawn_parms, sizeof(spawn_parms));
+        eastl::copy(spawn_parms.begin(), spawn_parms.end(), client->spawn_parms.begin());
     } else {
         // call the progs to get default spawn parms for the new client
         PR_ExecuteProgram(pr_global_struct->SetNewParms);
-        for (i = 0; i < NUM_SPAWN_PARMS; i++) {
-            client->spawn_parms[i] = (&pr_global_struct->parm1)[i];
+        for (int i = 0; i < NUM_SPAWN_PARMS; ++i) {
+            client->spawn_parms[static_cast<size_t>(i)] = (&pr_global_struct->parm1)[i];
         }
     }
 
@@ -350,33 +328,25 @@ SV_CheckForNewClients
 
 ===================
 */
-void SV_CheckForNewClients(void)
+void SV_CheckForNewClients()
 {
-    struct qsocket_s* ret;
-    int i;
-
-    //
-    // check for new connections
-    //
-    while (1) {
-        ret = NET_CheckNewConnections();
+    while (true) {
+        qsocket_s* ret = NET_CheckNewConnections();
         if (!ret) {
             break;
         }
 
-        //
-        // init a new client structure
-        //
-        for (i = 0; i < svs.maxclients; i++) {
-            if (!svs.clients[i].active) {
-                break;
-            }
-        }
-        if (i == svs.maxclients) {
+        auto clients = svs.GetClients();
+        auto it = eastl::find_if(clients.begin(), clients.end(), [](const client_t& cl) {
+            return !cl.active;
+        });
+
+        if (it == clients.end()) {
             Sys_Error("Host_CheckForNewClients: no free clients");
         }
 
-        svs.clients[i].netconnection = ret;
+        const int i = static_cast<int>(eastl::distance(clients.begin(), it));
+        it->netconnection = ret;
         SV_ConnectClient(i);
 
         net_activeconnections++;
@@ -389,29 +359,24 @@ void SV_CheckForNewClients(void)
 
 void SV_AddToFatPVS(const Vector3& org, mnode_t* node)
 {
-    int i;
-    byte* pvs;
-    mplane_t* plane;
-    float d;
-
-    while (1) {
+    while (true) {
         // if this is a leaf, accumulate the pvs bits
         if (node->contents < 0) {
             if (node->contents != CONTENTS_SOLID) {
-                pvs = Mod_LeafPVS((mleaf_t*)node, sv.worldmodel);
-                for (i = 0; i < fatbytes; i++) {
-                    fatpvs[i] |= pvs[i];
+                const byte* pvs = Mod_LeafPVS(reinterpret_cast<mleaf_t*>(node), sv.worldmodel);
+                for (int i = 0; i < fatbytes; ++i) {
+                    fatpvs[static_cast<size_t>(i)] |= pvs[i];
                 }
             }
 
             return;
         }
 
-        plane = node->plane;
-        d = org.dot(plane->normal) - plane->dist;
-        if (d > 8) {
+        mplane_t* plane = node->plane;
+        const float d = org.dot(plane->normal) - plane->dist;
+        if (d > 8.0f) {
             node = node->children[0];
-        } else if (d < -8) {
+        } else if (d < -8.0f) {
             node = node->children[1];
         } else { // go down both
             SV_AddToFatPVS(org, node->children[0]);
@@ -431,10 +396,10 @@ given point.
 byte* SV_FatPVS(const Vector3& org)
 {
     fatbytes = (sv.worldmodel->numleafs + 31) >> 3;
-    Q_memset(fatpvs, 0, fatbytes);
+    eastl::fill_n(fatpvs.begin(), static_cast<size_t>(fatbytes), static_cast<byte>(0));
     SV_AddToFatPVS(org, sv.worldmodel->nodes);
 
-    return fatpvs;
+    return fatpvs.data();
 }
 
 //=============================================================================
@@ -447,30 +412,22 @@ SV_WriteEntitiesToClient
 */
 void SV_WriteEntitiesToClient(edict_t* clent, sizebuf_t* msg)
 {
-    int e, i;
-    int bits;
-    byte* pvs;
-    Vector3 org;
-    float miss;
-    edict_t* ent;
-
     // find the client's PVS
-    org = clent->v.origin + clent->v.view_ofs;
-    pvs = SV_FatPVS(org);
+    const Vector3 org = clent->v.origin + clent->v.view_ofs;
+    const byte* pvs = SV_FatPVS(org);
 
-    // send over all entities (excpet the client) that touch the pvs
-    ent = NEXT_EDICT(sv.edicts);
-    for (e = 1; e < sv.num_edicts; e++, ent = NEXT_EDICT(ent)) {
-
+    // send over all entities (except the client) that touch the pvs
+    edict_t* ent = NEXT_EDICT(sv.edicts);
+    for (int e = 1; e < sv.num_edicts; ++e, ent = NEXT_EDICT(ent)) {
         // ignore if not touching a PV leaf
-        if (ent != clent) // clent is ALLWAYS sent
-        {
+        if (ent != clent) { // clent is ALWAYS sent
             // ignore ents without visible models
             if (!ent->v.modelindex || !*PR_GetString(ent->v.model)) {
                 continue;
             }
 
-            for (i = 0; i < ent->num_leafs; i++) {
+            int i = 0;
+            for (; i < ent->num_leafs; ++i) {
                 if (pvs[ent->leafnums[i] >> 3] & (1 << (ent->leafnums[i] & 7))) {
                     break;
                 }
@@ -483,16 +440,15 @@ void SV_WriteEntitiesToClient(edict_t* clent, sizebuf_t* msg)
 
         if (msg->maxsize - msg->cursize < 16) {
             Con_Printf("packet overflow\n");
-
             return;
         }
 
         // send an update
-        bits = 0;
+        int bits = 0;
 
-        for (i = 0; i < 3; i++) {
-            miss = ent->v.origin[i] - ent->baseline.origin[i];
-            if (miss < -0.1 || miss > 0.1) {
+        for (int i = 0; i < 3; ++i) {
+            const float miss = ent->v.origin[i] - ent->baseline.origin[i];
+            if (miss < -0.1f || miss > 0.1f) {
                 bits |= U_ORIGIN1 << i;
             }
         }
@@ -541,9 +497,7 @@ void SV_WriteEntitiesToClient(edict_t* clent, sizebuf_t* msg)
             bits |= U_MOREBITS;
         }
 
-        //
         // write the message
-        //
         MSG_WriteByte(msg, bits | U_SIGNAL);
 
         if (bits & U_MOREBITS) {
@@ -608,13 +562,10 @@ SV_CleanupEnts
 
 =============
 */
-void SV_CleanupEnts(void)
+void SV_CleanupEnts()
 {
-    int e;
-    edict_t* ent;
-
-    ent = NEXT_EDICT(sv.edicts);
-    for (e = 1; e < sv.num_edicts; e++, ent = NEXT_EDICT(ent)) {
+    edict_t* ent = NEXT_EDICT(sv.edicts);
+    for (int e = 1; e < sv.num_edicts; ++e, ent = NEXT_EDICT(ent)) {
         ent->v.effects = static_cast<float>(static_cast<int>(ent->v.effects) & ~EF_MUZZLEFLASH);
     }
 }
@@ -627,43 +578,34 @@ SV_WriteClientdataToMessage
 */
 void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
 {
-    int bits;
-    int i;
-    edict_t* other;
-    int items;
-    eval_t* val;
-
-    //
     // send a damage message
-    //
     if (ent->v.dmg_take || ent->v.dmg_save) {
-        other = PROG_TO_EDICT(ent->v.dmg_inflictor);
+        const edict_t* other = PROG_TO_EDICT(ent->v.dmg_inflictor);
         MSG_WriteByte(msg, svc_damage);
         MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_save));
         MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_take));
-        for (i = 0; i < 3; i++) {
-            MSG_WriteCoord(msg, static_cast<float>(other->v.origin[i] + 0.5 * (other->v.mins[i] + other->v.maxs[i])));
+        const Vector3 center = other->v.origin + (other->v.mins + other->v.maxs) * 0.5f;
+        for (int i = 0; i < 3; ++i) {
+            MSG_WriteCoord(msg, center[i]);
         }
 
         ent->v.dmg_take = 0;
         ent->v.dmg_save = 0;
     }
 
-    //
     // send the current viewpos offset from the view entity
-    //
     SV_SetIdealPitch(); // how much to look up / down ideally
 
     // a fixangle might get lost in a dropped packet.  Oh well.
     if (ent->v.fixangle) {
         MSG_WriteByte(msg, svc_setangle);
-        for (i = 0; i < 3; i++) {
+        for (int i = 0; i < 3; ++i) {
             MSG_WriteAngle(msg, ent->v.angles[i]);
         }
         ent->v.fixangle = 0;
     }
 
-    bits = 0;
+    int bits = 0;
 
     if (ent->v.view_ofs[2] != DEFAULT_VIEWHEIGHT) {
         bits |= SU_VIEWHEIGHT;
@@ -673,16 +615,15 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
         bits |= SU_IDEALPITCH;
     }
 
-// stuff the sigil bits into the high bits of items for sbar, or else
-// mix in items2
-    val = GetEdictFieldValue(ent, "items2");
+    // stuff the sigil bits into the high bits of items for sbar, or else mix in items2
+    const eval_t* val = GetEdictFieldValue(ent, "items2");
+    int items = 0;
 
     if (val) {
         items = static_cast<int>(ent->v.items) | (static_cast<int>(val->_float) << 23);
     } else {
         items = static_cast<int>(ent->v.items) | (static_cast<int>(pr_global_struct->serverflags) << 28);
     }
-
 
     bits |= SU_ITEMS;
 
@@ -694,7 +635,7 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
         bits |= SU_INWATER;
     }
 
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; ++i) {
         if (ent->v.punchangle[i]) {
             bits |= (SU_PUNCH1 << i);
         }
@@ -712,11 +653,9 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
         bits |= SU_ARMOR;
     }
 
-    //	if (ent->v.weapon)
     bits |= SU_WEAPON;
 
     // send the data
-
     MSG_WriteByte(msg, svc_clientdata);
     MSG_WriteShort(msg, bits);
 
@@ -728,17 +667,16 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
         MSG_WriteChar(msg, static_cast<int>(ent->v.idealpitch));
     }
 
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; ++i) {
         if (bits & (SU_PUNCH1 << i)) {
             MSG_WriteChar(msg, static_cast<int>(ent->v.punchangle[i]));
         }
 
         if (bits & (SU_VELOCITY1 << i)) {
-            MSG_WriteChar(msg, static_cast<int>(ent->v.velocity[i] / 16));
+            MSG_WriteChar(msg, static_cast<int>(ent->v.velocity[i] / 16.0f));
         }
     }
 
-    // [always sent]	if (bits & SU_ITEMS)
     MSG_WriteLong(msg, items);
 
     if (bits & SU_WEAPONFRAME) {
@@ -763,7 +701,7 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
     if (standard_quake) {
         MSG_WriteByte(msg, static_cast<int>(ent->v.weapon));
     } else {
-        for (i = 0; i < 32; i++) {
+        for (int i = 0; i < 32; ++i) {
             if (static_cast<int>(ent->v.weapon) & (1 << i)) {
                 MSG_WriteByte(msg, i);
                 break;
@@ -779,11 +717,11 @@ SV_SendClientDatagram
 */
 qboolean SV_SendClientDatagram(client_t* client)
 {
-    byte buf[MAX_DATAGRAM];
-    sizebuf_t msg;
+    eastl::array<byte, MAX_DATAGRAM> buf{};
+    sizebuf_t msg{};
 
-    msg.data = buf;
-    msg.maxsize = sizeof(buf);
+    msg.data = buf.data();
+    msg.maxsize = static_cast<int>(buf.size());
     msg.cursize = 0;
 
     MSG_WriteByte(&msg, svc_time);
@@ -791,7 +729,6 @@ qboolean SV_SendClientDatagram(client_t* client)
 
     // add the client specific data to the datagram
     SV_WriteClientdataToMessage(client->edict, &msg);
-
     SV_WriteEntitiesToClient(client->edict, &msg);
 
     // copy the server datagram if there is space
@@ -802,7 +739,6 @@ qboolean SV_SendClientDatagram(client_t* client)
     // send the datagram
     if (NET_SendUnreliableMessage(client->netconnection, &msg) == -1) {
         SV_DropClient(true); // if the message couldn't send, kick off
-
         return false;
     }
 
@@ -814,36 +750,33 @@ qboolean SV_SendClientDatagram(client_t* client)
 SV_UpdateToReliableMessages
 =======================
 */
-void SV_UpdateToReliableMessages(void)
+void SV_UpdateToReliableMessages()
 {
-    int i, j;
-    client_t* client;
-
+    auto clients = svs.GetClients();
     // check for changes to be sent over the reliable streams
-    for (i = 0, host_client = svs.clients; i < svs.maxclients;
-        i++, host_client++) {
-        if (host_client->old_frags != host_client->edict->v.frags) {
-            for (j = 0, client = svs.clients; j < svs.maxclients; j++, client++) {
-                if (!client->active) {
+    for (size_t i = 0; i < clients.size(); ++i) {
+        host_client = &clients[i];
+        if (host_client->old_frags != static_cast<int>(host_client->edict->v.frags)) {
+            for (auto& client : clients) {
+                if (!client.active) {
                     continue;
                 }
 
-                MSG_WriteByte(&client->message, svc_updatefrags);
-                MSG_WriteByte(&client->message, i);
-                MSG_WriteShort(&client->message, static_cast<int>(host_client->edict->v.frags));
+                MSG_WriteByte(&client.message, svc_updatefrags);
+                MSG_WriteByte(&client.message, static_cast<int>(i));
+                MSG_WriteShort(&client.message, static_cast<int>(host_client->edict->v.frags));
             }
 
             host_client->old_frags = static_cast<int>(host_client->edict->v.frags);
         }
     }
 
-    for (j = 0, client = svs.clients; j < svs.maxclients; j++, client++) {
-        if (!client->active) {
+    for (auto& client : clients) {
+        if (!client.active) {
             continue;
         }
 
-        SZ_Write(&client->message, sv.reliable_datagram.data,
-            sv.reliable_datagram.cursize);
+        SZ_Write(&client.message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
     }
 
     SZ_Clear(&sv.reliable_datagram);
@@ -855,15 +788,15 @@ SV_SendNop
 
 Send a nop message without trashing or sending the accumulated client
 message buffer
-=======================
+======================
 */
 void SV_SendNop(client_t* client)
 {
-    sizebuf_t msg;
-    byte buf[4];
+    eastl::array<byte, 4> buf{};
+    sizebuf_t msg{};
 
-    msg.data = buf;
-    msg.maxsize = sizeof(buf);
+    msg.data = buf.data();
+    msg.maxsize = static_cast<int>(buf.size());
     msg.cursize = 0;
 
     MSG_WriteChar(&msg, svc_nop);
@@ -880,16 +813,15 @@ void SV_SendNop(client_t* client)
 SV_SendClientMessages
 =======================
 */
-void SV_SendClientMessages(void)
+void SV_SendClientMessages()
 {
-    int i;
-
     // update frags, names, etc
     SV_UpdateToReliableMessages();
 
     // build individual updates
-    for (i = 0, host_client = svs.clients; i < svs.maxclients;
-        i++, host_client++) {
+    auto clients = svs.GetClients();
+    for (auto& client : clients) {
+        host_client = &client;
         if (!host_client->active) {
             continue;
         }
@@ -899,13 +831,8 @@ void SV_SendClientMessages(void)
                 continue;
             }
         } else {
-            // the player isn't totally in the game yet
-            // send small keepalive messages if too much time has passed
-            // send a full message when the next signon stage has been requested
-            // some other message data (name changes, etc) may accumulate
-            // between signon stages
             if (!host_client->sendsignon) {
-                if (realtime - host_client->last_message > 5) {
+                if (realtime - host_client->last_message > 5.0) {
                     SV_SendNop(host_client);
                 }
 
@@ -913,9 +840,6 @@ void SV_SendClientMessages(void)
             }
         }
 
-        // check for an overflowed message.  Should only happen
-        // on a very fucked up connection that backs up a lot, then
-        // changes level
         if (host_client->message.overflowed) {
             SV_DropClient(true);
             host_client->message.overflowed = false;
@@ -924,16 +848,13 @@ void SV_SendClientMessages(void)
 
         if (host_client->message.cursize || host_client->dropasap) {
             if (!NET_CanSendMessage(host_client->netconnection)) {
-                //				I_Printf ("can't write\n");
                 continue;
             }
 
             if (host_client->dropasap) {
                 SV_DropClient(false); // went to another level
             } else {
-                if (NET_SendMessage(host_client->netconnection,
-                        &host_client->message)
-                    == -1) {
+                if (NET_SendMessage(host_client->netconnection, &host_client->message) == -1) {
                     SV_DropClient(true); // if the message couldn't send, kick off
                 }
 
@@ -960,22 +881,18 @@ SV_ModelIndex
 */
 int SV_ModelIndex(const char* name)
 {
-    int i;
-
     if (!name || !name[0]) {
         return 0;
     }
 
-    for (i = 0; i < MAX_MODELS && sv.model_precache[i]; i++) {
+    for (size_t i = 0; i < sv.model_precache.size() && sv.model_precache[i]; ++i) {
         if (!strcmp(sv.model_precache[i], name)) {
-            return i;
+            return static_cast<int>(i);
         }
     }
-    if (i == MAX_MODELS || !sv.model_precache[i]) {
-        Sys_Error("SV_ModelIndex: model %s not precached", name);
-    }
 
-    return i;
+    Sys_Error("SV_ModelIndex: model %s not precached", name);
+    return 0;
 }
 
 /*
@@ -984,15 +901,11 @@ SV_CreateBaseline
 
 ================
 */
-void SV_CreateBaseline(void)
+void SV_CreateBaseline()
 {
-    int i;
-    edict_t* svent;
-    int entnum;
-
-    for (entnum = 0; entnum < sv.num_edicts; entnum++) {
+    for (int entnum = 0; entnum < sv.num_edicts; ++entnum) {
         // get the current server version
-        svent = EDICT_NUM(entnum);
+        edict_t* svent = EDICT_NUM(entnum);
         if (svent->free) {
             continue;
         }
@@ -1001,9 +914,7 @@ void SV_CreateBaseline(void)
             continue;
         }
 
-        //
         // create entity baseline
-        //
         VectorCopy(svent->v.origin, svent->baseline.origin);
         VectorCopy(svent->v.angles, svent->baseline.angles);
         svent->baseline.frame = static_cast<int>(svent->v.frame);
@@ -1016,17 +927,14 @@ void SV_CreateBaseline(void)
             svent->baseline.modelindex = SV_ModelIndex(PR_GetString(svent->v.model));
         }
 
-        //
         // add to the message
-        //
         MSG_WriteByte(&sv.signon, svc_spawnbaseline);
         MSG_WriteShort(&sv.signon, entnum);
-
         MSG_WriteByte(&sv.signon, svent->baseline.modelindex);
         MSG_WriteByte(&sv.signon, svent->baseline.frame);
         MSG_WriteByte(&sv.signon, svent->baseline.colormap);
         MSG_WriteByte(&sv.signon, svent->baseline.skin);
-        for (i = 0; i < 3; i++) {
+        for (int i = 0; i < 3; ++i) {
             MSG_WriteCoord(&sv.signon, svent->baseline.origin[i]);
             MSG_WriteAngle(&sv.signon, svent->baseline.angles[i]);
         }
@@ -1040,21 +948,20 @@ SV_SendReconnect
 Tell all the clients that the server is changing levels
 ================
 */
-void SV_SendReconnect(void)
+void SV_SendReconnect()
 {
-    char data[128];
-    sizebuf_t msg;
+    eastl::array<char, 128> data{};
+    sizebuf_t msg{};
 
-    msg.data = (byte*)data;
+    msg.data = reinterpret_cast<byte*>(data.data());
     msg.cursize = 0;
-    msg.maxsize = sizeof(data);
+    msg.maxsize = static_cast<int>(data.size());
 
     MSG_WriteChar(&msg, svc_stufftext);
     MSG_WriteString(&msg, "reconnect\n");
     NET_SendToAll(&msg, 5);
 
-    if (cls.state != ca_dedicated)
-    {
+    if (cls.state != ca_dedicated) {
         Cmd::ExecuteString("reconnect\n", Cmd::Source::Command);
     }
 }
@@ -1067,14 +974,12 @@ Grabs the current state of each client for saving across the
 transition to another level
 ================
 */
-void SV_SaveSpawnparms(void)
+void SV_SaveSpawnparms()
 {
-    int i, j;
-
     svs.serverflags = static_cast<int>(pr_global_struct->serverflags);
 
-    for (i = 0, host_client = svs.clients; i < svs.maxclients;
-        i++, host_client++) {
+    for (auto& client : svs.GetClients()) {
+        host_client = &client;
         if (!host_client->active) {
             continue;
         }
@@ -1082,8 +987,8 @@ void SV_SaveSpawnparms(void)
         // call the progs to get default spawn parms for the new client
         pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(host_client->edict));
         PR_ExecuteProgram(pr_global_struct->SetChangeParms);
-        for (j = 0; j < NUM_SPAWN_PARMS; j++) {
-            host_client->spawn_parms[j] = (&pr_global_struct->parm1)[j];
+        for (int j = 0; j < NUM_SPAWN_PARMS; ++j) {
+            host_client->spawn_parms[static_cast<size_t>(j)] = (&pr_global_struct->parm1)[j];
         }
     }
 }
@@ -1095,11 +1000,8 @@ SV_SpawnServer
 This is called at the start of each level
 ================
 */
-void SV_SpawnServer(char* server)
+void SV_SpawnServer(const char* server)
 {
-    edict_t* ent;
-    int i;
-
     // let's not have any servers with no name
     if (hostname.string.empty()) {
         Cvar::Set("hostname", "UNNAMED");
@@ -1110,21 +1012,17 @@ void SV_SpawnServer(char* server)
     Con_DPrintf("SpawnServer: %s\n", server);
     svs.changelevel_issued = false; // now safe to issue another
 
-    //
     // tell all connected clients that we are going to a new level
-    //
     if (sv.active) {
         SV_SendReconnect();
     }
 
-    //
     // make cvars consistant
-    //
     if (coop.value) {
         Cvar::SetValue("deathmatch", 0);
     }
 
-    current_skill = static_cast<int>(skill.value + 0.5);
+    current_skill = static_cast<int>(skill.value + 0.5f);
     if (current_skill < 0) {
         current_skill = 0;
     }
@@ -1135,77 +1033,65 @@ void SV_SpawnServer(char* server)
 
     Cvar::SetValue("skill", static_cast<float>(current_skill));
 
-    //
     // set up the new server
-    //
     Host_ClearMemory();
 
-    memset(&sv, 0, sizeof(sv));
-
-    strcpy_s(sv.name, sizeof(sv.name), server);
+    sv = server_t{};
+    sv.SetName(server);
 
     // load progs to get entity field count
     PR_LoadProgs();
 
     // allocate server memory
     sv.max_edicts = MAX_EDICTS;
+    sv.edicts = reinterpret_cast<edict_t*>(Hunk_Alloc(sv.max_edicts * pr_edict_size, "edicts"));
 
-    sv.edicts = (edict_t *) Hunk_Alloc(sv.max_edicts * pr_edict_size, "edicts");
-
-    sv.datagram.maxsize = sizeof(sv.datagram_buf);
+    sv.datagram.maxsize = static_cast<int>(sv.datagram_buf.size());
     sv.datagram.cursize = 0;
-    sv.datagram.data = sv.datagram_buf;
+    sv.datagram.data = sv.datagram_buf.data();
 
-    sv.reliable_datagram.maxsize = sizeof(sv.reliable_datagram_buf);
+    sv.reliable_datagram.maxsize = static_cast<int>(sv.reliable_datagram_buf.size());
     sv.reliable_datagram.cursize = 0;
-    sv.reliable_datagram.data = sv.reliable_datagram_buf;
+    sv.reliable_datagram.data = sv.reliable_datagram_buf.data();
 
-    sv.signon.maxsize = sizeof(sv.signon_buf);
+    sv.signon.maxsize = static_cast<int>(sv.signon_buf.size());
     sv.signon.cursize = 0;
-    sv.signon.data = sv.signon_buf;
+    sv.signon.data = sv.signon_buf.data();
 
     // leave slots at start for clients only
     sv.num_edicts = svs.maxclients + 1;
-    for (i = 0; i < svs.maxclients; i++) {
-        ent = EDICT_NUM(i + 1);
-        svs.clients[i].edict = ent;
+    auto clients = svs.GetClients();
+    for (size_t i = 0; i < clients.size(); ++i) {
+        edict_t* ent = EDICT_NUM(static_cast<int>(i) + 1);
+        clients[i].edict = ent;
     }
 
     sv.state = ss_loading;
     sv.paused = false;
 
-    sv.time = 1.0;
-
-    strcpy_s(sv.name, sizeof(sv.name), server);
-    sprintf_s(sv.modelname, sizeof(sv.modelname), "maps/%s.bsp", server);
-    sv.worldmodel = Mod_ForName(sv.modelname, false);
+    sprintf_s(sv.modelname.data(), sv.modelname.size(), "maps/%s.bsp", server);
+    sv.worldmodel = Mod_ForName(sv.modelname.data(), false);
     if (!sv.worldmodel) {
-        Con_Printf("Couldn't spawn server %s\n", sv.modelname);
+        Con_Printf("Couldn't spawn server %s\n", sv.modelname.data());
         sv.active = false;
-
         return;
     }
 
     sv.models[1] = sv.worldmodel;
 
-    //
     // clear world interaction links
-    //
     SV_ClearWorld();
 
     sv.sound_precache[0] = pr_strings;
-
     sv.model_precache[0] = pr_strings;
-    sv.model_precache[1] = sv.modelname;
-    for (i = 1; i < sv.worldmodel->numsubmodels; i++) {
-        sv.model_precache[1 + i] = localmodels[i];
-        sv.models[i + 1] = Mod_ForName(localmodels[i], false);
+    sv.model_precache[1] = sv.modelname.data();
+    for (int i = 1; i < sv.worldmodel->numsubmodels; ++i) {
+        sv.model_precache[1 + i] = localmodels[static_cast<size_t>(i)].data();
+        sv.models[1 + i] = Mod_ForName(localmodels[static_cast<size_t>(i)].data(), false);
     }
 
-    //
     // load the rest of the entities
-    //
-    ent = EDICT_NUM(0);
+    edict_t* ent = EDICT_NUM(0);
     memset(&ent->v, 0, progs->entityfields * 4);
     ent->free = false;
     ent->v.model = PR_SetString(sv.worldmodel->name);
@@ -1219,7 +1105,7 @@ void SV_SpawnServer(char* server)
         pr_global_struct->deathmatch = deathmatch.value;
     }
 
-    pr_global_struct->mapname = PR_SetString(sv.name);
+    pr_global_struct->mapname = PR_SetString(sv.name.data());
 
     // serverflags are for cross level information (sigils)
     pr_global_struct->serverflags = static_cast<float>(svs.serverflags);
@@ -1240,8 +1126,8 @@ void SV_SpawnServer(char* server)
     SV_CreateBaseline();
 
     // send serverinfo to all connected clients
-    for (i = 0, host_client = svs.clients; i < svs.maxclients;
-        i++, host_client++) {
+    for (auto& client : clients) {
+        host_client = &client;
         if (host_client->active) {
             SV_SendServerinfo(host_client);
         }
@@ -1281,20 +1167,15 @@ SV_CheckVelocity
 */
 void SV_CheckVelocity(edict_t* ent)
 {
-    int i;
-
-    //
-    // bound velocity
-    //
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; ++i) {
         if (IS_NAN(ent->v.velocity[i])) {
             Con_Printf("Got a NaN velocity on %s\n", PR_GetString(ent->v.classname));
-            ent->v.velocity[i] = 0;
+            ent->v.velocity[i] = 0.0f;
         }
 
         if (IS_NAN(ent->v.origin[i])) {
             Con_Printf("Got a NaN origin on %s\n", PR_GetString(ent->v.classname));
-            ent->v.origin[i] = 0;
+            ent->v.origin[i] = 0.0f;
         }
 
         if (ent->v.velocity[i] > sv_maxvelocity.value) {
@@ -1317,10 +1198,8 @@ Returns false if the entity removed itself.
 */
 qboolean SV_RunThink(edict_t* ent)
 {
-    float thinktime;
-
-    thinktime = ent->v.nextthink;
-    if (thinktime <= 0 || thinktime > sv.time + host_frametime) {
+    float thinktime = ent->v.nextthink;
+    if (thinktime <= 0.0f || thinktime > sv.time + host_frametime) {
         return true;
     }
 
@@ -1328,8 +1207,6 @@ qboolean SV_RunThink(edict_t* ent)
         thinktime = static_cast<float>(sv.time); // don't let things stay in the past.
     }
 
-    // it is possible to start that way
-    // by a trigger with a local time.
     ent->v.nextthink = 0;
     pr_global_struct->time = thinktime;
     pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
@@ -1348,10 +1225,8 @@ Two entities have touched, so run their touch functions
 */
 void SV_Impact(edict_t* e1, edict_t* e2)
 {
-    int old_self, old_other;
-
-    old_self = pr_global_struct->self;
-    old_other = pr_global_struct->other;
+    const int old_self = pr_global_struct->self;
+    const int old_other = pr_global_struct->other;
 
     pr_global_struct->time = static_cast<float>(sv.time);
     if (e1->v.touch && e1->v.solid != SOLID_NOT) {
@@ -1378,28 +1253,24 @@ Slide off of the impacting object
 returns the blocked flags (1 = floor, 2 = step / wall)
 ==================
 */
-#define STOP_EPSILON 0.1
+constexpr float STOP_EPSILON = 0.1f;
 
 int ClipVelocity(const Vector3& in, const Vector3& normal, Vector3& out, float overbounce)
 {
-    float backoff;
-    int i, blocked;
-
-    blocked = 0;
-    if (normal.z > 0) {
+    int blocked = 0;
+    if (normal.z > 0.0f) {
         blocked |= 1; // floor
     }
 
-    if (!normal.z) {
+    if (normal.z == 0.0f) {
         blocked |= 2; // step
     }
 
-    backoff = in.dot(normal) * overbounce;
-
+    const float backoff = in.dot(normal) * overbounce;
     out = in - normal * backoff;
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; ++i) {
         if (out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON) {
-            out[i] = 0;
+            out[i] = 0.0f;
         }
     }
 
@@ -1418,61 +1289,47 @@ Returns the clipflags if the velocity was modified (hit something solid)
 If steptrace is not NULL, the trace of any vertical wall hit will be stored
 ============
 */
-#define MAX_CLIP_PLANES 5
+constexpr int MAX_CLIP_PLANES = 5;
 
 int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
 {
-    int bumpcount, numbumps;
-    Vector3 dir;
-    float d;
-    int numplanes;
-    Vector3 planes[MAX_CLIP_PLANES];
-    Vector3 primal_velocity, original_velocity, new_velocity;
-    int i, j;
-    trace_t trace;
-    Vector3 end;
-    float time_left;
-    int blocked;
+    constexpr int numbumps = 4;
+    int blocked = 0;
+    Vector3 original_velocity = ent->v.velocity;
+    Vector3 primal_velocity = ent->v.velocity;
+    int numplanes = 0;
+    eastl::array<Vector3, MAX_CLIP_PLANES> planes{};
 
-    numbumps = 4;
+    float time_left = time;
 
-    blocked = 0;
-    original_velocity = ent->v.velocity;
-    primal_velocity = ent->v.velocity;
-    numplanes = 0;
-
-    time_left = time;
-
-    for (bumpcount = 0; bumpcount < numbumps; bumpcount++) {
+    for (int bumpcount = 0; bumpcount < numbumps; ++bumpcount) {
         if (ent->v.velocity == vec3_origin) {
             break;
         }
 
-        end = ent->v.origin + ent->v.velocity * time_left;
-
-        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, false, ent);
+        const Vector3 end = ent->v.origin + ent->v.velocity * time_left;
+        trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, false, ent);
 
         if (trace.allsolid) { // entity is trapped in another solid
             ent->v.velocity = vec3_origin;
-
             return 3;
         }
 
-        if (trace.fraction > 0) { // actually covered some distance
+        if (trace.fraction > 0.0f) { // covered distance
             ent->v.origin = trace.endpos;
             original_velocity = ent->v.velocity;
             numplanes = 0;
         }
 
-        if (trace.fraction == 1) {
-            break; // moved the entire distance
+        if (trace.fraction == 1.0f) {
+            break; // moved full distance
         }
 
         if (!trace.ent) {
             Sys_Error("SV_FlyMove: !trace.ent");
         }
 
-        if (trace.plane.normal.z > 0.7) {
+        if (trace.plane.normal.z > 0.7f) {
             blocked |= 1; // floor
             if (trace.ent->v.solid == SOLID_BSP) {
                 ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) | FL_ONGROUND);
@@ -1480,42 +1337,37 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
             }
         }
 
-        if (!trace.plane.normal.z) {
+        if (trace.plane.normal.z == 0.0f) {
             blocked |= 2; // step
             if (steptrace) {
                 *steptrace = trace; // save for player extrafriction
             }
         }
 
-        //
-        // run the impact function
-        //
         SV_Impact(ent, trace.ent);
         if (ent->free) {
-            break; // removed by the impact function
+            break; // removed by impact
         }
 
         time_left -= time_left * trace.fraction;
 
-        // cliped to another plane
-        if (numplanes >= MAX_CLIP_PLANES) { // this shouldn't really happen
+        if (numplanes >= MAX_CLIP_PLANES) {
             ent->v.velocity = vec3_origin;
-
             return 3;
         }
 
-        planes[numplanes] = trace.plane.normal;
+        planes[static_cast<size_t>(numplanes)] = trace.plane.normal;
         numplanes++;
 
-        //
-        // modify original_velocity so it parallels all of the clip planes
-        //
-        for (i = 0; i < numplanes; i++) {
-            ClipVelocity(original_velocity, planes[i], new_velocity, 1);
-            for (j = 0; j < numplanes; j++) {
+        int i = 0;
+        Vector3 new_velocity{};
+        for (; i < numplanes; ++i) {
+            ClipVelocity(original_velocity, planes[static_cast<size_t>(i)], new_velocity, 1.0f);
+            int j = 0;
+            for (; j < numplanes; ++j) {
                 if (j != i) {
-                    if (new_velocity.dot(planes[j]) < 0) {
-                        break; // not ok
+                    if (new_velocity.dot(planes[static_cast<size_t>(j)]) < 0.0f) {
+                        break;
                     }
                 }
             }
@@ -1524,28 +1376,21 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
             }
         }
 
-        if (i != numplanes) { // go along this plane
+        if (i != numplanes) {
             ent->v.velocity = new_velocity;
-        } else { // go along the crease
+        } else {
             if (numplanes != 2) {
-                //				Con_Printf ("clip velocity, numplanes == %i\n",numplanes);
                 ent->v.velocity = vec3_origin;
-
                 return 7;
             }
 
-            dir = planes[0].cross(planes[1]);
-            d = dir.dot(ent->v.velocity);
+            const Vector3 dir = planes[0].cross(planes[1]);
+            const float d = dir.dot(ent->v.velocity);
             ent->v.velocity = dir * d;
         }
 
-        //
-        // if original velocity is against the original velocity, stop dead
-        // to avoid tiny occilations in sloping corners
-        //
-        if (ent->v.velocity.dot(primal_velocity) <= 0) {
+        if (ent->v.velocity.dot(primal_velocity) <= 0.0f) {
             ent->v.velocity = vec3_origin;
-
             return blocked;
         }
     }
@@ -1561,15 +1406,10 @@ SV_AddGravity
 */
 void SV_AddGravity(edict_t* ent)
 {
-    float ent_gravity;
-
-    eval_t* val;
-
-    val = GetEdictFieldValue(ent, "gravity");
+    float ent_gravity = 1.0f;
+    const eval_t* val = GetEdictFieldValue(ent, "gravity");
     if (val && val->_float) {
         ent_gravity = val->_float;
-    } else {
-        ent_gravity = 1.0;
     }
 
     ent->v.velocity[2] -= static_cast<float>(ent_gravity * sv_gravity.value * host_frametime);
@@ -1588,18 +1428,13 @@ Does not change the entities velocity at all
 */
 trace_t SV_PushEntity(edict_t* ent, const Vector3& push)
 {
-    trace_t trace;
-    Vector3 end;
-
-    end = ent->v.origin + push;
+    const Vector3 end = ent->v.origin + push;
+    trace_t trace{};
 
     if (ent->v.movetype == MOVETYPE_FLYMISSILE) {
-        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_MISSILE,
-            ent);
+        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_MISSILE, ent);
     } else if (ent->v.solid == SOLID_TRIGGER || ent->v.solid == SOLID_NOT) {
-        // only clip against bmodels
-        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end,
-            MOVE_NOMONSTERS, ent);
+        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_NOMONSTERS, ent);
     } else {
         trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent);
     }
@@ -1622,36 +1457,26 @@ SV_PushMove
 */
 void SV_PushMove(edict_t* pusher, float movetime)
 {
-    int i, e;
-    edict_t *check, *block;
-    Vector3 mins, maxs, move;
-    Vector3 entorig, pushorig;
-    int num_moved;
-    edict_t* moved_edict[MAX_EDICTS];
-    Vector3 moved_from[MAX_EDICTS];
-
     if (pusher->v.velocity == vec3_origin) {
         pusher->v.ltime += movetime;
-
         return;
     }
 
-    move = pusher->v.velocity * movetime;
-    mins = pusher->v.absmin + move;
-    maxs = pusher->v.absmax + move;
-
-    pushorig = pusher->v.origin;
-
-    // move the pusher to it's final position
+    const Vector3 move = pusher->v.velocity * movetime;
+    const Vector3 mins = pusher->v.absmin + move;
+    const Vector3 maxs = pusher->v.absmax + move;
+    const Vector3 pushorig = pusher->v.origin;
 
     pusher->v.origin += move;
     pusher->v.ltime += movetime;
     SV_LinkEdict(pusher, false);
 
-    // see if any solid entities are inside the final position
-    num_moved = 0;
-    check = NEXT_EDICT(sv.edicts);
-    for (e = 1; e < sv.num_edicts; e++, check = NEXT_EDICT(check)) {
+    int num_moved = 0;
+    eastl::array<edict_t*, MAX_EDICTS> moved_edict{};
+    eastl::array<Vector3, MAX_EDICTS> moved_from{};
+
+    edict_t* check = NEXT_EDICT(sv.edicts);
+    for (int e = 1; e < sv.num_edicts; ++e, check = NEXT_EDICT(check)) {
         if (check->free) {
             continue;
         }
@@ -1661,41 +1486,36 @@ void SV_PushMove(edict_t* pusher, float movetime)
             continue;
         }
 
-        // if the entity is standing on the pusher, it will definately be moved
         if (!((static_cast<int>(check->v.flags) & FL_ONGROUND) && PROG_TO_EDICT(check->v.groundentity) == pusher)) {
             if (check->v.absmin.x >= maxs.x || check->v.absmin.y >= maxs.y || check->v.absmin.z >= maxs.z || check->v.absmax.x <= mins.x || check->v.absmax.y <= mins.y || check->v.absmax.z <= mins.z) {
                 continue;
             }
 
-            // see if the ent's bbox is inside the pusher's final position
             if (!SV_TestEntityPosition(check)) {
                 continue;
             }
         }
 
-        // remove the onground flag for non-players
         if (check->v.movetype != MOVETYPE_WALK) {
             check->v.flags = static_cast<float>(static_cast<int>(check->v.flags) & ~FL_ONGROUND);
         }
 
-        entorig = check->v.origin;
-        moved_from[num_moved] = check->v.origin;
-        moved_edict[num_moved] = check;
+        const Vector3 entorig = check->v.origin;
+        moved_from[static_cast<size_t>(num_moved)] = check->v.origin;
+        moved_edict[static_cast<size_t>(num_moved)] = check;
         num_moved++;
 
-        // try moving the contacted entity
         pusher->v.solid = SOLID_NOT;
         SV_PushEntity(check, move);
         pusher->v.solid = SOLID_BSP;
 
-        // if it is still inside the pusher, block
-        block = SV_TestEntityPosition(check);
-        if (block) { // fail the move
+        edict_t* block = SV_TestEntityPosition(check);
+        if (block) {
             if (check->v.mins.x == check->v.maxs.x) {
                 continue;
             }
 
-            if (check->v.solid == SOLID_NOT || check->v.solid == SOLID_TRIGGER) { // corpse
+            if (check->v.solid == SOLID_NOT || check->v.solid == SOLID_TRIGGER) {
                 check->v.mins.x = check->v.mins.y = 0;
                 check->v.maxs = check->v.mins;
                 continue;
@@ -1708,18 +1528,15 @@ void SV_PushMove(edict_t* pusher, float movetime)
             SV_LinkEdict(pusher, false);
             pusher->v.ltime -= movetime;
 
-            // if the pusher has a "blocked" function, call it
-            // otherwise, just stay in place until the obstacle is gone
             if (pusher->v.blocked) {
                 pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(pusher));
                 pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(check));
                 PR_ExecuteProgram(pusher->v.blocked);
             }
 
-            // move back any entities we already moved
-            for (i = 0; i < num_moved; i++) {
-                moved_edict[i]->v.origin = moved_from[i];
-                SV_LinkEdict(moved_edict[i], false);
+            for (int i = 0; i < num_moved; ++i) {
+                moved_edict[static_cast<size_t>(i)]->v.origin = moved_from[static_cast<size_t>(i)];
+                SV_LinkEdict(moved_edict[static_cast<size_t>(i)], false);
             }
 
             return;
@@ -2072,31 +1889,24 @@ Player character actions
 */
 void SV_Physics_Client(edict_t* ent, int num)
 {
-    if (!svs.clients[num - 1].active) {
+    if (!svs.GetClients()[static_cast<size_t>(num - 1)].active) {
         return; // unconnected slot
     }
 
-    //
     // call standard client pre-think
-    //
     pr_global_struct->time = static_cast<float>(sv.time);
     pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
     PR_ExecuteProgram(pr_global_struct->PlayerPreThink);
 
-    //
     // do a move
-    //
     SV_CheckVelocity(ent);
 
-    //
     // decide which move function to call
-    //
     switch (static_cast<int>(ent->v.movetype)) {
     case MOVETYPE_NONE:
         if (!SV_RunThink(ent)) {
             return;
         }
-
         break;
 
     case MOVETYPE_WALK:
@@ -2110,7 +1920,6 @@ void SV_Physics_Client(edict_t* ent, int num)
 
         SV_CheckStuck(ent);
         SV_WalkMove(ent);
-
         break;
 
     case MOVETYPE_TOSS:
@@ -2123,7 +1932,7 @@ void SV_Physics_Client(edict_t* ent, int num)
             return;
         }
 
-        SV_FlyMove(ent, static_cast<float>(host_frametime), NULL);
+        SV_FlyMove(ent, static_cast<float>(host_frametime), nullptr);
         break;
 
     case MOVETYPE_NOCLIP:
@@ -2138,9 +1947,7 @@ void SV_Physics_Client(edict_t* ent, int num)
         Sys_Error("SV_Physics_client: bad movetype %i", static_cast<int>(ent->v.movetype));
     }
 
-    //
     // call standard player post-think
-    //
     SV_LinkEdict(ent, true);
 
     pr_global_struct->time = static_cast<float>(sv.time);
@@ -2159,10 +1966,8 @@ Non moving objects can only think
 */
 void SV_Physics_None(edict_t* ent)
 {
-    // regular thinking
     SV_RunThink(ent);
 }
-
 
 /*
 =============
@@ -2173,7 +1978,6 @@ A moving object that doesn't obey physics
 */
 void SV_Physics_Noclip(edict_t* ent)
 {
-    // regular thinking
     if (!SV_RunThink(ent)) {
         return;
     }
@@ -2196,12 +2000,10 @@ SV_CheckWaterTransition
 */
 void SV_CheckWaterTransition(edict_t* ent)
 {
-    int cont;
-    cont = SV_PointContents(ent->v.origin);
+    const int cont = SV_PointContents(ent->v.origin);
     if (!ent->v.watertype) { // just spawned here
         ent->v.watertype = static_cast<float>(cont);
         ent->v.waterlevel = 1;
-
         return;
     }
 
@@ -2210,15 +2012,15 @@ void SV_CheckWaterTransition(edict_t* ent)
             SV_StartSound(ent, 0, "misc/h2ohit1.wav", 255, 1);
         }
 
-            ent->v.watertype = static_cast<float>(cont);
-            ent->v.waterlevel = 1;
-        } else {
-            if (ent->v.watertype != CONTENTS_EMPTY) { // just crossed into water
-                SV_StartSound(ent, 0, "misc/h2ohit1.wav", 255, 1);
-            }
+        ent->v.watertype = static_cast<float>(cont);
+        ent->v.waterlevel = 1;
+    } else {
+        if (ent->v.watertype != CONTENTS_EMPTY) {
+            SV_StartSound(ent, 0, "misc/h2ohit1.wav", 255, 1);
+        }
 
-            ent->v.watertype = static_cast<float>(CONTENTS_EMPTY);
-            ent->v.waterlevel = static_cast<float>(cont);
+        ent->v.watertype = static_cast<float>(CONTENTS_EMPTY);
+        ent->v.waterlevel = static_cast<float>(cont);
     }
 }
 
@@ -2231,55 +2033,33 @@ Toss, bounce, and fly movement.  When onground, do nothing.
 */
 void SV_Physics_Toss(edict_t* ent)
 {
-    trace_t trace;
-    Vector3 move;
-    float backoff;
-    // regular thinking
     if (!SV_RunThink(ent)) {
         return;
     }
 
-    // if onground, return without moving
-    if ((static_cast<int>(ent->v.flags) & FL_ONGROUND)) {
+    if (static_cast<int>(ent->v.flags) & FL_ONGROUND) {
         return;
     }
 
     SV_CheckVelocity(ent);
 
-    // add gravity
     if (ent->v.movetype != MOVETYPE_FLY && ent->v.movetype != MOVETYPE_FLYMISSILE) {
         SV_AddGravity(ent);
     }
 
-
-    // move angles
     ent->v.angles += ent->v.avelocity * static_cast<float>(host_frametime);
 
-// move origin
-    move = ent->v.velocity * static_cast<float>(host_frametime);
-    trace = SV_PushEntity(ent, move);
-    if (trace.fraction == 1) {
+    const Vector3 move = ent->v.velocity * static_cast<float>(host_frametime);
+    const trace_t trace = SV_PushEntity(ent, move);
+    if (trace.fraction == 1.0f || ent->free) {
         return;
     }
 
-    if (ent->free) {
-        return;
-    }
-
-    if (ent->v.movetype == MOVETYPE_BOUNCE) {
-        backoff = 1.5;
-    }
-
-    else {
-        backoff = 1;
-    }
-
+    const float backoff = (ent->v.movetype == MOVETYPE_BOUNCE) ? 1.5f : 1.0f;
     ClipVelocity(ent->v.velocity, trace.plane.normal, ent->v.velocity, backoff);
 
-    // stop if on ground
-    if (trace.plane.normal.z > 0.7) {
-        if (ent->v.velocity.z < 60 || ent->v.movetype != MOVETYPE_BOUNCE)
-        {
+    if (trace.plane.normal.z > 0.7f) {
+        if (ent->v.velocity.z < 60.0f || ent->v.movetype != MOVETYPE_BOUNCE) {
             ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) | FL_ONGROUND);
             ent->v.groundentity = static_cast<int>(EDICT_TO_PROG(trace.ent));
             ent->v.velocity = vec3_origin;
@@ -2287,7 +2067,6 @@ void SV_Physics_Toss(edict_t* ent)
         }
     }
 
-    // check for in water
     SV_CheckWaterTransition(ent);
 }
 
@@ -2308,32 +2087,23 @@ will fall if the floor is pulled out from under them.
 */
 void SV_Physics_Step(edict_t* ent)
 {
-    qboolean hitsound;
-
     // freefall if not onground
     if (!(static_cast<int>(ent->v.flags) & (FL_ONGROUND | FL_FLY | FL_SWIM))) {
-        if (ent->v.velocity.z < sv_gravity.value * -0.1) {
-            hitsound = true;
-        } else {
-            hitsound = false;
-        }
+        const bool hitsound = (ent->v.velocity.z < sv_gravity.value * -0.1f);
 
         SV_AddGravity(ent);
         SV_CheckVelocity(ent);
-        SV_FlyMove(ent, static_cast<float>(host_frametime), NULL);
+        SV_FlyMove(ent, static_cast<float>(host_frametime), nullptr);
         SV_LinkEdict(ent, true);
 
-        if (static_cast<int>(ent->v.flags) & FL_ONGROUND) // just hit ground
-        {
+        if (static_cast<int>(ent->v.flags) & FL_ONGROUND) {
             if (hitsound) {
                 SV_StartSound(ent, 0, "demon/dland2.wav", 255, 1);
             }
         }
     }
 
-    // regular thinking
     SV_RunThink(ent);
-
     SV_CheckWaterTransition(ent);
 }
 
@@ -2345,30 +2115,22 @@ SV_Physics
 
 ================
 */
-void SV_Physics(void)
+void SV_Physics()
 {
-    int i;
-    edict_t* ent;
-
     // let the progs know that a new frame has started
     pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(sv.edicts));
     pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
     pr_global_struct->time = static_cast<float>(sv.time);
     PR_ExecuteProgram(pr_global_struct->StartFrame);
 
-    //SV_CheckAllEnts ();
-
-    //
-    // treat each object in turn
-    //
-    ent = sv.edicts;
-    for (i = 0; i < sv.num_edicts; i++, ent = NEXT_EDICT(ent)) {
+    edict_t* ent = sv.edicts;
+    for (int i = 0; i < sv.num_edicts; ++i, ent = NEXT_EDICT(ent)) {
         if (ent->free) {
             continue;
         }
 
         if (pr_global_struct->force_retouch) {
-            SV_LinkEdict(ent, true); // force retouch even for stationary
+            SV_LinkEdict(ent, true);
         }
 
         if (i > 0 && i <= svs.maxclients) {
@@ -2377,9 +2139,7 @@ void SV_Physics(void)
             SV_Physics_Pusher(ent);
         } else if (ent->v.movetype == MOVETYPE_NONE) {
             SV_Physics_None(ent);
-        }
-
-        else if (ent->v.movetype == MOVETYPE_NOCLIP) {
+        } else if (ent->v.movetype == MOVETYPE_NOCLIP) {
             SV_Physics_Noclip(ent);
         } else if (ent->v.movetype == MOVETYPE_STEP) {
             SV_Physics_Step(ent);
@@ -2411,22 +2171,15 @@ is not a staircase.
 
 =============
 */
-qboolean SV_CheckBottom(edict_t* ent)
+bool SV_CheckBottom(edict_t* ent)
 {
-    Vector3 mins, maxs, start, stop;
-    trace_t trace;
-    int x, y;
-    float mid, bottom;
+    Vector3 mins = ent->v.origin + ent->v.mins;
+    Vector3 maxs = ent->v.origin + ent->v.maxs;
+    Vector3 start{}, stop{};
 
-    mins = ent->v.origin + ent->v.mins;
-    maxs = ent->v.origin + ent->v.maxs;
-
-    // if all of the points under the corners are solid world, don't bother
-    // with the tougher checks
-    // the corners must be within 16 of the midpoint
-    start.z = mins.z - 1;
-    for (x = 0; x <= 1; x++) {
-        for (y = 0; y <= 1; y++) {
+    start.z = mins.z - 1.0f;
+    for (int x = 0; x <= 1; ++x) {
+        for (int y = 0; y <= 1; ++y) {
             start.x = x ? maxs.x : mins.x;
             start.y = y ? maxs.y : mins.y;
             if (SV_PointContents(start) != CONTENTS_SOLID) {
@@ -2436,48 +2189,41 @@ qboolean SV_CheckBottom(edict_t* ent)
     }
 
     c_yes++;
-
-    return true; // we got out easy
+    return true;
 
 realcheck:
     c_no++;
-    //
-    // check it for real...
-    //
     start.z = mins.z;
-
-    // the midpoint must be within 16 of the bottom
     start.x = stop.x = (mins.x + maxs.x) * 0.5f;
     start.y = stop.y = (mins.y + maxs.y) * 0.5f;
-    stop.z = start.z - 2 * STEPSIZE;
-    trace = SV_Move(start, vec3_origin, vec3_origin, stop, true, ent);
+    stop.z = start.z - 2.0f * STEPSIZE;
+    trace_t trace = SV_Move(start, vec3_origin, vec3_origin, stop, true, ent);
 
-    if (trace.fraction == 1.0) {
+    if (trace.fraction == 1.0f) {
         return false;
     }
 
-    mid = bottom = trace.endpos.z;
+    const float mid = trace.endpos.z;
+    float bottom = trace.endpos.z;
 
-    // the corners must be within 16 of the midpoint
-    for (x = 0; x <= 1; x++) {
-        for (y = 0; y <= 1; y++) {
+    for (int x = 0; x <= 1; ++x) {
+        for (int y = 0; y <= 1; ++y) {
             start.x = stop.x = x ? maxs.x : mins.x;
             start.y = stop.y = y ? maxs.y : mins.y;
 
             trace = SV_Move(start, vec3_origin, vec3_origin, stop, true, ent);
 
-            if (trace.fraction != 1.0 && trace.endpos.z > bottom) {
+            if (trace.fraction != 1.0f && trace.endpos.z > bottom) {
                 bottom = trace.endpos.z;
             }
 
-            if (trace.fraction == 1.0 || mid - trace.endpos.z > STEPSIZE) {
+            if (trace.fraction == 1.0f || mid - trace.endpos.z > STEPSIZE) {
                 return false;
             }
         }
     }
 
     c_yes++;
-
     return true;
 }
 
@@ -2486,45 +2232,32 @@ realcheck:
 SV_movestep
 
 Called by monster program code.
-The move will be adjusted for slopes and stairs, but if the move isn't
-possible, no move is done, false is returned, and
-pr_global_struct->trace_normal is set to the normal of the blocking wall
 =============
 */
-qboolean SV_movestep(edict_t* ent, const Vector3& move, qboolean relink)
+bool SV_movestep(edict_t* ent, const Vector3& move, bool relink)
 {
-    float dz;
-    Vector3 oldorg, neworg, end;
-    trace_t trace;
-    int i;
-    edict_t* enemy;
+    const Vector3 oldorg = ent->v.origin;
+    Vector3 neworg = ent->v.origin + move;
 
-    // try the move
-    VectorCopy(ent->v.origin, oldorg);
-    neworg = ent->v.origin + move;
-
-    // flying monsters don't step up
     if (static_cast<int>(ent->v.flags) & (FL_SWIM | FL_FLY)) {
-        // try one move with vertical motion, then one without
-        for (i = 0; i < 2; i++) {
+        for (int i = 0; i < 2; ++i) {
             neworg = ent->v.origin + move;
-            enemy = PROG_TO_EDICT(ent->v.enemy);
+            const edict_t* enemy = PROG_TO_EDICT(ent->v.enemy);
             if (i == 0 && enemy != sv.edicts) {
-                dz = ent->v.origin.z - PROG_TO_EDICT(ent->v.enemy)->v.origin.z;
-                if (dz > 40) {
-                    neworg.z -= 8;
+                const float dz = ent->v.origin.z - PROG_TO_EDICT(ent->v.enemy)->v.origin.z;
+                if (dz > 40.0f) {
+                    neworg.z -= 8.0f;
                 }
-
-                if (dz < 30) {
-                    neworg.z += 8;
+                if (dz < 30.0f) {
+                    neworg.z += 8.0f;
                 }
             }
 
-            trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, neworg, false, ent);
+            trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, neworg, false, ent);
 
-            if (trace.fraction == 1) {
+            if (trace.fraction == 1.0f) {
                 if ((static_cast<int>(ent->v.flags) & FL_SWIM) && SV_PointContents(trace.endpos) == CONTENTS_EMPTY) {
-                    return false; // swim monster left water
+                    return false;
                 }
 
                 ent->v.origin = trace.endpos;
@@ -2543,12 +2276,11 @@ qboolean SV_movestep(edict_t* ent, const Vector3& move, qboolean relink)
         return false;
     }
 
-    // push down from a step height above the wished position
     neworg.z += STEPSIZE;
-    end = neworg;
+    Vector3 end = neworg;
     end.z -= STEPSIZE * 2;
 
-    trace = SV_Move(neworg, ent->v.mins, ent->v.maxs, end, false, ent);
+    trace_t trace = SV_Move(neworg, ent->v.mins, ent->v.maxs, end, false, ent);
 
     if (trace.allsolid) {
         return false;
@@ -2562,49 +2294,40 @@ qboolean SV_movestep(edict_t* ent, const Vector3& move, qboolean relink)
         }
     }
 
-    if (trace.fraction == 1) {
-        // if monster had the ground pulled out, go ahead and fall
-if (static_cast<int>(ent->v.flags) & FL_PARTIALGROUND) {
+    if (trace.fraction == 1.0f) {
+        if (static_cast<int>(ent->v.flags) & FL_PARTIALGROUND) {
             ent->v.origin += move;
             if (relink) {
                 SV_LinkEdict(ent, true);
             }
 
             ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) & ~FL_ONGROUND);
-
-            //	Con_Printf ("fall down\n");
             return true;
         }
-
-        return false; // walked off an edge
-    }
-
-    // check point traces down for dangling corners
-    ent->v.origin = trace.endpos;
-
-    if (!SV_CheckBottom(ent)) {
-        if (static_cast<int>(ent->v.flags) & FL_PARTIALGROUND) { // entity had floor mostly pulled out from underneath it
-            // and is trying to correct
-            if (relink) {
-                SV_LinkEdict(ent, true);
-            }
-
-            return true;
-        }
-
-        ent->v.origin = oldorg;
 
         return false;
     }
 
+    ent->v.origin = trace.endpos;
+
+    if (!SV_CheckBottom(ent)) {
+        if (static_cast<int>(ent->v.flags) & FL_PARTIALGROUND) {
+            if (relink) {
+                SV_LinkEdict(ent, true);
+            }
+            return true;
+        }
+
+        ent->v.origin = oldorg;
+        return false;
+    }
+
     if (static_cast<int>(ent->v.flags) & FL_PARTIALGROUND) {
-        //		Con_Printf ("back on ground\n");
         ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) & ~FL_PARTIALGROUND);
     }
 
     ent->v.groundentity = static_cast<int>(EDICT_TO_PROG(trace.ent));
 
-    // the move is ok
     if (relink) {
         SV_LinkEdict(ent, true);
     }
@@ -2618,37 +2341,28 @@ SV_StepDirection
 
 Turns to the movement direction, and walks the current distance if
 facing it.
-
 ======================
 */
-
 qboolean SV_StepDirection(edict_t* ent, float yaw, float dist)
 {
-    Vector3 move, oldorigin;
-    float delta;
-
     ent->v.ideal_yaw = yaw;
     VM::PF_changeyaw();
 
-    yaw = static_cast<float>(yaw * M_PI * 2 / 360);
-    move.x = cos(yaw) * dist;
-    move.y = sin(yaw) * dist;
-    move.z = 0;
+    const float rad_yaw = static_cast<float>(yaw * M_PI * 2.0 / 360.0);
+    const Vector3 move(cosf(rad_yaw) * dist, sinf(rad_yaw) * dist, 0.0f);
 
-    oldorigin = ent->v.origin;
+    const Vector3 oldorigin = ent->v.origin;
     if (SV_movestep(ent, move, false)) {
-        delta = ent->v.angles[YAW] - ent->v.ideal_yaw;
-        if (delta > 45 && delta < 315) { // not turned far enough, so don't take the step
+        const float delta = ent->v.angles[YAW] - ent->v.ideal_yaw;
+        if (delta > 45.0f && delta < 315.0f) {
             ent->v.origin = oldorigin;
         }
 
         SV_LinkEdict(ent, true);
-
         return true;
     }
 
     SV_LinkEdict(ent, true);
-
     return false;
 }
 
@@ -2660,8 +2374,6 @@ SV_FixCheckBottom
 */
 void SV_FixCheckBottom(edict_t* ent)
 {
-    //	Con_Printf ("SV_FixCheckBottom\n");
-
     ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) | FL_PARTIALGROUND);
 }
 
@@ -2671,43 +2383,36 @@ SV_NewChaseDir
 
 ================
 */
-#define DI_NODIR -1
+constexpr float DI_NODIR = -1.0f;
 
 void SV_NewChaseDir(edict_t* actor, edict_t* enemy, float dist)
 {
-    float deltax, deltay;
-    float d[3];
-    float tdir, olddir, turnaround;
+    eastl::array<float, 3> d{0.0f, DI_NODIR, DI_NODIR};
 
-    olddir = anglemod(static_cast<float>(static_cast<int>(actor->v.ideal_yaw / 45) * 45));
-    turnaround = anglemod(olddir - 180);
+    const float olddir = anglemod(static_cast<float>(static_cast<int>(actor->v.ideal_yaw / 45.0f) * 45));
+    const float turnaround = anglemod(olddir - 180.0f);
 
-    deltax = enemy->v.origin[0] - actor->v.origin[0];
-    deltay = enemy->v.origin[1] - actor->v.origin[1];
-    if (deltax > 10) {
-        d[1] = 0;
-    } else if (deltax < -10) {
-        d[1] = 180;
+    const float deltax = enemy->v.origin[0] - actor->v.origin[0];
+    const float deltay = enemy->v.origin[1] - actor->v.origin[1];
+    if (deltax > 10.0f) {
+        d[1] = 0.0f;
+    } else if (deltax < -10.0f) {
+        d[1] = 180.0f;
     } else {
         d[1] = DI_NODIR;
     }
 
-    if (deltay < -10) {
-        d[2] = 270;
-    } else if (deltay > 10) {
-        d[2] = 90;
+    if (deltay < -10.0f) {
+        d[2] = 270.0f;
+    } else if (deltay > 10.0f) {
+        d[2] = 90.0f;
     } else {
         d[2] = DI_NODIR;
     }
 
     // try direct route
     if (d[1] != DI_NODIR && d[2] != DI_NODIR) {
-        if (d[1] == 0) {
-            tdir = d[2] == 90 ? 45.0f : 315.0f;
-        } else {
-            tdir = d[2] == 90 ? 135.0f : 215.0f;
-        }
-
+        const float tdir = (d[1] == 0.0f) ? ((d[2] == 90.0f) ? 45.0f : 315.0f) : ((d[2] == 90.0f) ? 135.0f : 215.0f);
         if (tdir != turnaround && SV_StepDirection(actor, tdir, dist)) {
             return;
         }
@@ -2715,7 +2420,7 @@ void SV_NewChaseDir(edict_t* actor, edict_t* enemy, float dist)
 
     // try other directions
     if (((rand() & 3) & 1) || fabs(deltay) > fabs(deltax)) {
-        tdir = d[1];
+        const float tdir = d[1];
         d[1] = d[2];
         d[2] = tdir;
     }
@@ -2728,21 +2433,18 @@ void SV_NewChaseDir(edict_t* actor, edict_t* enemy, float dist)
         return;
     }
 
-    /* there is no direct path to the player, so pick another direction */
-
     if (olddir != DI_NODIR && SV_StepDirection(actor, olddir, dist)) {
         return;
     }
 
-    if (rand() & 1) /*randomly determine direction of search*/
-    {
-        for (tdir = 0; tdir <= 315; tdir += 45) {
+    if (rand() & 1) {
+        for (float tdir = 0.0f; tdir <= 315.0f; tdir += 45.0f) {
             if (tdir != turnaround && SV_StepDirection(actor, tdir, dist)) {
                 return;
             }
         }
     } else {
-        for (tdir = 315; tdir >= 0; tdir -= 45) {
+        for (float tdir = 315.0f; tdir >= 0.0f; tdir -= 45.0f) {
             if (tdir != turnaround && SV_StepDirection(actor, tdir, dist)) {
                 return;
             }
@@ -2754,9 +2456,6 @@ void SV_NewChaseDir(edict_t* actor, edict_t* enemy, float dist)
     }
 
     actor->v.ideal_yaw = olddir; // can't move
-
-    // if a bridge was pulled out from underneath a monster, it may not have
-    // a valid standing position at all
 
     if (!SV_CheckBottom(actor)) {
         SV_FixCheckBottom(actor);
@@ -2771,9 +2470,7 @@ SV_CloseEnough
 */
 qboolean SV_CloseEnough(edict_t* ent, edict_t* goal, float dist)
 {
-    int i;
-
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; ++i) {
         if (goal->v.absmin[i] > ent->v.absmax[i] + dist) {
             return false;
         }
@@ -2792,28 +2489,21 @@ SV_MoveToGoal
 
 ======================
 */
-void SV_MoveToGoal(void)
+void SV_MoveToGoal()
 {
-    edict_t *ent, *goal;
-    float dist;
-
-    ent = PROG_TO_EDICT(pr_global_struct->self);
-    goal = PROG_TO_EDICT(ent->v.goalentity);
-    dist = G_FLOAT(OFS_PARM0);
+    edict_t* ent = PROG_TO_EDICT(pr_global_struct->self);
+    edict_t* goal = PROG_TO_EDICT(ent->v.goalentity);
+    const float dist = G_FLOAT(OFS_PARM0);
 
     if (!(static_cast<int>(ent->v.flags) & (FL_ONGROUND | FL_FLY | FL_SWIM))) {
-        G_FLOAT(OFS_RETURN) = 0;
-
+        G_FLOAT(OFS_RETURN) = 0.0f;
         return;
     }
 
-// if the next step hits the enemy, return immediately
-    if (PROG_TO_EDICT(ent->v.enemy) != sv.edicts && SV_CloseEnough(ent, goal, dist))
-    {
+    if (PROG_TO_EDICT(ent->v.enemy) != sv.edicts && SV_CloseEnough(ent, goal, dist)) {
         return;
     }
 
-    // bump around...
     if ((rand() & 3) == 1 || !SV_StepDirection(ent, ent->v.ideal_yaw, dist)) {
         SV_NewChaseDir(ent, goal, dist);
     }
@@ -2828,56 +2518,48 @@ void SV_MoveToGoal(void)
 SV_SetIdealPitch
 ===============
 */
-#define MAX_FORWARD 6
+constexpr int MAX_FORWARD = 6;
 
-void SV_SetIdealPitch(void)
+void SV_SetIdealPitch()
 {
-    float angleval, sinval, cosval;
-    trace_t tr;
-    Vector3 top, bottom;
-    float z[MAX_FORWARD];
-    int i, j;
-    int step, dir, steps;
-
     if (!(static_cast<int>(sv_player->v.flags) & FL_ONGROUND)) {
         return;
     }
 
-    angleval = static_cast<float>(sv_player->v.angles[YAW] * M_PI * 2 / 360);
-    sinval = sin(angleval);
-    cosval = cos(angleval);
+    const float angleval = static_cast<float>(sv_player->v.angles[YAW] * M_PI * 2.0 / 360.0);
+    const float sinval = sinf(angleval);
+    const float cosval = cosf(angleval);
 
-    for (i = 0; i < MAX_FORWARD; i++) {
-        top.x = sv_player->v.origin.x + cosval * (i + 3) * 12;
-        top.y = sv_player->v.origin.y + sinval * (i + 3) * 12;
-        top.z = sv_player->v.origin.z + sv_player->v.view_ofs.z;
+    eastl::array<float, MAX_FORWARD> z{};
 
-        bottom.x = top.x;
-        bottom.y = top.y;
-        bottom.z = top.z - 160;
+    int i = 0;
+    for (; i < MAX_FORWARD; ++i) {
+        Vector3 top(
+            sv_player->v.origin.x + cosval * (i + 3) * 12.0f,
+            sv_player->v.origin.y + sinval * (i + 3) * 12.0f,
+            sv_player->v.origin.z + sv_player->v.view_ofs.z);
 
-        tr = SV_Move(top, vec3_origin, vec3_origin, bottom, 1, sv_player);
-        if (tr.allsolid) {
-            return; // looking at a wall, leave ideal the way is was
+        Vector3 bottom = top;
+        bottom.z -= 160.0f;
+
+        const trace_t tr = SV_Move(top, vec3_origin, vec3_origin, bottom, 1, sv_player);
+        if (tr.allsolid || tr.fraction == 1.0f) {
+            return;
         }
 
-        if (tr.fraction == 1) {
-            return; // near a dropoff
-        }
-
-        z[i] = top.z + tr.fraction * (bottom.z - top.z);
+        z[static_cast<size_t>(i)] = top.z + tr.fraction * (bottom.z - top.z);
     }
 
-    dir = 0;
-    steps = 0;
-    for (j = 1; j < i; j++) {
-        step = static_cast<int>(z[j] - z[j - 1]);
+    int dir = 0;
+    int steps = 0;
+    for (int j = 1; j < i; ++j) {
+        const int step = static_cast<int>(z[static_cast<size_t>(j)] - z[static_cast<size_t>(j - 1)]);
         if (step > -ON_EPSILON && step < ON_EPSILON) {
             continue;
         }
 
         if (dir && (step - dir > ON_EPSILON || step - dir < -ON_EPSILON)) {
-            return; // mixed changes
+            return;
         }
 
         steps++;
@@ -2885,8 +2567,7 @@ void SV_SetIdealPitch(void)
     }
 
     if (!dir) {
-        sv_player->v.idealpitch = 0;
-
+        sv_player->v.idealpitch = 0.0f;
         return;
     }
 
@@ -2903,45 +2584,33 @@ SV_UserFriction
 
 ==================
 */
-void SV_UserFriction(void)
+void SV_UserFriction()
 {
-    float speed, newspeed, control;
-    Vector3 start, stop;
-    float friction;
-    trace_t trace;
-
-    speed = sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
+    const float speed = sqrtf(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
     if (!speed) {
         return;
     }
 
-    // if the leading edge is over a dropoff, increase friction
-    start.x = stop.x = origin[0] + velocity[0] / speed * 16;
-    start.y = stop.y = origin[1] + velocity[1] / speed * 16;
-    start.z = origin[2] + sv_player->v.mins.z;
-    stop.z = start.z - 34;
+    Vector3 start(
+        origin[0] + velocity[0] / speed * 16.0f,
+        origin[1] + velocity[1] / speed * 16.0f,
+        origin[2] + sv_player->v.mins.z);
+    Vector3 stop = start;
+    stop.z -= 34.0f;
 
-    trace = SV_Move(start, vec3_origin, vec3_origin, stop, true, sv_player);
+    const trace_t trace = SV_Move(start, vec3_origin, vec3_origin, stop, true, sv_player);
+    const float friction = (trace.fraction == 1.0f) ? (sv_friction.value * sv_edgefriction.value) : sv_friction.value;
 
-    if (trace.fraction == 1.0) {
-        friction = sv_friction.value * sv_edgefriction.value;
-    } else {
-        friction = sv_friction.value;
-    }
-
-    // apply friction
-    control = speed < sv_stopspeed.value ? sv_stopspeed.value : speed;
-    newspeed = static_cast<float>(speed - host_frametime * control * friction);
-
-    if (newspeed < 0) {
-        newspeed = 0;
+    const float control = (speed < sv_stopspeed.value) ? sv_stopspeed.value : speed;
+    float newspeed = static_cast<float>(speed - host_frametime * control * friction);
+    if (newspeed < 0.0f) {
+        newspeed = 0.0f;
     }
 
     newspeed /= speed;
-
-    velocity[0] = velocity[0] * newspeed;
-    velocity[1] = velocity[1] * newspeed;
-    velocity[2] = velocity[2] * newspeed;
+    velocity[0] *= newspeed;
+    velocity[1] *= newspeed;
+    velocity[2] *= newspeed;
 }
 
 /*
@@ -2949,63 +2618,53 @@ void SV_UserFriction(void)
 SV_Accelerate
 ==============
 */
-void SV_Accelerate(void)
+void SV_Accelerate()
 {
-    int i;
-    float addspeed, accelspeed, currentspeed;
-
-    currentspeed = DotProduct(velocity, wishdir);
-    addspeed = wishspeed - currentspeed;
-    if (addspeed <= 0) {
+    const float currentspeed = DotProduct(velocity, wishdir);
+    const float addspeed = wishspeed - currentspeed;
+    if (addspeed <= 0.0f) {
         return;
     }
 
-    accelspeed = static_cast<float>(sv_accelerate.value * host_frametime * wishspeed);
+    float accelspeed = static_cast<float>(sv_accelerate.value * host_frametime * wishspeed);
     if (accelspeed > addspeed) {
         accelspeed = addspeed;
     }
 
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; ++i) {
         velocity[i] += accelspeed * wishdir[i];
     }
 }
 
 void SV_AirAccelerate(Vector3 wishveloc)
 {
-    int i;
-    float addspeed, wishspd, accelspeed, currentspeed;
-
-    wishspd = wishveloc.normalize();
-    if (wishspd > 30) {
-        wishspd = 30;
+    float wishspd = wishveloc.normalize();
+    if (wishspd > 30.0f) {
+        wishspd = 30.0f;
     }
 
-    currentspeed = DotProduct(velocity, wishveloc);
-    addspeed = wishspd - currentspeed;
-    if (addspeed <= 0) {
+    const float currentspeed = DotProduct(velocity, wishveloc);
+    const float addspeed = wishspd - currentspeed;
+    if (addspeed <= 0.0f) {
         return;
     }
 
-    //	accelspeed = sv_accelerate.value * host_frametime;
-    accelspeed = static_cast<float>(sv_accelerate.value * wishspeed * host_frametime);
+    float accelspeed = static_cast<float>(sv_accelerate.value * wishspeed * host_frametime);
     if (accelspeed > addspeed) {
         accelspeed = addspeed;
     }
 
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; ++i) {
         velocity[i] += accelspeed * wishveloc[i];
     }
 }
 
-void DropPunchAngle(void)
+void DropPunchAngle()
 {
-    float len;
-
-    len = sv_player->v.punchangle.normalize();
-
-    len -= static_cast<float>(10 * host_frametime);
-    if (len < 0) {
-        len = 0;
+    float len = sv_player->v.punchangle.normalize();
+    len -= static_cast<float>(10.0 * host_frametime);
+    if (len < 0.0f) {
+        len = 0.0f;
     }
 
     sv_player->v.punchangle *= len;
@@ -3017,27 +2676,20 @@ SV_WaterMove
 
 ===================
 */
-void SV_WaterMove(void)
+void SV_WaterMove()
 {
-    int i;
-    Vector3 wishvel;
-    Vector3 forward, right, up;
-    float speed, newspeed, w_speed, addspeed, accelspeed;
-
-    //
-    // user intentions
-    //
+    Vector3 forward{}, right{}, up{};
     AngleVectors(sv_player->v.v_angle, forward, right, up);
 
-    wishvel = forward * cmd.forwardmove + right * cmd.sidemove;
+    Vector3 wishvel = forward * cmd.forwardmove + right * cmd.sidemove;
 
     if (!cmd.forwardmove && !cmd.sidemove && !cmd.upmove) {
-        wishvel.z -= 60; // drift towards bottom
+        wishvel.z -= 60.0f; // drift towards bottom
     } else {
         wishvel.z += cmd.upmove;
     }
 
-    w_speed = wishvel.length();
+    float w_speed = wishvel.length();
     if (w_speed > sv_maxspeed.value) {
         wishvel *= sv_maxspeed.value / w_speed;
         w_speed = sv_maxspeed.value;
@@ -3045,49 +2697,42 @@ void SV_WaterMove(void)
 
     w_speed *= 0.7f;
 
-    //
-    // water friction
-    //
-    speed = Length(velocity);
+    const float speed = Length(velocity);
+    float newspeed = 0.0f;
     if (speed) {
         newspeed = speed - static_cast<float>(host_frametime * speed * sv_friction.value);
-        if (newspeed < 0) {
-            newspeed = 0;
+        if (newspeed < 0.0f) {
+            newspeed = 0.0f;
         }
 
         VectorScale(velocity, newspeed / speed, velocity);
-    } else {
-        newspeed = 0;
     }
 
-    //
-    // water acceleration
-    //
     if (!w_speed) {
         return;
     }
 
-    addspeed = w_speed - newspeed;
-    if (addspeed <= 0) {
+    const float addspeed = w_speed - newspeed;
+    if (addspeed <= 0.0f) {
         return;
     }
 
     wishvel.normalize();
-    accelspeed = static_cast<float>(sv_accelerate.value * w_speed * host_frametime);
+    float accelspeed = static_cast<float>(sv_accelerate.value * w_speed * host_frametime);
     if (accelspeed > addspeed) {
         accelspeed = addspeed;
     }
 
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; ++i) {
         velocity[i] += accelspeed * wishvel[i];
     }
 }
 
-void SV_WaterJump(void)
+void SV_WaterJump()
 {
     if (sv.time > sv_player->v.teleport_time || !sv_player->v.waterlevel) {
         sv_player->v.flags = static_cast<float>(static_cast<int>(sv_player->v.flags) & ~FL_WATERJUMP);
-        sv_player->v.teleport_time = 0;
+        sv_player->v.teleport_time = 0.0;
     }
 
     sv_player->v.velocity.x = sv_player->v.movedir.x;
@@ -3100,28 +2745,23 @@ SV_AirMove
 
 ===================
 */
-void SV_AirMove(void)
+void SV_AirMove()
 {
-    Vector3 wishvel;
-    Vector3 forward, right, up;
-    float fmove, smove;
-
+    Vector3 forward{}, right{}, up{};
     AngleVectors(sv_player->v.angles, forward, right, up);
 
-    fmove = cmd.forwardmove;
-    smove = cmd.sidemove;
+    float fmove = cmd.forwardmove;
+    float smove = cmd.sidemove;
 
-    // hack to not let you back into teleporter
-    if (sv.time < sv_player->v.teleport_time && fmove < 0) {
-        fmove = 0;
+    if (sv.time < sv_player->v.teleport_time && fmove < 0.0f) {
+        fmove = 0.0f;
     }
 
-    wishvel = forward * fmove + right * smove;
-
+    Vector3 wishvel = forward * fmove + right * smove;
     if (static_cast<int>(sv_player->v.movetype) != MOVETYPE_WALK) {
         wishvel.z = cmd.upmove;
     } else {
-        wishvel.z = 0;
+        wishvel.z = 0.0f;
     }
 
     wishdir = wishvel;
@@ -3131,12 +2771,12 @@ void SV_AirMove(void)
         wishspeed = sv_maxspeed.value;
     }
 
-    if (sv_player->v.movetype == MOVETYPE_NOCLIP) { // noclip
+    if (sv_player->v.movetype == MOVETYPE_NOCLIP) {
         VectorCopy(wishvel, velocity);
     } else if (onground) {
         SV_UserFriction();
         SV_Accelerate();
-    } else { // not on ground, so little effect on velocity
+    } else {
         SV_AirAccelerate(wishvel);
     }
 }
@@ -3145,57 +2785,41 @@ void SV_AirMove(void)
 ===================
 SV_ClientThink
 
-the move fields specify an intended velocity in pix/sec
-the angle fields specify an exact angular motion in degrees
 ===================
 */
-void SV_ClientThink(void)
+void SV_ClientThink()
 {
-    Vector3 v_angle;
-
     if (sv_player->v.movetype == MOVETYPE_NONE) {
         return;
     }
 
     onground = static_cast<int>(sv_player->v.flags) & FL_ONGROUND;
-
     origin = sv_player->v.origin;
     velocity = sv_player->v.velocity;
 
     DropPunchAngle();
 
-    //
-    // if dead, behave differently
-    //
-    if (sv_player->v.health <= 0) {
+    if (sv_player->v.health <= 0.0f) {
         return;
     }
 
-    //
-    // angles
-    // show 1/3 the pitch angle and all the roll angle
     cmd = host_client->cmd;
     angles = sv_player->v.angles;
 
-    v_angle = sv_player->v.v_angle + sv_player->v.punchangle;
-    angles[ROLL] = V_CalcRoll(sv_player->v.angles, sv_player->v.velocity) * 4;
+    const Vector3 v_angle = sv_player->v.v_angle + sv_player->v.punchangle;
+    angles[ROLL] = V_CalcRoll(sv_player->v.angles, sv_player->v.velocity) * 4.0f;
     if (!sv_player->v.fixangle) {
-        angles[PITCH] = -v_angle[PITCH] / 3;
+        angles[PITCH] = -v_angle[PITCH] / 3.0f;
         angles[YAW] = v_angle[YAW];
     }
 
     if (static_cast<int>(sv_player->v.flags) & FL_WATERJUMP) {
         SV_WaterJump();
-
         return;
     }
 
-    //
-    // walk
-    //
     if ((sv_player->v.waterlevel >= 2) && (sv_player->v.movetype != MOVETYPE_NOCLIP)) {
         SV_WaterMove();
-
         return;
     }
 
@@ -3209,36 +2833,27 @@ SV_ReadClientMove
 */
 void SV_ReadClientMove(usercmd_t* move)
 {
-    int i;
-    Vector3 angle;
-    int bits;
-
-    // read ping time
-    host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = static_cast<float>(sv.time) - MSG_ReadFloat();
+    host_client->ping_times[static_cast<size_t>(host_client->num_pings % NUM_PING_TIMES)] = static_cast<float>(sv.time) - MSG_ReadFloat();
     host_client->num_pings++;
 
-    // read current angles
+    Vector3 angle{};
     angle.x = MSG_ReadAngle();
     angle.y = MSG_ReadAngle();
     angle.z = MSG_ReadAngle();
-
     host_client->edict->v.v_angle = angle;
 
-    // read movement
     move->forwardmove = static_cast<float>(MSG_ReadShort());
     move->sidemove = static_cast<float>(MSG_ReadShort());
     move->upmove = static_cast<float>(MSG_ReadShort());
 
-    // read buttons
-    bits = MSG_ReadByte();
+    const int bits = MSG_ReadByte();
     host_client->edict->v.button0 = static_cast<float>(bits & 1);
     host_client->edict->v.button2 = static_cast<float>((bits & 2) >> 1);
 
-    i = MSG_ReadByte();
-    if (i) {
-        host_client->edict->v.impulse = static_cast<float>(i);
+    const int impulse = MSG_ReadByte();
+    if (impulse) {
+        host_client->edict->v.impulse = static_cast<float>(impulse);
     }
-
 }
 
 /*
@@ -3248,18 +2863,20 @@ SV_ReadClientMessage
 Returns false if the client should be killed
 ===================
 */
-qboolean SV_ReadClientMessage(void)
+qboolean SV_ReadClientMessage()
 {
-    int ret;
-    int msg_cmd;
-    char* s;
+    static constexpr eastl::array<eastl::string_view, 19> allowed_commands = {
+        "status", "god", "notarget", "fly", "name", "noclip",
+        "say", "say_team", "tell", "color", "kill", "pause",
+        "spawn", "begin", "prespawn", "kick", "ping", "give", "ban"
+    };
 
+    int ret = 0;
     do {
     nextmsg:
         ret = NET_GetMessage(host_client->netconnection);
         if (ret == -1) {
             Sys_Printf("SV_ReadClientMessage: NET_GetMessage failed\n");
-
             return false;
         }
 
@@ -3269,78 +2886,39 @@ qboolean SV_ReadClientMessage(void)
 
         MSG_BeginReading();
 
-        while (1) {
+        while (true) {
             if (!host_client->active) {
-                return false; // a command caused an error
+                return false;
             }
 
             if (msg_badread) {
                 Sys_Printf("SV_ReadClientMessage: badread\n");
-
                 return false;
             }
 
-            msg_cmd = MSG_ReadChar();
+            const int msg_cmd = MSG_ReadChar();
 
             switch (msg_cmd) {
             case -1:
-                goto nextmsg; // end of message
+                goto nextmsg;
 
             default:
                 Sys_Printf("SV_ReadClientMessage: unknown command char\n");
-
                 return false;
 
             case clc_nop:
-                //				Sys_Printf ("clc_nop\n");
                 break;
 
-            case clc_stringcmd:
-                s = MSG_ReadString();
-                if (host_client->privileged) {
-                    ret = 2;
-                } else {
-                    ret = 0;
-                }
+            case clc_stringcmd: {
+                const char* s = MSG_ReadString();
+                ret = host_client->privileged ? 2 : 0;
 
-                if (Q_strncasecmp(s, "status", 6) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "god", 3) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "notarget", 8) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "fly", 3) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "name", 4) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "noclip", 6) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "say", 3) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "say_team", 8) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "tell", 4) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "color", 5) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "kill", 4) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "pause", 5) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "spawn", 5) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "begin", 5) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "prespawn", 8) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "kick", 4) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "ping", 4) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "give", 4) == 0) {
-                    ret = 1;
-                } else if (Q_strncasecmp(s, "ban", 3) == 0) {
-                    ret = 1;
+                const eastl::string_view cmd_sv(s);
+                for (const auto& allowed : allowed_commands) {
+                    if (cmd_sv.length() >= allowed.length() && Q_strncasecmp(s, allowed.data(), static_cast<int>(allowed.length())) == 0) {
+                        ret = 1;
+                        break;
+                    }
                 }
 
                 if (ret == 2) {
@@ -3348,13 +2926,12 @@ qboolean SV_ReadClientMessage(void)
                 } else if (ret == 1) {
                     Cmd::ExecuteString(s, Cmd::Source::Client);
                 } else {
-                    Con_DPrintf("%s tried to %s\n", host_client->name, s);
+                    Con_DPrintf("%s tried to %s\n", host_client->name.data(), s);
                 }
-
                 break;
+            }
 
             case clc_disconnect:
-                //				Sys_Printf ("SV_ReadClientMessage: client disconnected\n");
                 return false;
 
             case clc_move:
@@ -3372,12 +2949,11 @@ qboolean SV_ReadClientMessage(void)
 SV_RunClients
 ==================
 */
-void SV_RunClients(void)
+void SV_RunClients()
 {
-    int i;
-
-    for (i = 0, host_client = svs.clients; i < svs.maxclients;
-        i++, host_client++) {
+    auto clients = svs.GetClients();
+    for (auto& client : clients) {
+        host_client = &client;
         if (!host_client->active) {
             continue;
         }
@@ -3385,17 +2961,15 @@ void SV_RunClients(void)
         sv_player = host_client->edict;
 
         if (!SV_ReadClientMessage()) {
-            SV_DropClient(false); // client misbehaved...
+            SV_DropClient(false);
             continue;
         }
 
         if (!host_client->spawned) {
-            // clear client movement until a new packet is received
-            memset(&host_client->cmd, 0, sizeof(host_client->cmd));
+            host_client->cmd = usercmd_t{};
             continue;
         }
 
-        // always pause in single player if in console or menus
         if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game)) {
             SV_ClientThink();
         }

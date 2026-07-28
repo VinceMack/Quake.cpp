@@ -107,7 +107,7 @@ void Host_Status_f()
             }
         }
 
-        print("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", j + 1, client->name,
+        print("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", j + 1, client->name.data(),
             static_cast<int>(client->edict->v.frags), hours, minutes, seconds);
         print("   %s\n", client->netconnection->address);
     }
@@ -239,7 +239,7 @@ void Host_Ping_f()
             total += client->ping_times[j];
         }
         total /= NUM_PING_TIMES;
-        SV_ClientPrintf("%4i %s\n", static_cast<int>(total * 1000.0f), client->name);
+        SV_ClientPrintf("%4i %s\n", static_cast<int>(total * 1000.0f), client->name.data());
     }
 }
 
@@ -349,7 +349,7 @@ void Host_Restart_f()
     }
 
     char mapname[MAX_QPATH];
-    strcpy_s(mapname, sizeof(mapname), sv.name); // must copy out, because it gets cleared
+    strcpy_s(mapname, sizeof(mapname), sv.name.data()); // must copy out, because it gets cleared
                                                  // in sv_spawnserver
     SV_SpawnServer(mapname);
 }
@@ -504,7 +504,7 @@ void Host_Savegame_f()
         f << svs.clients->spawn_parms[i] << "\n";
     }
     f << current_skill << "\n";
-    f << sv.name << "\n";
+    f << sv.name.data() << "\n";
     f << sv.time << "\n";
 
     // write the light styles
@@ -729,19 +729,19 @@ void Host_Name_f()
         return;
     }
 
-    if (host_client->name[0] && strcmp(host_client->name, "unconnected") != 0) {
-        if (Q_strcmp(host_client->name, newName) != 0) {
-            Con_Printf("%s renamed to %s\n", host_client->name, newName);
+    if (host_client->name[0] && strcmp(host_client->name.data(), "unconnected") != 0) {
+        if (Q_strcmp(host_client->name.data(), newName) != 0) {
+            Con_Printf("%s renamed to %s\n", host_client->name.data(), newName);
         }
     }
 
-    Q_strcpy(host_client->name, newName);
-    host_client->edict->v.netname = PR_SetString(host_client->name);
+    Q_strcpy(host_client->name.data(), newName);
+    host_client->edict->v.netname = PR_SetString(host_client->name.data());
 
     // send notification to all clients
     MSG_WriteByte(&sv.reliable_datagram, svc_updatename);
     MSG_WriteByte(&sv.reliable_datagram, static_cast<int>(host_client - svs.clients));
-    MSG_WriteString(&sv.reliable_datagram, host_client->name);
+    MSG_WriteString(&sv.reliable_datagram, host_client->name.data());
 }
 
 void Host_Version_f()
@@ -783,7 +783,7 @@ void Host_Say(qboolean teamonly)
     if (Cmd::state.source == Cmd::Source::Command && cls.state == ca_dedicated) {
         text_str = std::string(1, '\x01') + "<" + hostname.string.c_str() + "> ";
     } else {
-        text_str = std::string(1, '\x01') + save->name + ": ";
+        text_str = std::string(1, '\x01') + save->name.data() + ": ";
     }
 
     // check length & truncate if necessary
@@ -826,7 +826,7 @@ void Host_Tell_f()
         return;
     }
 
-    std::string text_str = std::string(host_client->name) + ": ";
+    std::string text_str = std::string(host_client->name.data()) + ": ";
 
     std::string arg_str(Cmd::Args());
     // remove quotes if present
@@ -853,7 +853,7 @@ void Host_Tell_f()
             continue;
         }
 
-        if (Q_strcasecmp(client->name, Cmd::Argv(1)) != 0) {
+        if (Q_strcasecmp(client->name.data(), Cmd::Argv(1)) != 0) {
             continue;
         }
 
@@ -1031,7 +1031,7 @@ void Host_Spawn_f()
         std::memset(reinterpret_cast<void*>(&ent->v), 0, static_cast<size_t>(progs->entityfields) * 4);
         ent->v.colormap = static_cast<float>(NUM_FOR_EDICT(ent));
         ent->v.team = static_cast<float>((host_client->colors & 15) + 1);
-        ent->v.netname = PR_SetString(host_client->name);
+        ent->v.netname = PR_SetString(host_client->name.data());
 
         // copy spawn parms out of the client_t
         for (int i = 0; i < NUM_SPAWN_PARMS; i++) {
@@ -1044,7 +1044,7 @@ void Host_Spawn_f()
         PR_ExecuteProgram(pr_global_struct->ClientConnect);
 
         if ((Sys_FloatTime() - host_client->netconnection->connecttime) <= sv.time) {
-            Sys_Printf("%s entered the game\n", host_client->name);
+            Sys_Printf("%s entered the game\n", host_client->name.data());
         }
 
         PR_ExecuteProgram(pr_global_struct->PutClientInServer);
@@ -1061,7 +1061,7 @@ void Host_Spawn_f()
         client_t* client = &svs.clients[i];
         MSG_WriteByte(&host_client->message, svc_updatename);
         MSG_WriteByte(&host_client->message, i);
-        MSG_WriteString(&host_client->message, client->name);
+        MSG_WriteString(&host_client->message, client->name.data());
         MSG_WriteByte(&host_client->message, svc_updatefrags);
         MSG_WriteByte(&host_client->message, i);
         MSG_WriteShort(&host_client->message, client->old_frags);
@@ -1176,7 +1176,7 @@ void Host_Kick_f()
                 continue;
             }
 
-            if (Q_strcasecmp(host_client->name, Cmd::Argv(1)) == 0) {
+            if (Q_strcasecmp(host_client->name.data(), Cmd::Argv(1)) == 0) {
                 break;
             }
         }
@@ -1191,7 +1191,7 @@ void Host_Kick_f()
                 who = cl_name.string.c_str();
             }
         } else {
-            who = save->name;
+            who = save->name.data();
         }
 
         // can't kick yourself!

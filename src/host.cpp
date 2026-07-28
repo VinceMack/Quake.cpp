@@ -188,7 +188,7 @@ void Host_FindMaxClients()
         svs.maxclientslimit = 4;
     }
 
-    svs.clients = static_cast<client_t*>(Hunk_Alloc(svs.maxclientslimit * sizeof(client_t), "clients"));
+    svs.resize_clients(svs.maxclientslimit);
 
     if (svs.maxclients > 1) {
         Cvar::SetValue("deathmatch", 1.0);
@@ -317,7 +317,7 @@ Called when the player is getting totally kicked off the host
 if (crash = true), don't bother sending signofs
 =====================
 */
-void SV_DropClient(qboolean crash)
+void SV_DropClient(bool crash)
 {
     if (!crash) {
         // send any final messages (don't check for errors)
@@ -335,7 +335,7 @@ void SV_DropClient(qboolean crash)
             pr_global_struct->self = saveSelf;
         }
 
-        Sys_Printf("Client %s removed\n", host_client->name);
+        Sys_Printf("Client %s removed\n", host_client->name.data());
     }
 
     // break the net connection

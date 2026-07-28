@@ -2123,7 +2123,7 @@ void PF_setmodel(void)
     m = G_STRING(OFS_PARM1);
 
     // check to see if model was properly precached
-    for (i = 0, check = sv.model_precache; *check; i++, check++) {
+    for (i = 0, check = sv.model_precache.data(); *check; i++, check++) {
         if (!strcmp(*check, m)) {
             break;
         }
@@ -2396,7 +2396,7 @@ void PF_ambientsound(void)
     attenuation = G_FLOAT(OFS_PARM3);
 
     // check to see if samp was properly precached
-    for (soundnum = 0, check = sv.sound_precache; *check; check++, soundnum++) {
+    for (soundnum = 0, check = sv.sound_precache.data(); *check; check++, soundnum++) {
         if (!strcmp(*check, samp)) {
             break;
         }
