@@ -1,4 +1,5 @@
-// server.cpp -- server subsystem (merged from sv_main.cpp, sv_phys.cpp, sv_move.cpp, sv_user.cpp)
+// sys_server.cpp -- Subsystem Server Implementation
+// Contains: server state management, client connections, physics world, collision tracing, entity area movement
 
 #include "quakedef.hpp"
 
@@ -32,10 +33,6 @@ void PF_changeyaw();
 
 namespace Server {
 
-//============================================================================
-// Global variable definitions
-//============================================================================
-
 cvar_t teamplay = { "teamplay", "0", false, true };
 cvar_t skill = { "skill", "1" };
 cvar_t deathmatch = { "deathmatch", "0" };
@@ -43,7 +40,6 @@ cvar_t coop = { "coop", "0" };
 cvar_t fraglimit = { "fraglimit", "0", false, true };
 cvar_t timelimit = { "timelimit", "0", false, true };
 
-// from sv_main.cpp
 ServerSubsystem& GetServerSubsystem() noexcept
 {
     static ServerSubsystem subsystem;
@@ -54,18 +50,15 @@ static eastl::array<eastl::array<char, 5>, MAX_MODELS> localmodels{};
 static int fatbytes = 0;
 static eastl::array<byte, MAX_MAP_LEAFS / 8> fatpvs{};
 
-// from sv_phys.cpp
 cvar_t sv_friction = { "sv_friction", "4", false, true };
 cvar_t sv_stopspeed = { "sv_stopspeed", "100" };
 cvar_t sv_gravity = { "sv_gravity", "800", false, true };
 cvar_t sv_maxvelocity = { "sv_maxvelocity", "2000" };
 cvar_t sv_nostep = { "sv_nostep", "0" };
 
-// from sv_move.cpp
 static int c_yes = 0;
 static int c_no = 0;
 
-// from sv_user.cpp
 edict_t* sv_player = nullptr;
 cvar_t sv_edgefriction = { "edgefriction", "2" };
 Vector3 wishdir{};
@@ -79,15 +72,463 @@ cvar_t sv_idealpitchscale = { "sv_idealpitchscale", "0.8" };
 cvar_t sv_maxspeed = { "sv_maxspeed", "320", false, true };
 cvar_t sv_accelerate = { "sv_accelerate", "10" };
 
-//============================================================================
-// sv_main.cpp contents
-//============================================================================
+typedef struct {
+    Vector3 boxmins, boxmaxs;
+    Vector3 mins, maxs;
+    Vector3 mins2, maxs2;
+    Vector3 start, end;
+    trace_t trace;
+    int type;
+    edict_t* passedict;
+} moveclip_t;
 
-/*
-===============
-SV_Init
-===============
-*/
+static hull_t box_hull;
+static dclipnode_t box_clipnodes[6];
+static mplane_t box_planes[6];
+
+void SV_InitBoxHull(void)
+{
+    int i, side;
+    box_hull.clipnodes = box_clipnodes;
+    box_hull.planes = box_planes;
+    box_hull.firstclipnode = 0;
+    box_hull.lastclipnode = 5;
+
+    for (i = 0; i < 6; i++) {
+        box_clipnodes[i].planenum = i;
+        side = i & 1;
+        box_clipnodes[i].children[side] = CONTENTS_EMPTY;
+        if (i != 5) {
+            box_clipnodes[i].children[side ^ 1] = static_cast<short>(i + 1);
+        } else {
+            box_clipnodes[i].children[side ^ 1] = CONTENTS_SOLID;
+        }
+
+        box_planes[i].type = static_cast<byte>(i >> 1);
+        box_planes[i].normal[i >> 1] = 1;
+    }
+}
+
+hull_t* SV_HullForBox(const Vector3& mins, const Vector3& maxs)
+{
+    box_planes[0].dist = maxs.x;
+    box_planes[1].dist = mins.x;
+    box_planes[2].dist = maxs.y;
+    box_planes[3].dist = mins.y;
+    box_planes[4].dist = maxs.z;
+    box_planes[5].dist = mins.z;
+
+    return &box_hull;
+}
+
+hull_t* SV_HullForEntity(edict_t* ent, const Vector3& mins, const Vector3& maxs, Vector3& offset)
+{
+    model_t* model;
+    Vector3 size, hullmins, hullmaxs;
+    hull_t* hull;
+
+    if (ent->v.solid == SOLID_BSP) {
+        if (ent->v.movetype != MOVETYPE_PUSH) Sys_Error("SOLID_BSP without MOVETYPE_PUSH");
+
+        model = sv.models[(int)ent->v.modelindex];
+        if (!model || model->type != mod_brush) Sys_Error("MOVETYPE_PUSH with a non bsp model");
+
+        size = maxs - mins;
+        if (size.x < 3) hull = &model->hulls[0];
+        else if (size.x <= 32) hull = &model->hulls[1];
+        else hull = &model->hulls[2];
+
+        offset = hull->clip_mins - mins;
+        offset += ent->v.origin;
+    } else {
+        hullmins = ent->v.mins - maxs;
+        hullmaxs = ent->v.maxs - mins;
+        hull = SV_HullForBox(hullmins, hullmaxs);
+
+        offset = ent->v.origin;
+    }
+
+    return hull;
+}
+
+typedef struct areanode_s {
+    int axis;
+    float dist;
+    struct areanode_s* children[2];
+    link_t trigger_edicts;
+    link_t solid_edicts;
+} areanode_t;
+
+#define AREA_DEPTH 4
+#define AREA_NODES 32
+
+static areanode_t sv_areanodes[AREA_NODES];
+static int sv_numareanodes;
+
+areanode_t* SV_CreateAreaNode(int depth, const Vector3& mins, const Vector3& maxs)
+{
+    areanode_t* anode;
+    Vector3 size, mins1, maxs1, mins2, maxs2;
+
+    anode = &sv_areanodes[sv_numareanodes++];
+    ClearLink(&anode->trigger_edicts);
+    ClearLink(&anode->solid_edicts);
+
+    if (depth == AREA_DEPTH) {
+        anode->axis = -1;
+        anode->children[0] = anode->children[1] = NULL;
+        return anode;
+    }
+
+    size = maxs - mins;
+    if (size.x > size.y) anode->axis = 0;
+    else anode->axis = 1;
+
+    anode->dist = static_cast<float>(0.5 * (maxs[anode->axis] + mins[anode->axis]));
+    mins1 = mins; mins2 = mins;
+    maxs1 = maxs; maxs2 = maxs;
+
+    maxs1[anode->axis] = mins2[anode->axis] = anode->dist;
+
+    anode->children[0] = SV_CreateAreaNode(depth + 1, mins2, maxs2);
+    anode->children[1] = SV_CreateAreaNode(depth + 1, mins1, maxs1);
+
+    return anode;
+}
+
+void SV_ClearWorld(void)
+{
+    SV_InitBoxHull();
+    for (auto& node : sv_areanodes) node = areanode_t{};
+    sv_numareanodes = 0;
+    SV_CreateAreaNode(0, sv.worldmodel->mins, sv.worldmodel->maxs);
+}
+
+void SV_UnlinkEdict(edict_t* ent)
+{
+    if (!ent->area.prev) return;
+    RemoveLink(&ent->area);
+    ent->area.prev = ent->area.next = NULL;
+}
+
+void SV_TouchLinks(edict_t* ent, areanode_t* node)
+{
+    link_t *l, *next;
+    edict_t* touch;
+    int old_self, old_other;
+
+    for (l = node->trigger_edicts.next; l != &node->trigger_edicts; l = next) {
+        next = l->next;
+        touch = EDICT_FROM_AREA(l);
+        if (touch == ent) continue;
+        if (!touch->v.touch || touch->v.solid != SOLID_TRIGGER) continue;
+
+        if (ent->v.absmin.x > touch->v.absmax.x || ent->v.absmin.y > touch->v.absmax.y || ent->v.absmin.z > touch->v.absmax.z ||
+            ent->v.absmax.x < touch->v.absmin.x || ent->v.absmax.y < touch->v.absmin.y || ent->v.absmax.z < touch->v.absmin.z) {
+            continue;
+        }
+
+        old_self = pr_global_struct->self;
+        old_other = pr_global_struct->other;
+
+        pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(touch));
+        pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(ent));
+        pr_global_struct->time = static_cast<float>(sv.time);
+        PR_ExecuteProgram(touch->v.touch);
+
+        pr_global_struct->self = old_self;
+        pr_global_struct->other = old_other;
+    }
+
+    if (node->axis == -1) return;
+
+    if (ent->v.absmax[node->axis] > node->dist) SV_TouchLinks(ent, node->children[0]);
+    if (ent->v.absmin[node->axis] < node->dist) SV_TouchLinks(ent, node->children[1]);
+}
+
+void SV_FindTouchedLeafs(edict_t* ent, mnode_t* node)
+{
+    mplane_t* splitplane;
+    mleaf_t* leaf;
+    int sides, leafnum;
+
+    if (node->contents == CONTENTS_SOLID) return;
+
+    if (node->contents < 0) {
+        if (ent->num_leafs == MAX_ENT_LEAFS) return;
+        leaf = (mleaf_t*)node;
+        leafnum = static_cast<int>(leaf - sv.worldmodel->leafs - 1);
+        ent->leafnums[ent->num_leafs++] = static_cast<short>(leafnum);
+        return;
+    }
+
+    splitplane = node->plane;
+    sides = BOX_ON_PLANE_SIDE(ent->v.absmin, ent->v.absmax, splitplane);
+
+    if (sides & 1) SV_FindTouchedLeafs(ent, node->children[0]);
+    if (sides & 2) SV_FindTouchedLeafs(ent, node->children[1]);
+}
+
+void SV_LinkEdict(edict_t* ent, qboolean touch_triggers)
+{
+    areanode_t* node;
+
+    if (ent->area.prev) SV_UnlinkEdict(ent);
+    if (ent == sv.edicts || ent->free) return;
+
+    ent->v.absmin = ent->v.origin + ent->v.mins;
+    ent->v.absmax = ent->v.origin + ent->v.maxs;
+
+    if ((int)ent->v.flags & FL_ITEM) {
+        ent->v.absmin.x -= 15; ent->v.absmin.y -= 15;
+        ent->v.absmax.x += 15; ent->v.absmax.y += 15;
+    } else {
+        ent->v.absmin.x -= 1; ent->v.absmin.y -= 1; ent->v.absmin.z -= 1;
+        ent->v.absmax.x += 1; ent->v.absmax.y += 1; ent->v.absmax.z += 1;
+    }
+
+    ent->num_leafs = 0;
+    if (ent->v.modelindex) SV_FindTouchedLeafs(ent, sv.worldmodel->nodes);
+
+    if (ent->v.solid == SOLID_NOT) return;
+
+    node = sv_areanodes;
+    while (1) {
+        if (node->axis == -1) break;
+        if (ent->v.absmin[node->axis] > node->dist) node = node->children[0];
+        else if (ent->v.absmax[node->axis] < node->dist) node = node->children[1];
+        else break;
+    }
+
+    if (ent->v.solid == SOLID_TRIGGER) InsertLinkBefore(&ent->area, &node->trigger_edicts);
+    else InsertLinkBefore(&ent->area, &node->solid_edicts);
+
+    if (touch_triggers) SV_TouchLinks(ent, sv_areanodes);
+}
+
+int SV_HullPointContents(hull_t* hull, int num, const Vector3& p)
+{
+    float d;
+    dclipnode_t* node;
+    mplane_t* plane;
+
+    while (num >= 0) {
+        if (num < hull->firstclipnode || num > hull->lastclipnode) Sys_Error("SV_HullPointContents: bad node number");
+        node = hull->clipnodes + num;
+        plane = hull->planes + node->planenum;
+
+        if (plane->type < 3) d = p[plane->type] - plane->dist;
+        else d = plane->normal.dot(p) - plane->dist;
+
+        if (d < 0) num = node->children[1];
+        else num = node->children[0];
+    }
+    return num;
+}
+
+int SV_PointContents(const Vector3& p)
+{
+    int cont = SV_HullPointContents(&sv.worldmodel->hulls[0], 0, p);
+    if (cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN) cont = CONTENTS_WATER;
+    return cont;
+}
+
+edict_t* SV_TestEntityPosition(edict_t* ent)
+{
+    trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, 0, ent);
+    if (trace.startsolid) return sv.edicts;
+    return NULL;
+}
+
+#define DIST_EPSILON (0.03125)
+
+qboolean SV_RecursiveHullCheck(hull_t* hull, int num, float p1f, float p2f, const Vector3& p1, const Vector3& p2, trace_t* trace)
+{
+    dclipnode_t* node;
+    mplane_t* plane;
+    float t1, t2, frac, midf;
+    Vector3 mid;
+    int side;
+
+    if (num < 0) {
+        if (num != CONTENTS_SOLID) {
+            trace->allsolid = false;
+            if (num == CONTENTS_EMPTY) trace->inopen = true;
+            else trace->inwater = true;
+        } else {
+            trace->startsolid = true;
+        }
+        return true;
+    }
+
+    if (num < hull->firstclipnode || num > hull->lastclipnode) Sys_Error("SV_RecursiveHullCheck: bad node number");
+
+    node = hull->clipnodes + num;
+    plane = hull->planes + node->planenum;
+
+    if (plane->type < 3) {
+        t1 = p1[plane->type] - plane->dist;
+        t2 = p2[plane->type] - plane->dist;
+    } else {
+        t1 = plane->normal.dot(p1) - plane->dist;
+        t2 = plane->normal.dot(p2) - plane->dist;
+    }
+
+    if (t1 >= 0 && t2 >= 0) return SV_RecursiveHullCheck(hull, node->children[0], p1f, p2f, p1, p2, trace);
+    if (t1 < 0 && t2 < 0) return SV_RecursiveHullCheck(hull, node->children[1], p1f, p2f, p1, p2, trace);
+
+    if (t1 < 0) frac = static_cast<float>((t1 + DIST_EPSILON) / (t1 - t2));
+    else frac = static_cast<float>((t1 - DIST_EPSILON) / (t1 - t2));
+
+    if (frac < 0) frac = 0;
+    if (frac > 1) frac = 1;
+
+    midf = p1f + (p2f - p1f) * frac;
+    mid = p1 + (p2 - p1) * frac;
+    side = (t1 < 0);
+
+    if (!SV_RecursiveHullCheck(hull, node->children[side], p1f, midf, p1, mid, trace)) return false;
+
+    if (SV_HullPointContents(hull, node->children[side ^ 1], mid) != CONTENTS_SOLID) {
+        return SV_RecursiveHullCheck(hull, node->children[side ^ 1], midf, p2f, mid, p2, trace);
+    }
+
+    if (trace->allsolid) return false;
+
+    if (!side) {
+        trace->plane.normal = plane->normal;
+        trace->plane.dist = plane->dist;
+    } else {
+        trace->plane.normal = -plane->normal;
+        trace->plane.dist = -plane->dist;
+    }
+
+    while (SV_HullPointContents(hull, hull->firstclipnode, mid) == CONTENTS_SOLID) {
+        frac -= 0.1f;
+        if (frac < 0) {
+            trace->fraction = midf;
+            trace->endpos = mid;
+            return false;
+        }
+        midf = p1f + (p2f - p1f) * frac;
+        mid = p1 + (p2 - p1) * frac;
+    }
+
+    trace->fraction = midf;
+    trace->endpos = mid;
+    return false;
+}
+
+trace_t SV_ClipMoveToEntity(edict_t* ent, const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end)
+{
+    Vector3 offset, start_l, end_l;
+    hull_t* hull;
+    trace_t trace{};
+    trace.fraction = 1.0f;
+    trace.allsolid = true;
+    trace.endpos = end;
+
+    hull = SV_HullForEntity(ent, mins, maxs, offset);
+    start_l = start - offset;
+    end_l = end - offset;
+
+    SV_RecursiveHullCheck(hull, hull->firstclipnode, 0, 1, start_l, end_l, &trace);
+
+    if (trace.fraction != 1) trace.endpos += offset;
+    if (trace.fraction < 1 || trace.startsolid) trace.ent = ent;
+
+    return trace;
+}
+
+void SV_ClipToLinks(areanode_t* node, moveclip_t* clip)
+{
+    link_t *l, *next;
+    edict_t* touch;
+    trace_t trace;
+
+    for (l = node->solid_edicts.next; l != &node->solid_edicts; l = next) {
+        next = l->next;
+        touch = EDICT_FROM_AREA(l);
+        if (touch->v.solid == SOLID_NOT || touch == clip->passedict) continue;
+        if (touch->v.solid == SOLID_TRIGGER) Sys_Error("Trigger in clipping list");
+        if (clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP) continue;
+
+        if (clip->boxmins.x > touch->v.absmax.x || clip->boxmins.y > touch->v.absmax.y || clip->boxmins.z > touch->v.absmax.z ||
+            clip->boxmaxs.x < touch->v.absmin.x || clip->boxmaxs.y < touch->v.absmin.y || clip->boxmaxs.z < touch->v.absmin.z) {
+            continue;
+        }
+
+        if (clip->passedict && clip->passedict->v.size.x && !touch->v.size.x) continue;
+        if (clip->trace.allsolid) return;
+
+        if (clip->passedict) {
+            if (PROG_TO_EDICT(touch->v.owner) == clip->passedict) continue;
+            if (PROG_TO_EDICT(clip->passedict->v.owner) == touch) continue;
+        }
+
+        if ((int)touch->v.flags & FL_MONSTER) {
+            trace = SV_ClipMoveToEntity(touch, clip->start, clip->mins2, clip->maxs2, clip->end);
+        } else {
+            trace = SV_ClipMoveToEntity(touch, clip->start, clip->mins, clip->maxs, clip->end);
+        }
+
+        if (trace.allsolid || trace.startsolid || trace.fraction < clip->trace.fraction) {
+            trace.ent = touch;
+            if (clip->trace.startsolid) {
+                clip->trace = trace;
+                clip->trace.startsolid = true;
+            } else {
+                clip->trace = trace;
+            }
+        } else if (trace.startsolid) {
+            clip->trace.startsolid = true;
+        }
+    }
+
+    if (node->axis == -1) return;
+
+    if (clip->boxmaxs[node->axis] > node->dist) SV_ClipToLinks(node->children[0], clip);
+    if (clip->boxmins[node->axis] < node->dist) SV_ClipToLinks(node->children[1], clip);
+}
+
+void SV_MoveBounds(const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end, Vector3& boxmins, Vector3& boxmaxs)
+{
+    for (int i = 0; i < 3; i++) {
+        if (end[i] > start[i]) {
+            boxmins[i] = start[i] + mins[i] - 1;
+            boxmaxs[i] = end[i] + maxs[i] + 1;
+        } else {
+            boxmins[i] = end[i] + mins[i] - 1;
+            boxmaxs[i] = start[i] + maxs[i] + 1;
+        }
+    }
+}
+
+trace_t SV_Move(const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end, int type, edict_t* passedict)
+{
+    moveclip_t clip{};
+    clip.trace = SV_ClipMoveToEntity(sv.edicts, start, mins, maxs, end);
+    clip.start = start;
+    clip.end = end;
+    clip.mins = mins;
+    clip.maxs = maxs;
+    clip.type = type;
+    clip.passedict = passedict;
+
+    if (type == MOVE_MISSILE) {
+        clip.mins2 = Vector3(-15, -15, -15);
+        clip.maxs2 = Vector3(15, 15, 15);
+    } else {
+        clip.mins2 = mins;
+        clip.maxs2 = maxs;
+    }
+
+    SV_MoveBounds(start, clip.mins2, clip.maxs2, end, clip.boxmins, clip.boxmaxs);
+    SV_ClipToLinks(sv_areanodes, &clip);
+
+    return clip.trace;
+}
+
 void SV_Init()
 {
     Cvar::Register(&sv_maxvelocity);
@@ -106,18 +547,9 @@ void SV_Init()
     }
 }
 
-/*
-==================
-SV_StartParticle
-
-Make sure the event gets sent to all clients
-==================
-*/
 void SV_StartParticle(const Vector3& org, const Vector3& dir, int color, int count)
 {
-    if (sv.datagram.cursize > MAX_DATAGRAM - 16) {
-        return;
-    }
+    if (sv.datagram.cursize > MAX_DATAGRAM - 16) return;
 
     MSG_WriteByte(&sv.datagram, svc_particle);
     MSG_WriteCoord(&sv.datagram, org[0]);
@@ -125,61 +557,24 @@ void SV_StartParticle(const Vector3& org, const Vector3& dir, int color, int cou
     MSG_WriteCoord(&sv.datagram, org[2]);
     for (int i = 0; i < 3; ++i) {
         int v = static_cast<int>(dir[i] * 16.0f);
-        if (v > 127) {
-            v = 127;
-        } else if (v < -128) {
-            v = -128;
-        }
-
+        if (v > 127) v = 127;
+        else if (v < -128) v = -128;
         MSG_WriteChar(&sv.datagram, v);
     }
     MSG_WriteByte(&sv.datagram, count);
     MSG_WriteByte(&sv.datagram, color);
 }
 
-/*
-==================
-SV_StartSound
-
-Each entity can have eight independant sound sources, like voice,
-weapon, feet, etc.
-
-Channel 0 is an auto-allocate channel, the others override anything
-allready running on that entity/channel pair.
-
-An attenuation of 0 will play full volume everywhere in the level.
-Larger attenuations will drop off.  (max 4 attenuation)
-
-==================
-*/
-void SV_StartSound(edict_t* entity,
-    int channel,
-    const char* sample,
-    int vol,
-    float attenuation)
+void SV_StartSound(edict_t* entity, int channel, const char* sample, int vol, float attenuation)
 {
-    if (vol < 0 || vol > 255) {
-        Sys_Error("SV_StartSound: volume = %i", vol);
-    }
+    if (vol < 0 || vol > 255) Sys_Error("SV_StartSound: volume = %i", vol);
+    if (attenuation < 0.0f || attenuation > 4.0f) Sys_Error("SV_StartSound: attenuation = %f", static_cast<double>(attenuation));
+    if (channel < 0 || channel > 7) Sys_Error("SV_StartSound: channel = %i", channel);
+    if (sv.datagram.cursize > MAX_DATAGRAM - 16) return;
 
-    if (attenuation < 0.0f || attenuation > 4.0f) {
-        Sys_Error("SV_StartSound: attenuation = %f", static_cast<double>(attenuation));
-    }
-
-    if (channel < 0 || channel > 7) {
-        Sys_Error("SV_StartSound: channel = %i", channel);
-    }
-
-    if (sv.datagram.cursize > MAX_DATAGRAM - 16) {
-        return;
-    }
-
-    // find precache number for sound
     int sound_num = 1;
     for (; sound_num < MAX_SOUNDS && sv.sound_precache[sound_num]; ++sound_num) {
-        if (!strcmp(sample, sv.sound_precache[sound_num])) {
-            break;
-        }
+        if (!strcmp(sample, sv.sound_precache[sound_num])) break;
     }
 
     if (sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num]) {
@@ -191,41 +586,20 @@ void SV_StartSound(edict_t* entity,
     channel = (ent << 3) | channel;
 
     int field_mask = 0;
-    if (vol != DEFAULT_SOUND_PACKET_VOLUME) {
-        field_mask |= SND_VOLUME;
-    }
+    if (vol != DEFAULT_SOUND_PACKET_VOLUME) field_mask |= SND_VOLUME;
+    if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION) field_mask |= SND_ATTENUATION;
 
-    if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION) {
-        field_mask |= SND_ATTENUATION;
-    }
-
-    // directed messages go only to the entity the are targeted on
     MSG_WriteByte(&sv.datagram, svc_sound);
     MSG_WriteByte(&sv.datagram, field_mask);
-    if (field_mask & SND_VOLUME) {
-        MSG_WriteByte(&sv.datagram, vol);
-    }
-
-    if (field_mask & SND_ATTENUATION) {
-        MSG_WriteByte(&sv.datagram, static_cast<int>(attenuation * 64.0f));
-    }
+    if (field_mask & SND_VOLUME) MSG_WriteByte(&sv.datagram, vol);
+    if (field_mask & SND_ATTENUATION) MSG_WriteByte(&sv.datagram, static_cast<int>(attenuation * 64.0f));
 
     MSG_WriteShort(&sv.datagram, channel);
     MSG_WriteByte(&sv.datagram, sound_num);
     const Vector3 center = entity->v.origin + (entity->v.mins + entity->v.maxs) * 0.5f;
-    for (int i = 0; i < 3; ++i) {
-        MSG_WriteCoord(&sv.datagram, center[i]);
-    }
+    for (int i = 0; i < 3; ++i) MSG_WriteCoord(&sv.datagram, center[i]);
 }
 
-/*
-================
-SV_SendServerinfo
-
-Sends the first message from the server to a connected client.
-This will be sent on the initial connection and upon each server load.
-================
-*/
 void SV_SendServerinfo(client_t* client)
 {
     eastl::array<char, 2048> message{};
@@ -238,11 +612,8 @@ void SV_SendServerinfo(client_t* client)
     MSG_WriteLong(&client->message, PROTOCOL_VERSION);
     MSG_WriteByte(&client->message, svs.maxclients);
 
-    if (!coop.value && deathmatch.value) {
-        MSG_WriteByte(&client->message, GAME_DEATHMATCH);
-    } else {
-        MSG_WriteByte(&client->message, GAME_COOP);
-    }
+    if (!coop.value && deathmatch.value) MSG_WriteByte(&client->message, GAME_DEATHMATCH);
+    else MSG_WriteByte(&client->message, GAME_COOP);
 
     sprintf_s(message.data(), message.size(), "%s", PR_GetString(sv.edicts->v.message));
     MSG_WriteString(&client->message, message.data());
@@ -257,12 +628,10 @@ void SV_SendServerinfo(client_t* client)
     }
     MSG_WriteByte(&client->message, 0);
 
-    // send music
     MSG_WriteByte(&client->message, svc_cdtrack);
     MSG_WriteByte(&client->message, static_cast<int>(sv.edicts->v.sounds));
     MSG_WriteByte(&client->message, static_cast<int>(sv.edicts->v.sounds));
 
-    // set view
     MSG_WriteByte(&client->message, svc_setview);
     MSG_WriteShort(&client->message, NUM_FOR_EDICT(client->edict));
 
@@ -270,27 +639,16 @@ void SV_SendServerinfo(client_t* client)
     MSG_WriteByte(&client->message, 1);
 
     client->sendsignon = true;
-    client->spawned = false; // need prespawn, spawn, etc
+    client->spawned = false;
 }
 
-/*
-================
-SV_ConnectClient
-
-Initializes a client_t for a new net connection.  This will only be called
-once for a player each game, not once for each level change.
-================
-*/
 void SV_ConnectClient(int clientnum)
 {
     client_t* client = &svs.GetClients()[static_cast<size_t>(clientnum)];
-
     Con_DPrintf("Client %s connected\n", client->netconnection->address);
 
     const int edictnum = clientnum + 1;
     edict_t* ent = EDICT_NUM(edictnum);
-
-    // set up the client_t
     qsocket_s* netconnection = client->netconnection;
 
     eastl::array<float, NUM_SPAWN_PARMS> spawn_parms{};
@@ -306,13 +664,12 @@ void SV_ConnectClient(int clientnum)
     client->edict = ent;
     client->message.data = client->msgbuf.data();
     client->message.maxsize = static_cast<int>(client->msgbuf.size());
-    client->message.allowoverflow = true; // we can catch it
+    client->message.allowoverflow = true;
     client->privileged = false;
 
     if (sv.loadgame) {
         eastl::copy(spawn_parms.begin(), spawn_parms.end(), client->spawn_parms.begin());
     } else {
-        // call the progs to get default spawn parms for the new client
         PR_ExecuteProgram(pr_global_struct->SetNewParms);
         for (int i = 0; i < NUM_SPAWN_PARMS; ++i) {
             client->spawn_parms[static_cast<size_t>(i)] = (&pr_global_struct->parm1)[i];
@@ -322,28 +679,18 @@ void SV_ConnectClient(int clientnum)
     SV_SendServerinfo(client);
 }
 
-/*
-===================
-SV_CheckForNewClients
-
-===================
-*/
 void SV_CheckForNewClients()
 {
     while (true) {
         qsocket_s* ret = NET_CheckNewConnections();
-        if (!ret) {
-            break;
-        }
+        if (!ret) break;
 
         auto clients = svs.GetClients();
         auto it = eastl::find_if(clients.begin(), clients.end(), [](const client_t& cl) {
             return !cl.active;
         });
 
-        if (it == clients.end()) {
-            Sys_Error("Host_CheckForNewClients: no free clients");
-        }
+        if (it == clients.end()) Sys_Error("Host_CheckForNewClients: no free clients");
 
         const int i = static_cast<int>(eastl::distance(clients.begin(), it));
         it->netconnection = ret;
@@ -353,14 +700,9 @@ void SV_CheckForNewClients()
     }
 }
 
-//=============================================================================
-// PVS
-//=============================================================================
-
 void SV_AddToFatPVS(const Vector3& org, mnode_t* node)
 {
     while (true) {
-        // if this is a leaf, accumulate the pvs bits
         if (node->contents < 0) {
             if (node->contents != CONTENTS_SOLID) {
                 const byte* pvs = Mod_LeafPVS(reinterpret_cast<mleaf_t*>(node), sv.worldmodel);
@@ -368,74 +710,43 @@ void SV_AddToFatPVS(const Vector3& org, mnode_t* node)
                     fatpvs[static_cast<size_t>(i)] |= pvs[i];
                 }
             }
-
             return;
         }
 
         mplane_t* plane = node->plane;
         const float d = org.dot(plane->normal) - plane->dist;
-        if (d > 8.0f) {
-            node = node->children[0];
-        } else if (d < -8.0f) {
-            node = node->children[1];
-        } else { // go down both
+        if (d > 8.0f) node = node->children[0];
+        else if (d < -8.0f) node = node->children[1];
+        else {
             SV_AddToFatPVS(org, node->children[0]);
             node = node->children[1];
         }
     }
 }
 
-/*
-=============
-SV_FatPVS
-
-Calculates a PVS that is the inclusive or of all leafs within 8 pixels of the
-given point.
-=============
-*/
 byte* SV_FatPVS(const Vector3& org)
 {
     fatbytes = (sv.worldmodel->numleafs + 31) >> 3;
     eastl::fill_n(fatpvs.begin(), static_cast<size_t>(fatbytes), static_cast<byte>(0));
     SV_AddToFatPVS(org, sv.worldmodel->nodes);
-
     return fatpvs.data();
 }
 
-//=============================================================================
-
-/*
-=============
-SV_WriteEntitiesToClient
-
-=============
-*/
 void SV_WriteEntitiesToClient(edict_t* clent, sizebuf_t* msg)
 {
-    // find the client's PVS
     const Vector3 org = clent->v.origin + clent->v.view_ofs;
     const byte* pvs = SV_FatPVS(org);
 
-    // send over all entities (except the client) that touch the pvs
     edict_t* ent = NEXT_EDICT(sv.edicts);
     for (int e = 1; e < sv.num_edicts; ++e, ent = NEXT_EDICT(ent)) {
-        // ignore if not touching a PV leaf
-        if (ent != clent) { // clent is ALWAYS sent
-            // ignore ents without visible models
-            if (!ent->v.modelindex || !*PR_GetString(ent->v.model)) {
-                continue;
-            }
+        if (ent != clent) {
+            if (!ent->v.modelindex || !*PR_GetString(ent->v.model)) continue;
 
             int i = 0;
             for (; i < ent->num_leafs; ++i) {
-                if (pvs[ent->leafnums[i] >> 3] & (1 << (ent->leafnums[i] & 7))) {
-                    break;
-                }
+                if (pvs[ent->leafnums[i] >> 3] & (1 << (ent->leafnums[i] & 7))) break;
             }
-
-            if (i == ent->num_leafs) {
-                continue; // not visible
-            }
+            if (i == ent->num_leafs) continue;
         }
 
         if (msg->maxsize - msg->cursize < 16) {
@@ -443,125 +754,44 @@ void SV_WriteEntitiesToClient(edict_t* clent, sizebuf_t* msg)
             return;
         }
 
-        // send an update
         int bits = 0;
-
         for (int i = 0; i < 3; ++i) {
             const float miss = ent->v.origin[i] - ent->baseline.origin[i];
-            if (miss < -0.1f || miss > 0.1f) {
-                bits |= U_ORIGIN1 << i;
-            }
+            if (miss < -0.1f || miss > 0.1f) bits |= U_ORIGIN1 << i;
         }
 
-        if (ent->v.angles[0] != ent->baseline.angles[0]) {
-            bits |= U_ANGLE1;
-        }
+        if (ent->v.angles[0] != ent->baseline.angles[0]) bits |= U_ANGLE1;
+        if (ent->v.angles[1] != ent->baseline.angles[1]) bits |= U_ANGLE2;
+        if (ent->v.angles[2] != ent->baseline.angles[2]) bits |= U_ANGLE3;
 
-        if (ent->v.angles[1] != ent->baseline.angles[1]) {
-            bits |= U_ANGLE2;
-        }
+        if (ent->v.movetype == MOVETYPE_STEP) bits |= U_NOLERP;
+        if (ent->baseline.colormap != ent->v.colormap) bits |= U_COLORMAP;
+        if (ent->baseline.skin != ent->v.skin) bits |= U_SKIN;
+        if (ent->baseline.frame != ent->v.frame) bits |= U_FRAME;
+        if (ent->baseline.effects != ent->v.effects) bits |= U_EFFECTS;
+        if (ent->baseline.modelindex != ent->v.modelindex) bits |= U_MODEL;
+        if (e >= 256) bits |= U_LONGENTITY;
+        if (bits >= 256) bits |= U_MOREBITS;
 
-        if (ent->v.angles[2] != ent->baseline.angles[2]) {
-            bits |= U_ANGLE3;
-        }
-
-        if (ent->v.movetype == MOVETYPE_STEP) {
-            bits |= U_NOLERP; // don't mess up the step animation
-        }
-
-        if (ent->baseline.colormap != ent->v.colormap) {
-            bits |= U_COLORMAP;
-        }
-
-        if (ent->baseline.skin != ent->v.skin) {
-            bits |= U_SKIN;
-        }
-
-        if (ent->baseline.frame != ent->v.frame) {
-            bits |= U_FRAME;
-        }
-
-        if (ent->baseline.effects != ent->v.effects) {
-            bits |= U_EFFECTS;
-        }
-
-        if (ent->baseline.modelindex != ent->v.modelindex) {
-            bits |= U_MODEL;
-        }
-
-        if (e >= 256) {
-            bits |= U_LONGENTITY;
-        }
-
-        if (bits >= 256) {
-            bits |= U_MOREBITS;
-        }
-
-        // write the message
         MSG_WriteByte(msg, bits | U_SIGNAL);
+        if (bits & U_MOREBITS) MSG_WriteByte(msg, bits >> 8);
+        if (bits & U_LONGENTITY) MSG_WriteShort(msg, e);
+        else MSG_WriteByte(msg, e);
 
-        if (bits & U_MOREBITS) {
-            MSG_WriteByte(msg, bits >> 8);
-        }
-
-        if (bits & U_LONGENTITY) {
-            MSG_WriteShort(msg, e);
-        } else {
-            MSG_WriteByte(msg, e);
-        }
-
-        if (bits & U_MODEL) {
-            MSG_WriteByte(msg, static_cast<int>(ent->v.modelindex));
-        }
-
-        if (bits & U_FRAME) {
-            MSG_WriteByte(msg, static_cast<int>(ent->v.frame));
-        }
-
-        if (bits & U_COLORMAP) {
-            MSG_WriteByte(msg, static_cast<int>(ent->v.colormap));
-        }
-
-        if (bits & U_SKIN) {
-            MSG_WriteByte(msg, static_cast<int>(ent->v.skin));
-        }
-
-        if (bits & U_EFFECTS) {
-            MSG_WriteByte(msg, static_cast<int>(ent->v.effects));
-        }
-
-        if (bits & U_ORIGIN1) {
-            MSG_WriteCoord(msg, ent->v.origin[0]);
-        }
-
-        if (bits & U_ANGLE1) {
-            MSG_WriteAngle(msg, ent->v.angles[0]);
-        }
-
-        if (bits & U_ORIGIN2) {
-            MSG_WriteCoord(msg, ent->v.origin[1]);
-        }
-
-        if (bits & U_ANGLE2) {
-            MSG_WriteAngle(msg, ent->v.angles[1]);
-        }
-
-        if (bits & U_ORIGIN3) {
-            MSG_WriteCoord(msg, ent->v.origin[2]);
-        }
-
-        if (bits & U_ANGLE3) {
-            MSG_WriteAngle(msg, ent->v.angles[2]);
-        }
+        if (bits & U_MODEL) MSG_WriteByte(msg, static_cast<int>(ent->v.modelindex));
+        if (bits & U_FRAME) MSG_WriteByte(msg, static_cast<int>(ent->v.frame));
+        if (bits & U_COLORMAP) MSG_WriteByte(msg, static_cast<int>(ent->v.colormap));
+        if (bits & U_SKIN) MSG_WriteByte(msg, static_cast<int>(ent->v.skin));
+        if (bits & U_EFFECTS) MSG_WriteByte(msg, static_cast<int>(ent->v.effects));
+        if (bits & U_ORIGIN1) MSG_WriteCoord(msg, ent->v.origin[0]);
+        if (bits & U_ANGLE1) MSG_WriteAngle(msg, ent->v.angles[0]);
+        if (bits & U_ORIGIN2) MSG_WriteCoord(msg, ent->v.origin[1]);
+        if (bits & U_ANGLE2) MSG_WriteAngle(msg, ent->v.angles[1]);
+        if (bits & U_ORIGIN3) MSG_WriteCoord(msg, ent->v.origin[2]);
+        if (bits & U_ANGLE3) MSG_WriteAngle(msg, ent->v.angles[2]);
     }
 }
 
-/*
-=============
-SV_CleanupEnts
-
-=============
-*/
 void SV_CleanupEnts()
 {
     edict_t* ent = NEXT_EDICT(sv.edicts);
@@ -570,126 +800,63 @@ void SV_CleanupEnts()
     }
 }
 
-/*
-==================
-SV_WriteClientdataToMessage
-
-==================
-*/
 void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
 {
-    // send a damage message
     if (ent->v.dmg_take || ent->v.dmg_save) {
         const edict_t* other = PROG_TO_EDICT(ent->v.dmg_inflictor);
         MSG_WriteByte(msg, svc_damage);
         MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_save));
         MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_take));
         const Vector3 center = other->v.origin + (other->v.mins + other->v.maxs) * 0.5f;
-        for (int i = 0; i < 3; ++i) {
-            MSG_WriteCoord(msg, center[i]);
-        }
-
-        ent->v.dmg_take = 0;
-        ent->v.dmg_save = 0;
+        for (int i = 0; i < 3; ++i) MSG_WriteCoord(msg, center[i]);
+        ent->v.dmg_take = 0; ent->v.dmg_save = 0;
     }
 
-    // send the current viewpos offset from the view entity
-    SV_SetIdealPitch(); // how much to look up / down ideally
+    SV_SetIdealPitch();
 
-    // a fixangle might get lost in a dropped packet.  Oh well.
     if (ent->v.fixangle) {
         MSG_WriteByte(msg, svc_setangle);
-        for (int i = 0; i < 3; ++i) {
-            MSG_WriteAngle(msg, ent->v.angles[i]);
-        }
+        for (int i = 0; i < 3; ++i) MSG_WriteAngle(msg, ent->v.angles[i]);
         ent->v.fixangle = 0;
     }
 
     int bits = 0;
+    if (ent->v.view_ofs[2] != DEFAULT_VIEWHEIGHT) bits |= SU_VIEWHEIGHT;
+    if (ent->v.idealpitch) bits |= SU_IDEALPITCH;
 
-    if (ent->v.view_ofs[2] != DEFAULT_VIEWHEIGHT) {
-        bits |= SU_VIEWHEIGHT;
-    }
-
-    if (ent->v.idealpitch) {
-        bits |= SU_IDEALPITCH;
-    }
-
-    // stuff the sigil bits into the high bits of items for sbar, or else mix in items2
     const eval_t* val = GetEdictFieldValue(ent, "items2");
-    int items = 0;
-
-    if (val) {
-        items = static_cast<int>(ent->v.items) | (static_cast<int>(val->_float) << 23);
-    } else {
-        items = static_cast<int>(ent->v.items) | (static_cast<int>(pr_global_struct->serverflags) << 28);
-    }
+    int items = val ? (static_cast<int>(ent->v.items) | (static_cast<int>(val->_float) << 23))
+                    : (static_cast<int>(ent->v.items) | (static_cast<int>(pr_global_struct->serverflags) << 28));
 
     bits |= SU_ITEMS;
-
-    if (static_cast<int>(ent->v.flags) & FL_ONGROUND) {
-        bits |= SU_ONGROUND;
-    }
-
-    if (ent->v.waterlevel >= 2) {
-        bits |= SU_INWATER;
-    }
+    if (static_cast<int>(ent->v.flags) & FL_ONGROUND) bits |= SU_ONGROUND;
+    if (ent->v.waterlevel >= 2) bits |= SU_INWATER;
 
     for (int i = 0; i < 3; ++i) {
-        if (ent->v.punchangle[i]) {
-            bits |= (SU_PUNCH1 << i);
-        }
-
-        if (ent->v.velocity[i]) {
-            bits |= (SU_VELOCITY1 << i);
-        }
+        if (ent->v.punchangle[i]) bits |= (SU_PUNCH1 << i);
+        if (ent->v.velocity[i]) bits |= (SU_VELOCITY1 << i);
     }
 
-    if (ent->v.weaponframe) {
-        bits |= SU_WEAPONFRAME;
-    }
-
-    if (ent->v.armorvalue) {
-        bits |= SU_ARMOR;
-    }
-
+    if (ent->v.weaponframe) bits |= SU_WEAPONFRAME;
+    if (ent->v.armorvalue) bits |= SU_ARMOR;
     bits |= SU_WEAPON;
 
-    // send the data
     MSG_WriteByte(msg, svc_clientdata);
     MSG_WriteShort(msg, bits);
 
-    if (bits & SU_VIEWHEIGHT) {
-        MSG_WriteChar(msg, static_cast<int>(ent->v.view_ofs[2]));
-    }
-
-    if (bits & SU_IDEALPITCH) {
-        MSG_WriteChar(msg, static_cast<int>(ent->v.idealpitch));
-    }
+    if (bits & SU_VIEWHEIGHT) MSG_WriteChar(msg, static_cast<int>(ent->v.view_ofs[2]));
+    if (bits & SU_IDEALPITCH) MSG_WriteChar(msg, static_cast<int>(ent->v.idealpitch));
 
     for (int i = 0; i < 3; ++i) {
-        if (bits & (SU_PUNCH1 << i)) {
-            MSG_WriteChar(msg, static_cast<int>(ent->v.punchangle[i]));
-        }
-
-        if (bits & (SU_VELOCITY1 << i)) {
-            MSG_WriteChar(msg, static_cast<int>(ent->v.velocity[i] / 16.0f));
-        }
+        if (bits & (SU_PUNCH1 << i)) MSG_WriteChar(msg, static_cast<int>(ent->v.punchangle[i]));
+        if (bits & (SU_VELOCITY1 << i)) MSG_WriteChar(msg, static_cast<int>(ent->v.velocity[i] / 16.0f));
     }
 
     MSG_WriteLong(msg, items);
 
-    if (bits & SU_WEAPONFRAME) {
-        MSG_WriteByte(msg, static_cast<int>(ent->v.weaponframe));
-    }
-
-    if (bits & SU_ARMOR) {
-        MSG_WriteByte(msg, static_cast<int>(ent->v.armorvalue));
-    }
-
-    if (bits & SU_WEAPON) {
-        MSG_WriteByte(msg, SV_ModelIndex(PR_GetString(ent->v.weaponmodel)));
-    }
+    if (bits & SU_WEAPONFRAME) MSG_WriteByte(msg, static_cast<int>(ent->v.weaponframe));
+    if (bits & SU_ARMOR) MSG_WriteByte(msg, static_cast<int>(ent->v.armorvalue));
+    if (bits & SU_WEAPON) MSG_WriteByte(msg, SV_ModelIndex(PR_GetString(ent->v.weaponmodel)));
 
     MSG_WriteShort(msg, static_cast<int>(ent->v.health));
     MSG_WriteByte(msg, static_cast<int>(ent->v.currentammo));
@@ -710,11 +877,6 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
     }
 }
 
-/*
-=======================
-SV_SendClientDatagram
-=======================
-*/
 qboolean SV_SendClientDatagram(client_t* client)
 {
     eastl::array<byte, MAX_DATAGRAM> buf{};
@@ -727,69 +889,45 @@ qboolean SV_SendClientDatagram(client_t* client)
     MSG_WriteByte(&msg, svc_time);
     MSG_WriteFloat(&msg, static_cast<float>(sv.time));
 
-    // add the client specific data to the datagram
     SV_WriteClientdataToMessage(client->edict, &msg);
     SV_WriteEntitiesToClient(client->edict, &msg);
 
-    // copy the server datagram if there is space
     if (msg.cursize + sv.datagram.cursize < msg.maxsize) {
         SZ_Write(&msg, sv.datagram.data, sv.datagram.cursize);
     }
 
-    // send the datagram
     if (NET_SendUnreliableMessage(client->netconnection, &msg) == -1) {
-        SV_DropClient(true); // if the message couldn't send, kick off
+        SV_DropClient(true);
         return false;
     }
 
     return true;
 }
 
-/*
-=======================
-SV_UpdateToReliableMessages
-=======================
-*/
 void SV_UpdateToReliableMessages()
 {
     auto clients = svs.GetClients();
-    // check for changes to be sent over the reliable streams
     for (size_t i = 0; i < clients.size(); ++i) {
         host_client = &clients[i];
         if (host_client->old_frags != static_cast<int>(host_client->edict->v.frags)) {
             for (auto& client : clients) {
-                if (!client.active) {
-                    continue;
-                }
-
+                if (!client.active) continue;
                 MSG_WriteByte(&client.message, svc_updatefrags);
                 MSG_WriteByte(&client.message, static_cast<int>(i));
                 MSG_WriteShort(&client.message, static_cast<int>(host_client->edict->v.frags));
             }
-
             host_client->old_frags = static_cast<int>(host_client->edict->v.frags);
         }
     }
 
     for (auto& client : clients) {
-        if (!client.active) {
-            continue;
-        }
-
+        if (!client.active) continue;
         SZ_Write(&client.message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
     }
 
     SZ_Clear(&sv.reliable_datagram);
 }
 
-/*
-=======================
-SV_SendNop
-
-Send a nop message without trashing or sending the accumulated client
-message buffer
-======================
-*/
 void SV_SendNop(client_t* client)
 {
     eastl::array<byte, 4> buf{};
@@ -802,41 +940,27 @@ void SV_SendNop(client_t* client)
     MSG_WriteChar(&msg, svc_nop);
 
     if (NET_SendUnreliableMessage(client->netconnection, &msg) == -1) {
-        SV_DropClient(true); // if the message couldn't send, kick off
+        SV_DropClient(true);
     }
 
     client->last_message = realtime;
 }
 
-/*
-=======================
-SV_SendClientMessages
-=======================
-*/
 void SV_SendClientMessages()
 {
-    // update frags, names, etc
     SV_UpdateToReliableMessages();
 
-    // build individual updates
     auto clients = svs.GetClients();
     for (auto& client : clients) {
         host_client = &client;
-        if (!host_client->active) {
-            continue;
-        }
+        if (!host_client->active) continue;
 
         if (host_client->spawned) {
-            if (!SV_SendClientDatagram(host_client)) {
-                continue;
-            }
+            if (!SV_SendClientDatagram(host_client)) continue;
         } else {
             if (!host_client->sendsignon) {
-                if (realtime - host_client->last_message > 5.0) {
-                    SV_SendNop(host_client);
-                }
-
-                continue; // don't send out non-signon messages
+                if (realtime - host_client->last_message > 5.0) SV_SendNop(host_client);
+                continue;
             }
         }
 
@@ -847,15 +971,13 @@ void SV_SendClientMessages()
         }
 
         if (host_client->message.cursize || host_client->dropasap) {
-            if (!NET_CanSendMessage(host_client->netconnection)) {
-                continue;
-            }
+            if (!NET_CanSendMessage(host_client->netconnection)) continue;
 
             if (host_client->dropasap) {
-                SV_DropClient(false); // went to another level
+                SV_DropClient(false);
             } else {
                 if (NET_SendMessage(host_client->netconnection, &host_client->message) == -1) {
-                    SV_DropClient(true); // if the message couldn't send, kick off
+                    SV_DropClient(true);
                 }
 
                 SZ_Clear(&host_client->message);
@@ -865,56 +987,28 @@ void SV_SendClientMessages()
         }
     }
 
-    // clear muzzle flashes
     SV_CleanupEnts();
 }
 
-//==============================================================================
-// SERVER SPAWNING
-//==============================================================================
-
-/*
-================
-SV_ModelIndex
-
-================
-*/
 int SV_ModelIndex(const char* name)
 {
-    if (!name || !name[0]) {
-        return 0;
-    }
+    if (!name || !name[0]) return 0;
 
     for (size_t i = 0; i < sv.model_precache.size() && sv.model_precache[i]; ++i) {
-        if (!strcmp(sv.model_precache[i], name)) {
-            return static_cast<int>(i);
-        }
+        if (!strcmp(sv.model_precache[i], name)) return static_cast<int>(i);
     }
 
     Sys_Error("SV_ModelIndex: model %s not precached", name);
     return 0;
 }
 
-/*
-================
-SV_CreateBaseline
-
-================
-*/
 void SV_CreateBaseline()
 {
     for (int entnum = 0; entnum < sv.num_edicts; ++entnum) {
-        // get the current server version
         edict_t* svent = EDICT_NUM(entnum);
-        if (svent->free) {
-            continue;
-        }
+        if (svent->free) continue;
+        if (entnum > svs.maxclients && !svent->v.modelindex) continue;
 
-        if (entnum > svs.maxclients && !svent->v.modelindex) {
-            continue;
-        }
-
-        // create entity baseline
         VectorCopy(svent->v.origin, svent->baseline.origin);
         VectorCopy(svent->v.angles, svent->baseline.angles);
         svent->baseline.frame = static_cast<int>(svent->v.frame);
@@ -927,7 +1021,6 @@ void SV_CreateBaseline()
             svent->baseline.modelindex = SV_ModelIndex(PR_GetString(svent->v.model));
         }
 
-        // add to the message
         MSG_WriteByte(&sv.signon, svc_spawnbaseline);
         MSG_WriteShort(&sv.signon, entnum);
         MSG_WriteByte(&sv.signon, svent->baseline.modelindex);
@@ -941,13 +1034,6 @@ void SV_CreateBaseline()
     }
 }
 
-/*
-================
-SV_SendReconnect
-
-Tell all the clients that the server is changing levels
-================
-*/
 void SV_SendReconnect()
 {
     eastl::array<char, 128> data{};
@@ -961,30 +1047,17 @@ void SV_SendReconnect()
     MSG_WriteString(&msg, "reconnect\n");
     NET_SendToAll(&msg, 5);
 
-    if (cls.state != ca_dedicated) {
-        Cmd::ExecuteString("reconnect\n", Cmd::Source::Command);
-    }
+    if (cls.state != ca_dedicated) Cmd::ExecuteString("reconnect\n", Cmd::Source::Command);
 }
 
-/*
-================
-SV_SaveSpawnparms
-
-Grabs the current state of each client for saving across the
-transition to another level
-================
-*/
 void SV_SaveSpawnparms()
 {
     svs.serverflags = static_cast<int>(pr_global_struct->serverflags);
 
     for (auto& client : svs.GetClients()) {
         host_client = &client;
-        if (!host_client->active) {
-            continue;
-        }
+        if (!host_client->active) continue;
 
-        // call the progs to get default spawn parms for the new client
         pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(host_client->edict));
         PR_ExecuteProgram(pr_global_struct->SetChangeParms);
         for (int j = 0; j < NUM_SPAWN_PARMS; ++j) {
@@ -993,56 +1066,30 @@ void SV_SaveSpawnparms()
     }
 }
 
-/*
-================
-SV_SpawnServer
-
-This is called at the start of each level
-================
-*/
 void SV_SpawnServer(const char* server)
 {
-    // let's not have any servers with no name
-    if (hostname.string.empty()) {
-        Cvar::Set("hostname", "UNNAMED");
-    }
+    if (hostname.string.empty()) Cvar::Set("hostname", "UNNAMED");
 
     Screen::GetScreenSystem().SetCentertimeOff(0.0f);
-
     Con_DPrintf("SpawnServer: %s\n", server);
-    svs.changelevel_issued = false; // now safe to issue another
+    svs.changelevel_issued = false;
 
-    // tell all connected clients that we are going to a new level
-    if (sv.active) {
-        SV_SendReconnect();
-    }
+    if (sv.active) SV_SendReconnect();
 
-    // make cvars consistant
-    if (coop.value) {
-        Cvar::SetValue("deathmatch", 0);
-    }
+    if (coop.value) Cvar::SetValue("deathmatch", 0);
 
     current_skill = static_cast<int>(skill.value + 0.5f);
-    if (current_skill < 0) {
-        current_skill = 0;
-    }
-
-    if (current_skill > 3) {
-        current_skill = 3;
-    }
-
+    if (current_skill < 0) current_skill = 0;
+    if (current_skill > 3) current_skill = 3;
     Cvar::SetValue("skill", static_cast<float>(current_skill));
 
-    // set up the new server
     Host_ClearMemory();
 
     sv = server_t{};
     sv.SetName(server);
 
-    // load progs to get entity field count
     PR_LoadProgs();
 
-    // allocate server memory
     sv.max_edicts = MAX_EDICTS;
     sv.edicts = reinterpret_cast<edict_t*>(Hunk_Alloc(sv.max_edicts * pr_edict_size, "edicts"));
 
@@ -1058,7 +1105,6 @@ void SV_SpawnServer(const char* server)
     sv.signon.cursize = 0;
     sv.signon.data = sv.signon_buf.data();
 
-    // leave slots at start for clients only
     sv.num_edicts = svs.maxclients + 1;
     auto clients = svs.GetClients();
     for (size_t i = 0; i < clients.size(); ++i) {
@@ -1079,7 +1125,6 @@ void SV_SpawnServer(const char* server)
 
     sv.models[1] = sv.worldmodel;
 
-    // clear world interaction links
     SV_ClearWorld();
 
     sv.sound_precache[0] = pr_strings;
@@ -1090,81 +1135,43 @@ void SV_SpawnServer(const char* server)
         sv.models[1 + i] = Mod_ForName(localmodels[static_cast<size_t>(i)].data(), false);
     }
 
-    // load the rest of the entities
     edict_t* ent = EDICT_NUM(0);
     memset(&ent->v, 0, progs->entityfields * 4);
     ent->free = false;
     ent->v.model = PR_SetString(sv.worldmodel->name);
-    ent->v.modelindex = 1; // world model
+    ent->v.modelindex = 1;
     ent->v.solid = SOLID_BSP;
     ent->v.movetype = MOVETYPE_PUSH;
 
-    if (coop.value) {
-        pr_global_struct->coop = coop.value;
-    } else {
-        pr_global_struct->deathmatch = deathmatch.value;
-    }
+    if (coop.value) pr_global_struct->coop = coop.value;
+    else pr_global_struct->deathmatch = deathmatch.value;
 
     pr_global_struct->mapname = PR_SetString(sv.name.data());
-
-    // serverflags are for cross level information (sigils)
     pr_global_struct->serverflags = static_cast<float>(svs.serverflags);
 
     ED_LoadFromFile(sv.worldmodel->entities);
 
     sv.active = true;
-
-    // all setup is completed, any further precache statements are errors
     sv.state = ss_active;
 
-    // run two frames to allow everything to settle
     host_frametime = 0.1;
     SV_Physics();
     SV_Physics();
 
-    // create a baseline for more efficient communications
     SV_CreateBaseline();
 
-    // send serverinfo to all connected clients
     for (auto& client : clients) {
         host_client = &client;
-        if (host_client->active) {
-            SV_SendServerinfo(host_client);
-        }
+        if (host_client->active) SV_SendServerinfo(host_client);
     }
 
     Con_DPrintf("Server spawned.\n");
 }
 
-//============================================================================
-// sv_phys.cpp contents
-//============================================================================
-
-/*
-pushmove objects do not obey gravity, and do not interact with each other or trigger fields, but block normal movement and push normal objects when they move.
-
-onground is set for toss objects when they come to a complete rest.  it is set for steping or walking objects
-
-doors, plats, etc are SOLID_BSP, and MOVETYPE_PUSH
-bonus items are SOLID_TRIGGER touch, and MOVETYPE_TOSS
-corpses are SOLID_NOT and MOVETYPE_TOSS
-crates are SOLID_BBOX and MOVETYPE_TOSS
-walking monsters are SOLID_SLIDEBOX and MOVETYPE_STEP
-flying/floating monsters are SOLID_SLIDEBOX and MOVETYPE_FLY
-
-solid_edge items only clip against bsp models.
-
-*/
-
 #define MOVE_EPSILON 0.01
 
 void SV_Physics_Toss(edict_t* ent);
 
-/*
-================
-SV_CheckVelocity
-================
-*/
 void SV_CheckVelocity(edict_t* ent)
 {
     for (int i = 0; i < 3; ++i) {
@@ -1178,34 +1185,17 @@ void SV_CheckVelocity(edict_t* ent)
             ent->v.origin[i] = 0.0f;
         }
 
-        if (ent->v.velocity[i] > sv_maxvelocity.value) {
-            ent->v.velocity[i] = sv_maxvelocity.value;
-        } else if (ent->v.velocity[i] < -sv_maxvelocity.value) {
-            ent->v.velocity[i] = -sv_maxvelocity.value;
-        }
+        if (ent->v.velocity[i] > sv_maxvelocity.value) ent->v.velocity[i] = sv_maxvelocity.value;
+        else if (ent->v.velocity[i] < -sv_maxvelocity.value) ent->v.velocity[i] = -sv_maxvelocity.value;
     }
 }
 
-/*
-=============
-SV_RunThink
-
-Runs thinking code if time.  There is some play in the exact time the think
-function will be called, because it is called before any movement is done
-in a frame.  Not used for pushmove objects, because they must be exact.
-Returns false if the entity removed itself.
-=============
-*/
 qboolean SV_RunThink(edict_t* ent)
 {
     float thinktime = ent->v.nextthink;
-    if (thinktime <= 0.0f || thinktime > sv.time + host_frametime) {
-        return true;
-    }
+    if (thinktime <= 0.0f || thinktime > sv.time + host_frametime) return true;
 
-    if (thinktime < sv.time) {
-        thinktime = static_cast<float>(sv.time); // don't let things stay in the past.
-    }
+    if (thinktime < sv.time) thinktime = static_cast<float>(sv.time);
 
     ent->v.nextthink = 0;
     pr_global_struct->time = thinktime;
@@ -1216,13 +1206,6 @@ qboolean SV_RunThink(edict_t* ent)
     return !ent->free;
 }
 
-/*
-==================
-SV_Impact
-
-Two entities have touched, so run their touch functions
-==================
-*/
 void SV_Impact(edict_t* e1, edict_t* e2)
 {
     const int old_self = pr_global_struct->self;
@@ -1245,50 +1228,23 @@ void SV_Impact(edict_t* e1, edict_t* e2)
     pr_global_struct->other = old_other;
 }
 
-/*
-==================
-ClipVelocity
-
-Slide off of the impacting object
-returns the blocked flags (1 = floor, 2 = step / wall)
-==================
-*/
 constexpr float STOP_EPSILON = 0.1f;
 
 int ClipVelocity(const Vector3& in, const Vector3& normal, Vector3& out, float overbounce)
 {
     int blocked = 0;
-    if (normal.z > 0.0f) {
-        blocked |= 1; // floor
-    }
-
-    if (normal.z == 0.0f) {
-        blocked |= 2; // step
-    }
+    if (normal.z > 0.0f) blocked |= 1;
+    if (normal.z == 0.0f) blocked |= 2;
 
     const float backoff = in.dot(normal) * overbounce;
     out = in - normal * backoff;
     for (int i = 0; i < 3; ++i) {
-        if (out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON) {
-            out[i] = 0.0f;
-        }
+        if (out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON) out[i] = 0.0f;
     }
 
     return blocked;
 }
 
-/*
-============
-SV_FlyMove
-
-The basic solid body movement clip that slides along multiple planes
-Returns the clipflags if the velocity was modified (hit something solid)
-1 = floor
-2 = wall / step
-4 = dead stop
-If steptrace is not NULL, the trace of any vertical wall hit will be stored
-============
-*/
 constexpr int MAX_CLIP_PLANES = 5;
 
 int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
@@ -1303,34 +1259,27 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
     float time_left = time;
 
     for (int bumpcount = 0; bumpcount < numbumps; ++bumpcount) {
-        if (ent->v.velocity == vec3_origin) {
-            break;
-        }
+        if (ent->v.velocity == vec3_origin) break;
 
         const Vector3 end = ent->v.origin + ent->v.velocity * time_left;
         trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, false, ent);
 
-        if (trace.allsolid) { // entity is trapped in another solid
+        if (trace.allsolid) {
             ent->v.velocity = vec3_origin;
             return 3;
         }
 
-        if (trace.fraction > 0.0f) { // covered distance
+        if (trace.fraction > 0.0f) {
             ent->v.origin = trace.endpos;
             original_velocity = ent->v.velocity;
             numplanes = 0;
         }
 
-        if (trace.fraction == 1.0f) {
-            break; // moved full distance
-        }
-
-        if (!trace.ent) {
-            Sys_Error("SV_FlyMove: !trace.ent");
-        }
+        if (trace.fraction == 1.0f) break;
+        if (!trace.ent) Sys_Error("SV_FlyMove: !trace.ent");
 
         if (trace.plane.normal.z > 0.7f) {
-            blocked |= 1; // floor
+            blocked |= 1;
             if (trace.ent->v.solid == SOLID_BSP) {
                 ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) | FL_ONGROUND);
                 ent->v.groundentity = static_cast<int>(EDICT_TO_PROG(trace.ent));
@@ -1338,16 +1287,12 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
         }
 
         if (trace.plane.normal.z == 0.0f) {
-            blocked |= 2; // step
-            if (steptrace) {
-                *steptrace = trace; // save for player extrafriction
-            }
+            blocked |= 2;
+            if (steptrace) *steptrace = trace;
         }
 
         SV_Impact(ent, trace.ent);
-        if (ent->free) {
-            break; // removed by impact
-        }
+        if (ent->free) break;
 
         time_left -= time_left * trace.fraction;
 
@@ -1356,8 +1301,7 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
             return 3;
         }
 
-        planes[static_cast<size_t>(numplanes)] = trace.plane.normal;
-        numplanes++;
+        planes[static_cast<size_t>(numplanes++)] = trace.plane.normal;
 
         int i = 0;
         Vector3 new_velocity{};
@@ -1366,14 +1310,10 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
             int j = 0;
             for (; j < numplanes; ++j) {
                 if (j != i) {
-                    if (new_velocity.dot(planes[static_cast<size_t>(j)]) < 0.0f) {
-                        break;
-                    }
+                    if (new_velocity.dot(planes[static_cast<size_t>(j)]) < 0.0f) break;
                 }
             }
-            if (j == numplanes) {
-                break;
-            }
+            if (j == numplanes) break;
         }
 
         if (i != numplanes) {
@@ -1398,34 +1338,15 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
     return blocked;
 }
 
-/*
-============
-SV_AddGravity
-
-============
-*/
 void SV_AddGravity(edict_t* ent)
 {
     float ent_gravity = 1.0f;
     const eval_t* val = GetEdictFieldValue(ent, "gravity");
-    if (val && val->_float) {
-        ent_gravity = val->_float;
-    }
+    if (val && val->_float) ent_gravity = val->_float;
 
     ent->v.velocity[2] -= static_cast<float>(ent_gravity * sv_gravity.value * host_frametime);
 }
 
-//=============================================================================
-// PUSHMOVE
-//=============================================================================
-
-/*
-============
-SV_PushEntity
-
-Does not change the entities velocity at all
-============
-*/
 trace_t SV_PushEntity(edict_t* ent, const Vector3& push)
 {
     const Vector3 end = ent->v.origin + push;
@@ -1442,19 +1363,11 @@ trace_t SV_PushEntity(edict_t* ent, const Vector3& push)
     ent->v.origin = trace.endpos;
     SV_LinkEdict(ent, true);
 
-    if (trace.ent) {
-        SV_Impact(ent, trace.ent);
-    }
+    if (trace.ent) SV_Impact(ent, trace.ent);
 
     return trace;
 }
 
-/*
-============
-SV_PushMove
-
-============
-*/
 void SV_PushMove(edict_t* pusher, float movetime)
 {
     if (pusher->v.velocity == vec3_origin) {
@@ -1477,23 +1390,15 @@ void SV_PushMove(edict_t* pusher, float movetime)
 
     edict_t* check = NEXT_EDICT(sv.edicts);
     for (int e = 1; e < sv.num_edicts; ++e, check = NEXT_EDICT(check)) {
-        if (check->free) {
-            continue;
-        }
-
-        if (check->v.movetype == MOVETYPE_PUSH || check->v.movetype == MOVETYPE_NONE
-            || check->v.movetype == MOVETYPE_NOCLIP) {
-            continue;
-        }
+        if (check->free) continue;
+        if (check->v.movetype == MOVETYPE_PUSH || check->v.movetype == MOVETYPE_NONE || check->v.movetype == MOVETYPE_NOCLIP) continue;
 
         if (!((static_cast<int>(check->v.flags) & FL_ONGROUND) && PROG_TO_EDICT(check->v.groundentity) == pusher)) {
-            if (check->v.absmin.x >= maxs.x || check->v.absmin.y >= maxs.y || check->v.absmin.z >= maxs.z || check->v.absmax.x <= mins.x || check->v.absmax.y <= mins.y || check->v.absmax.z <= mins.z) {
+            if (check->v.absmin.x >= maxs.x || check->v.absmin.y >= maxs.y || check->v.absmin.z >= maxs.z ||
+                check->v.absmax.x <= mins.x || check->v.absmax.y <= mins.y || check->v.absmax.z <= mins.z) {
                 continue;
             }
-
-            if (!SV_TestEntityPosition(check)) {
-                continue;
-            }
+            if (!SV_TestEntityPosition(check)) continue;
         }
 
         if (check->v.movetype != MOVETYPE_WALK) {
@@ -1511,10 +1416,7 @@ void SV_PushMove(edict_t* pusher, float movetime)
 
         edict_t* block = SV_TestEntityPosition(check);
         if (block) {
-            if (check->v.mins.x == check->v.maxs.x) {
-                continue;
-            }
-
+            if (check->v.mins.x == check->v.maxs.x) continue;
             if (check->v.solid == SOLID_NOT || check->v.solid == SOLID_TRIGGER) {
                 check->v.mins.x = check->v.mins.y = 0;
                 check->v.maxs = check->v.mins;
@@ -1538,40 +1440,25 @@ void SV_PushMove(edict_t* pusher, float movetime)
                 moved_edict[static_cast<size_t>(i)]->v.origin = moved_from[static_cast<size_t>(i)];
                 SV_LinkEdict(moved_edict[static_cast<size_t>(i)], false);
             }
-
             return;
         }
     }
 }
 
-
-/*
-================
-SV_Physics_Pusher
-
-================
-*/
 void SV_Physics_Pusher(edict_t* ent)
 {
-    float thinktime;
-    float oldltime;
+    float thinktime = ent->v.nextthink;
+    float oldltime = ent->v.ltime;
     float movetime;
 
-    oldltime = ent->v.ltime;
-
-    thinktime = ent->v.nextthink;
     if (thinktime < ent->v.ltime + host_frametime) {
         movetime = thinktime - ent->v.ltime;
-        if (movetime < 0) {
-            movetime = 0;
-        }
+        if (movetime < 0) movetime = 0;
     } else {
         movetime = static_cast<float>(host_frametime);
     }
 
-    if (movetime) {
-            SV_PushMove(ent, movetime); // advances ent->v.ltime if not blocked
-    }
+    if (movetime) SV_PushMove(ent, movetime);
 
     if (thinktime > oldltime && thinktime <= ent->v.ltime) {
         ent->v.nextthink = 0;
@@ -1579,33 +1466,17 @@ void SV_Physics_Pusher(edict_t* ent)
         pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
         pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
         PR_ExecuteProgram(ent->v.think);
-        if (ent->free) {
-            return;
-        }
+        if (ent->free) return;
     }
 }
 
-//=============================================================================
-// CLIENT MOVEMENT
-//=============================================================================
-
-/*
-=============
-SV_CheckStuck
-
-This is a big hack to try and fix the rare case of getting stuck in the world
-clipping hull.
-=============
-*/
 void SV_CheckStuck(edict_t* ent)
 {
-    int i, j;
-    int z;
+    int i, j, z;
     Vector3 org;
 
     if (!SV_TestEntityPosition(ent)) {
         ent->v.oldorigin = ent->v.origin;
-
         return;
     }
 
@@ -1614,7 +1485,6 @@ void SV_CheckStuck(edict_t* ent)
     if (!SV_TestEntityPosition(ent)) {
         Con_DPrintf("Unstuck.\n");
         SV_LinkEdict(ent, true);
-
         return;
     }
 
@@ -1627,7 +1497,6 @@ void SV_CheckStuck(edict_t* ent)
                 if (!SV_TestEntityPosition(ent)) {
                     Con_DPrintf("Unstuck.\n");
                     SV_LinkEdict(ent, true);
-
                     return;
                 }
             }
@@ -1638,21 +1507,13 @@ void SV_CheckStuck(edict_t* ent)
     Con_DPrintf("player is stuck.\n");
 }
 
-/*
-=============
-SV_CheckWater
-=============
-*/
 qboolean SV_CheckWater(edict_t* ent)
 {
-    Vector3 point;
-    int cont;
-
-    point = Vector3(ent->v.origin.x, ent->v.origin.y, ent->v.origin.z + ent->v.mins.z + 1);
+    Vector3 point(ent->v.origin.x, ent->v.origin.y, ent->v.origin.z + ent->v.mins.z + 1);
 
     ent->v.waterlevel = 0;
     ent->v.watertype = CONTENTS_EMPTY;
-    cont = SV_PointContents(point);
+    int cont = SV_PointContents(point);
     if (cont <= CONTENTS_WATER) {
         ent->v.watertype = static_cast<float>(cont);
         ent->v.waterlevel = 1;
@@ -1666,33 +1527,22 @@ qboolean SV_CheckWater(edict_t* ent)
                 ent->v.waterlevel = 3;
             }
         }
-
     }
 
     return ent->v.waterlevel > 1;
 }
 
-/*
-============
-SV_WallFriction
-
-============
-*/
 void SV_WallFriction(edict_t* ent, trace_t* trace)
 {
-    Vector3 forward, right, up;
+    Vector3 forward, right, up, into, side;
     float d, i;
-    Vector3 into, side;
 
     AngleVectors(ent->v.v_angle, forward, right, up);
     d = trace->plane.normal.dot(forward);
 
     d += 0.5;
-    if (d >= 0) {
-        return;
-    }
+    if (d >= 0) return;
 
-    // cut the tangential velocity
     i = trace->plane.normal.dot(ent->v.velocity);
     into = trace->plane.normal * i;
     side = ent->v.velocity - into;
@@ -1701,107 +1551,50 @@ void SV_WallFriction(edict_t* ent, trace_t* trace)
     ent->v.velocity.y = side.y * (1 + d);
 }
 
-/*
-=====================
-SV_TryUnstick
-
-Player has come to a dead stop, possibly due to the problem with limited
-float precision at some angle joins in the BSP hull.
-
-Try fixing by pushing one pixel in each direction.
-
-This is a hack, but in the interest of good gameplay...
-======================
-*/
 int SV_TryUnstick(edict_t* ent, const Vector3& oldvel)
 {
-    int i;
-    Vector3 oldorg;
-    Vector3 dir;
-    int clip;
+    int i, clip;
+    Vector3 oldorg, dir;
     trace_t steptrace;
 
     oldorg = ent->v.origin;
     dir = vec3_origin;
 
     for (i = 0; i < 8; i++) {
-        // try pushing a little in an axial direction
         switch (i) {
-        case 0:
-            dir.x = 2;
-            dir.y = 0;
-            break;
-        case 1:
-            dir.x = 0;
-            dir.y = 2;
-            break;
-        case 2:
-            dir.x = -2;
-            dir.y = 0;
-            break;
-        case 3:
-            dir.x = 0;
-            dir.y = -2;
-            break;
-        case 4:
-            dir.x = 2;
-            dir.y = 2;
-            break;
-        case 5:
-            dir.x = -2;
-            dir.y = 2;
-            break;
-        case 6:
-            dir.x = 2;
-            dir.y = -2;
-            break;
-        case 7:
-            dir.x = -2;
-            dir.y = -2;
-            break;
+        case 0: dir.x = 2; dir.y = 0; break;
+        case 1: dir.x = 0; dir.y = 2; break;
+        case 2: dir.x = -2; dir.y = 0; break;
+        case 3: dir.x = 0; dir.y = -2; break;
+        case 4: dir.x = 2; dir.y = 2; break;
+        case 5: dir.x = -2; dir.y = 2; break;
+        case 6: dir.x = 2; dir.y = -2; break;
+        case 7: dir.x = -2; dir.y = -2; break;
         }
 
         SV_PushEntity(ent, dir);
-
-        // retry the original move
         ent->v.velocity = Vector3(oldvel.x, oldvel.y, 0.0f);
         clip = SV_FlyMove(ent, 0.1f, &steptrace);
 
         if (fabs(oldorg.y - ent->v.origin.y) > 4 || fabs(oldorg.x - ent->v.origin.x) > 4) {
-            //Con_DPrintf ("unstuck!\n");
             return clip;
         }
 
-        // go back to the original pos and try again
         ent->v.origin = oldorg;
     }
 
     ent->v.velocity = vec3_origin;
-
-    return 7; // still not moving
+    return 7;
 }
 
-/*
-=====================
-SV_WalkMove
-
-Only used by players
-======================
-*/
 #define STEPSIZE 18
 
 void SV_WalkMove(edict_t* ent)
 {
-    Vector3 upmove, downmove;
-    Vector3 oldorg, oldvel;
-    Vector3 nosteporg, nostepvel;
-    int clip;
-    int oldonground;
+    Vector3 upmove, downmove, oldorg, oldvel, nosteporg, nostepvel;
+    int clip, oldonground;
     trace_t steptrace, downtrace;
 
-    //
-    // do a regular slide move unless it looks like you ran into a step
-    //
     oldonground = static_cast<int>(ent->v.flags) & FL_ONGROUND;
     ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) & ~FL_ONGROUND);
 
@@ -1810,61 +1603,36 @@ void SV_WalkMove(edict_t* ent)
 
     clip = SV_FlyMove(ent, static_cast<float>(host_frametime), &steptrace);
 
-    if (!(clip & 2)) {
-        return; // move didn't block on a step
-    }
-
-    if (!oldonground && ent->v.waterlevel == 0) {
-        return; // don't stair up while jumping
-    }
-
-    if (ent->v.movetype != MOVETYPE_WALK) {
-        return; // gibbed by a trigger
-    }
-
-    if (sv_nostep.value) {
-        return;
-    }
-
-    if (static_cast<int>(sv_player->v.flags) & FL_WATERJUMP) {
-        return;
-    }
+    if (!(clip & 2)) return;
+    if (!oldonground && ent->v.waterlevel == 0) return;
+    if (ent->v.movetype != MOVETYPE_WALK) return;
+    if (sv_nostep.value) return;
+    if (static_cast<int>(sv_player->v.flags) & FL_WATERJUMP) return;
 
     nosteporg = ent->v.origin;
     nostepvel = ent->v.velocity;
 
-    //
-    // try moving up and forward to go up a step
-    //
-    ent->v.origin = oldorg; // back to start pos
+    ent->v.origin = oldorg;
 
     upmove = vec3_origin;
     downmove = vec3_origin;
     upmove.z = STEPSIZE;
     downmove.z = static_cast<float>(-STEPSIZE + oldvel.z * host_frametime);
 
-    // move up
-    SV_PushEntity(ent, upmove); // FIXME: don't link?
+    SV_PushEntity(ent, upmove);
 
-    // move forward
     ent->v.velocity = Vector3(oldvel.x, oldvel.y, 0.0f);
     clip = SV_FlyMove(ent, static_cast<float>(host_frametime), &steptrace);
 
-    // check for stuckness, possibly due to the limited precision of floats
-    // in the clipping hulls
     if (clip) {
-        if (fabs(oldorg.y - ent->v.origin.y) < 0.03125 && fabs(oldorg.x - ent->v.origin.x) < 0.03125) { // stepping up didn't make any progress
+        if (fabs(oldorg.y - ent->v.origin.y) < 0.03125 && fabs(oldorg.x - ent->v.origin.x) < 0.03125) {
             clip = SV_TryUnstick(ent, oldvel);
         }
     }
 
-    // extra friction based on view angle
-    if (clip & 2) {
-        SV_WallFriction(ent, &steptrace);
-    }
+    if (clip & 2) SV_WallFriction(ent, &steptrace);
 
-    // move down
-    downtrace = SV_PushEntity(ent, downmove); // FIXME: don't link?
+    downtrace = SV_PushEntity(ent, downmove);
 
     if (downtrace.plane.normal.z > 0.7) {
         if (ent->v.solid == SOLID_BSP) {
@@ -1872,52 +1640,31 @@ void SV_WalkMove(edict_t* ent)
             ent->v.groundentity = static_cast<int>(EDICT_TO_PROG(downtrace.ent));
         }
     } else {
-        // if the push down didn't end up on good ground, use the move without
-        // the step up.  This happens near wall / slope combinations, and can
-        // cause the player to hop up higher on a slope too steep to climb
         ent->v.origin = nosteporg;
         ent->v.velocity = nostepvel;
     }
 }
 
-/*
-================
-SV_Physics_Client
-
-Player character actions
-================
-*/
 void SV_Physics_Client(edict_t* ent, int num)
 {
-    if (!svs.GetClients()[static_cast<size_t>(num - 1)].active) {
-        return; // unconnected slot
-    }
+    if (!svs.GetClients()[static_cast<size_t>(num - 1)].active) return;
 
-    // call standard client pre-think
     pr_global_struct->time = static_cast<float>(sv.time);
     pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
     PR_ExecuteProgram(pr_global_struct->PlayerPreThink);
 
-    // do a move
     SV_CheckVelocity(ent);
 
-    // decide which move function to call
     switch (static_cast<int>(ent->v.movetype)) {
     case MOVETYPE_NONE:
-        if (!SV_RunThink(ent)) {
-            return;
-        }
+        if (!SV_RunThink(ent)) return;
         break;
 
     case MOVETYPE_WALK:
-        if (!SV_RunThink(ent)) {
-            return;
-        }
-
+        if (!SV_RunThink(ent)) return;
         if (!SV_CheckWater(ent) && !(static_cast<int>(ent->v.flags) & FL_WATERJUMP)) {
             SV_AddGravity(ent);
         }
-
         SV_CheckStuck(ent);
         SV_WalkMove(ent);
         break;
@@ -1928,18 +1675,12 @@ void SV_Physics_Client(edict_t* ent, int num)
         break;
 
     case MOVETYPE_FLY:
-        if (!SV_RunThink(ent)) {
-            return;
-        }
-
+        if (!SV_RunThink(ent)) return;
         SV_FlyMove(ent, static_cast<float>(host_frametime), nullptr);
         break;
 
     case MOVETYPE_NOCLIP:
-        if (!SV_RunThink(ent)) {
-            return;
-        }
-
+        if (!SV_RunThink(ent)) return;
         VectorMA(ent->v.origin, static_cast<float>(host_frametime), ent->v.velocity, ent->v.origin);
         break;
 
@@ -1947,99 +1688,50 @@ void SV_Physics_Client(edict_t* ent, int num)
         Sys_Error("SV_Physics_client: bad movetype %i", static_cast<int>(ent->v.movetype));
     }
 
-    // call standard player post-think
     SV_LinkEdict(ent, true);
-
     pr_global_struct->time = static_cast<float>(sv.time);
     pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
     PR_ExecuteProgram(pr_global_struct->PlayerPostThink);
 }
 
-//============================================================================
-
-/*
-=============
-SV_Physics_None
-
-Non moving objects can only think
-=============
-*/
 void SV_Physics_None(edict_t* ent)
 {
     SV_RunThink(ent);
 }
 
-/*
-=============
-SV_Physics_Noclip
-
-A moving object that doesn't obey physics
-=============
-*/
 void SV_Physics_Noclip(edict_t* ent)
 {
-    if (!SV_RunThink(ent)) {
-        return;
-    }
+    if (!SV_RunThink(ent)) return;
 
     VectorMA(ent->v.angles, static_cast<float>(host_frametime), ent->v.avelocity, ent->v.angles);
     VectorMA(ent->v.origin, static_cast<float>(host_frametime), ent->v.velocity, ent->v.origin);
-
     SV_LinkEdict(ent, false);
 }
 
-//==============================================================================
-// TOSS / BOUNCE
-//==============================================================================
-
-/*
-=============
-SV_CheckWaterTransition
-
-=============
-*/
 void SV_CheckWaterTransition(edict_t* ent)
 {
     const int cont = SV_PointContents(ent->v.origin);
-    if (!ent->v.watertype) { // just spawned here
+    if (!ent->v.watertype) {
         ent->v.watertype = static_cast<float>(cont);
         ent->v.waterlevel = 1;
         return;
     }
 
     if (cont <= CONTENTS_WATER) {
-        if (ent->v.watertype == CONTENTS_EMPTY) { // just crossed into water
-            SV_StartSound(ent, 0, "misc/h2ohit1.wav", 255, 1);
-        }
-
+        if (ent->v.watertype == CONTENTS_EMPTY) SV_StartSound(ent, 0, "misc/h2ohit1.wav", 255, 1);
         ent->v.watertype = static_cast<float>(cont);
         ent->v.waterlevel = 1;
     } else {
-        if (ent->v.watertype != CONTENTS_EMPTY) {
-            SV_StartSound(ent, 0, "misc/h2ohit1.wav", 255, 1);
-        }
-
+        if (ent->v.watertype != CONTENTS_EMPTY) SV_StartSound(ent, 0, "misc/h2ohit1.wav", 255, 1);
         ent->v.watertype = static_cast<float>(CONTENTS_EMPTY);
         ent->v.waterlevel = static_cast<float>(cont);
     }
 }
 
-/*
-=============
-SV_Physics_Toss
-
-Toss, bounce, and fly movement.  When onground, do nothing.
-=============
-*/
 void SV_Physics_Toss(edict_t* ent)
 {
-    if (!SV_RunThink(ent)) {
-        return;
-    }
-
-    if (static_cast<int>(ent->v.flags) & FL_ONGROUND) {
-        return;
-    }
+    if (!SV_RunThink(ent)) return;
+    if (static_cast<int>(ent->v.flags) & FL_ONGROUND) return;
 
     SV_CheckVelocity(ent);
 
@@ -2051,9 +1743,7 @@ void SV_Physics_Toss(edict_t* ent)
 
     const Vector3 move = ent->v.velocity * static_cast<float>(host_frametime);
     const trace_t trace = SV_PushEntity(ent, move);
-    if (trace.fraction == 1.0f || ent->free) {
-        return;
-    }
+    if (trace.fraction == 1.0f || ent->free) return;
 
     const float backoff = (ent->v.movetype == MOVETYPE_BOUNCE) ? 1.5f : 1.0f;
     ClipVelocity(ent->v.velocity, trace.plane.normal, ent->v.velocity, backoff);
@@ -2070,24 +1760,8 @@ void SV_Physics_Toss(edict_t* ent)
     SV_CheckWaterTransition(ent);
 }
 
-//===============================================================================
-// STEPPING MOVEMENT
-//===============================================================================
-
-/*
-=============
-SV_Physics_Step
-
-Monsters freefall when they don't have a ground entity, otherwise
-all movement is done with discrete steps.
-
-This is also used for objects that have become still on the ground, but
-will fall if the floor is pulled out from under them.
-=============
-*/
 void SV_Physics_Step(edict_t* ent)
 {
-    // freefall if not onground
     if (!(static_cast<int>(ent->v.flags) & (FL_ONGROUND | FL_FLY | FL_SWIM))) {
         const bool hitsound = (ent->v.velocity.z < sv_gravity.value * -0.1f);
 
@@ -2097,9 +1771,7 @@ void SV_Physics_Step(edict_t* ent)
         SV_LinkEdict(ent, true);
 
         if (static_cast<int>(ent->v.flags) & FL_ONGROUND) {
-            if (hitsound) {
-                SV_StartSound(ent, 0, "demon/dland2.wav", 255, 1);
-            }
+            if (hitsound) SV_StartSound(ent, 0, "demon/dland2.wav", 255, 1);
         }
     }
 
@@ -2107,17 +1779,8 @@ void SV_Physics_Step(edict_t* ent)
     SV_CheckWaterTransition(ent);
 }
 
-//============================================================================
-
-/*
-================
-SV_Physics
-
-================
-*/
 void SV_Physics()
 {
-    // let the progs know that a new frame has started
     pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(sv.edicts));
     pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
     pr_global_struct->time = static_cast<float>(sv.time);
@@ -2125,13 +1788,8 @@ void SV_Physics()
 
     edict_t* ent = sv.edicts;
     for (int i = 0; i < sv.num_edicts; ++i, ent = NEXT_EDICT(ent)) {
-        if (ent->free) {
-            continue;
-        }
-
-        if (pr_global_struct->force_retouch) {
-            SV_LinkEdict(ent, true);
-        }
+        if (ent->free) continue;
+        if (pr_global_struct->force_retouch) SV_LinkEdict(ent, true);
 
         if (i > 0 && i <= svs.maxclients) {
             SV_Physics_Client(ent, i);
@@ -2151,26 +1809,11 @@ void SV_Physics()
         }
     }
 
-    if (pr_global_struct->force_retouch) {
-        pr_global_struct->force_retouch--;
-    }
+    if (pr_global_struct->force_retouch) pr_global_struct->force_retouch--;
 
     sv.time += host_frametime;
 }
 
-//============================================================================
-// sv_move.cpp contents
-//============================================================================
-
-/*
-=============
-SV_CheckBottom
-
-Returns false if any part of the bottom of the entity is off an edge that
-is not a staircase.
-
-=============
-*/
 bool SV_CheckBottom(edict_t* ent)
 {
     Vector3 mins = ent->v.origin + ent->v.mins;
@@ -2182,9 +1825,7 @@ bool SV_CheckBottom(edict_t* ent)
         for (int y = 0; y <= 1; ++y) {
             start.x = x ? maxs.x : mins.x;
             start.y = y ? maxs.y : mins.y;
-            if (SV_PointContents(start) != CONTENTS_SOLID) {
-                goto realcheck;
-            }
+            if (SV_PointContents(start) != CONTENTS_SOLID) goto realcheck;
         }
     }
 
@@ -2199,9 +1840,7 @@ realcheck:
     stop.z = start.z - 2.0f * STEPSIZE;
     trace_t trace = SV_Move(start, vec3_origin, vec3_origin, stop, true, ent);
 
-    if (trace.fraction == 1.0f) {
-        return false;
-    }
+    if (trace.fraction == 1.0f) return false;
 
     const float mid = trace.endpos.z;
     float bottom = trace.endpos.z;
@@ -2213,13 +1852,8 @@ realcheck:
 
             trace = SV_Move(start, vec3_origin, vec3_origin, stop, true, ent);
 
-            if (trace.fraction != 1.0f && trace.endpos.z > bottom) {
-                bottom = trace.endpos.z;
-            }
-
-            if (trace.fraction == 1.0f || mid - trace.endpos.z > STEPSIZE) {
-                return false;
-            }
+            if (trace.fraction != 1.0f && trace.endpos.z > bottom) bottom = trace.endpos.z;
+            if (trace.fraction == 1.0f || mid - trace.endpos.z > STEPSIZE) return false;
         }
     }
 
@@ -2227,13 +1861,6 @@ realcheck:
     return true;
 }
 
-/*
-=============
-SV_movestep
-
-Called by monster program code.
-=============
-*/
 bool SV_movestep(edict_t* ent, const Vector3& move, bool relink)
 {
     const Vector3 oldorg = ent->v.origin;
@@ -2245,12 +1872,8 @@ bool SV_movestep(edict_t* ent, const Vector3& move, bool relink)
             const edict_t* enemy = PROG_TO_EDICT(ent->v.enemy);
             if (i == 0 && enemy != sv.edicts) {
                 const float dz = ent->v.origin.z - PROG_TO_EDICT(ent->v.enemy)->v.origin.z;
-                if (dz > 40.0f) {
-                    neworg.z -= 8.0f;
-                }
-                if (dz < 30.0f) {
-                    neworg.z += 8.0f;
-                }
+                if (dz > 40.0f) neworg.z -= 8.0f;
+                if (dz < 30.0f) neworg.z += 8.0f;
             }
 
             trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, neworg, false, ent);
@@ -2261,16 +1884,11 @@ bool SV_movestep(edict_t* ent, const Vector3& move, bool relink)
                 }
 
                 ent->v.origin = trace.endpos;
-                if (relink) {
-                    SV_LinkEdict(ent, true);
-                }
-
+                if (relink) SV_LinkEdict(ent, true);
                 return true;
             }
 
-            if (enemy == sv.edicts) {
-                break;
-            }
+            if (enemy == sv.edicts) break;
         }
 
         return false;
@@ -2282,25 +1900,18 @@ bool SV_movestep(edict_t* ent, const Vector3& move, bool relink)
 
     trace_t trace = SV_Move(neworg, ent->v.mins, ent->v.maxs, end, false, ent);
 
-    if (trace.allsolid) {
-        return false;
-    }
+    if (trace.allsolid) return false;
 
     if (trace.startsolid) {
         neworg.z -= STEPSIZE;
         trace = SV_Move(neworg, ent->v.mins, ent->v.maxs, end, false, ent);
-        if (trace.allsolid || trace.startsolid) {
-            return false;
-        }
+        if (trace.allsolid || trace.startsolid) return false;
     }
 
     if (trace.fraction == 1.0f) {
         if (static_cast<int>(ent->v.flags) & FL_PARTIALGROUND) {
             ent->v.origin += move;
-            if (relink) {
-                SV_LinkEdict(ent, true);
-            }
-
+            if (relink) SV_LinkEdict(ent, true);
             ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) & ~FL_ONGROUND);
             return true;
         }
@@ -2312,9 +1923,7 @@ bool SV_movestep(edict_t* ent, const Vector3& move, bool relink)
 
     if (!SV_CheckBottom(ent)) {
         if (static_cast<int>(ent->v.flags) & FL_PARTIALGROUND) {
-            if (relink) {
-                SV_LinkEdict(ent, true);
-            }
+            if (relink) SV_LinkEdict(ent, true);
             return true;
         }
 
@@ -2328,21 +1937,11 @@ bool SV_movestep(edict_t* ent, const Vector3& move, bool relink)
 
     ent->v.groundentity = static_cast<int>(EDICT_TO_PROG(trace.ent));
 
-    if (relink) {
-        SV_LinkEdict(ent, true);
-    }
+    if (relink) SV_LinkEdict(ent, true);
 
     return true;
 }
 
-/*
-======================
-SV_StepDirection
-
-Turns to the movement direction, and walks the current distance if
-facing it.
-======================
-*/
 qboolean SV_StepDirection(edict_t* ent, float yaw, float dist)
 {
     ent->v.ideal_yaw = yaw;
@@ -2366,23 +1965,11 @@ qboolean SV_StepDirection(edict_t* ent, float yaw, float dist)
     return false;
 }
 
-/*
-======================
-SV_FixCheckBottom
-
-======================
-*/
 void SV_FixCheckBottom(edict_t* ent)
 {
     ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) | FL_PARTIALGROUND);
 }
 
-/*
-================
-SV_NewChaseDir
-
-================
-*/
 constexpr float DI_NODIR = -1.0f;
 
 void SV_NewChaseDir(edict_t* actor, edict_t* enemy, float dist)
@@ -2394,101 +1981,54 @@ void SV_NewChaseDir(edict_t* actor, edict_t* enemy, float dist)
 
     const float deltax = enemy->v.origin[0] - actor->v.origin[0];
     const float deltay = enemy->v.origin[1] - actor->v.origin[1];
-    if (deltax > 10.0f) {
-        d[1] = 0.0f;
-    } else if (deltax < -10.0f) {
-        d[1] = 180.0f;
-    } else {
-        d[1] = DI_NODIR;
-    }
+    if (deltax > 10.0f) d[1] = 0.0f;
+    else if (deltax < -10.0f) d[1] = 180.0f;
+    else d[1] = DI_NODIR;
 
-    if (deltay < -10.0f) {
-        d[2] = 270.0f;
-    } else if (deltay > 10.0f) {
-        d[2] = 90.0f;
-    } else {
-        d[2] = DI_NODIR;
-    }
+    if (deltay < -10.0f) d[2] = 270.0f;
+    else if (deltay > 10.0f) d[2] = 90.0f;
+    else d[2] = DI_NODIR;
 
-    // try direct route
     if (d[1] != DI_NODIR && d[2] != DI_NODIR) {
         const float tdir = (d[1] == 0.0f) ? ((d[2] == 90.0f) ? 45.0f : 315.0f) : ((d[2] == 90.0f) ? 135.0f : 215.0f);
-        if (tdir != turnaround && SV_StepDirection(actor, tdir, dist)) {
-            return;
-        }
+        if (tdir != turnaround && SV_StepDirection(actor, tdir, dist)) return;
     }
 
-    // try other directions
     if (((rand() & 3) & 1) || fabs(deltay) > fabs(deltax)) {
         const float tdir = d[1];
         d[1] = d[2];
         d[2] = tdir;
     }
 
-    if (d[1] != DI_NODIR && d[1] != turnaround && SV_StepDirection(actor, d[1], dist)) {
-        return;
-    }
-
-    if (d[2] != DI_NODIR && d[2] != turnaround && SV_StepDirection(actor, d[2], dist)) {
-        return;
-    }
-
-    if (olddir != DI_NODIR && SV_StepDirection(actor, olddir, dist)) {
-        return;
-    }
+    if (d[1] != DI_NODIR && d[1] != turnaround && SV_StepDirection(actor, d[1], dist)) return;
+    if (d[2] != DI_NODIR && d[2] != turnaround && SV_StepDirection(actor, d[2], dist)) return;
+    if (olddir != DI_NODIR && SV_StepDirection(actor, olddir, dist)) return;
 
     if (rand() & 1) {
         for (float tdir = 0.0f; tdir <= 315.0f; tdir += 45.0f) {
-            if (tdir != turnaround && SV_StepDirection(actor, tdir, dist)) {
-                return;
-            }
+            if (tdir != turnaround && SV_StepDirection(actor, tdir, dist)) return;
         }
     } else {
         for (float tdir = 315.0f; tdir >= 0.0f; tdir -= 45.0f) {
-            if (tdir != turnaround && SV_StepDirection(actor, tdir, dist)) {
-                return;
-            }
+            if (tdir != turnaround && SV_StepDirection(actor, tdir, dist)) return;
         }
     }
 
-    if (turnaround != DI_NODIR && SV_StepDirection(actor, turnaround, dist)) {
-        return;
-    }
+    if (turnaround != DI_NODIR && SV_StepDirection(actor, turnaround, dist)) return;
 
-    actor->v.ideal_yaw = olddir; // can't move
-
-    if (!SV_CheckBottom(actor)) {
-        SV_FixCheckBottom(actor);
-    }
+    actor->v.ideal_yaw = olddir;
+    if (!SV_CheckBottom(actor)) SV_FixCheckBottom(actor);
 }
 
-/*
-======================
-SV_CloseEnough
-
-======================
-*/
 qboolean SV_CloseEnough(edict_t* ent, edict_t* goal, float dist)
 {
     for (int i = 0; i < 3; ++i) {
-        if (goal->v.absmin[i] > ent->v.absmax[i] + dist) {
-            return false;
-        }
-
-        if (goal->v.absmax[i] < ent->v.absmin[i] - dist) {
-            return false;
-        }
+        if (goal->v.absmin[i] > ent->v.absmax[i] + dist) return false;
+        if (goal->v.absmax[i] < ent->v.absmin[i] - dist) return false;
     }
-
     return true;
 }
 
-/*
-======================
-SV_MoveToGoal
-
-======================
-*/
 void SV_MoveToGoal()
 {
     edict_t* ent = PROG_TO_EDICT(pr_global_struct->self);
@@ -2500,31 +2040,18 @@ void SV_MoveToGoal()
         return;
     }
 
-    if (PROG_TO_EDICT(ent->v.enemy) != sv.edicts && SV_CloseEnough(ent, goal, dist)) {
-        return;
-    }
+    if (PROG_TO_EDICT(ent->v.enemy) != sv.edicts && SV_CloseEnough(ent, goal, dist)) return;
 
     if ((rand() & 3) == 1 || !SV_StepDirection(ent, ent->v.ideal_yaw, dist)) {
         SV_NewChaseDir(ent, goal, dist);
     }
 }
 
-//============================================================================
-// sv_user.cpp contents
-//============================================================================
-
-/*
-===============
-SV_SetIdealPitch
-===============
-*/
 constexpr int MAX_FORWARD = 6;
 
 void SV_SetIdealPitch()
 {
-    if (!(static_cast<int>(sv_player->v.flags) & FL_ONGROUND)) {
-        return;
-    }
+    if (!(static_cast<int>(sv_player->v.flags) & FL_ONGROUND)) return;
 
     const float angleval = static_cast<float>(sv_player->v.angles[YAW] * M_PI * 2.0 / 360.0);
     const float sinval = sinf(angleval);
@@ -2543,24 +2070,16 @@ void SV_SetIdealPitch()
         bottom.z -= 160.0f;
 
         const trace_t tr = SV_Move(top, vec3_origin, vec3_origin, bottom, 1, sv_player);
-        if (tr.allsolid || tr.fraction == 1.0f) {
-            return;
-        }
+        if (tr.allsolid || tr.fraction == 1.0f) return;
 
         z[static_cast<size_t>(i)] = top.z + tr.fraction * (bottom.z - top.z);
     }
 
-    int dir = 0;
-    int steps = 0;
+    int dir = 0, steps = 0;
     for (int j = 1; j < i; ++j) {
         const int step = static_cast<int>(z[static_cast<size_t>(j)] - z[static_cast<size_t>(j - 1)]);
-        if (step > -ON_EPSILON && step < ON_EPSILON) {
-            continue;
-        }
-
-        if (dir && (step - dir > ON_EPSILON || step - dir < -ON_EPSILON)) {
-            return;
-        }
+        if (step > -ON_EPSILON && step < ON_EPSILON) continue;
+        if (dir && (step - dir > ON_EPSILON || step - dir < -ON_EPSILON)) return;
 
         steps++;
         dir = step;
@@ -2571,25 +2090,15 @@ void SV_SetIdealPitch()
         return;
     }
 
-    if (steps < 2) {
-        return;
-    }
+    if (steps < 2) return;
 
     sv_player->v.idealpitch = -dir * sv_idealpitchscale.value;
 }
 
-/*
-==================
-SV_UserFriction
-
-==================
-*/
 void SV_UserFriction()
 {
     const float speed = sqrtf(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
-    if (!speed) {
-        return;
-    }
+    if (!speed) return;
 
     Vector3 start(
         origin[0] + velocity[0] / speed * 16.0f,
@@ -2603,9 +2112,7 @@ void SV_UserFriction()
 
     const float control = (speed < sv_stopspeed.value) ? sv_stopspeed.value : speed;
     float newspeed = static_cast<float>(speed - host_frametime * control * friction);
-    if (newspeed < 0.0f) {
-        newspeed = 0.0f;
-    }
+    if (newspeed < 0.0f) newspeed = 0.0f;
 
     newspeed /= speed;
     velocity[0] *= newspeed;
@@ -2613,69 +2120,41 @@ void SV_UserFriction()
     velocity[2] *= newspeed;
 }
 
-/*
-==============
-SV_Accelerate
-==============
-*/
 void SV_Accelerate()
 {
     const float currentspeed = DotProduct(velocity, wishdir);
     const float addspeed = wishspeed - currentspeed;
-    if (addspeed <= 0.0f) {
-        return;
-    }
+    if (addspeed <= 0.0f) return;
 
     float accelspeed = static_cast<float>(sv_accelerate.value * host_frametime * wishspeed);
-    if (accelspeed > addspeed) {
-        accelspeed = addspeed;
-    }
+    if (accelspeed > addspeed) accelspeed = addspeed;
 
-    for (int i = 0; i < 3; ++i) {
-        velocity[i] += accelspeed * wishdir[i];
-    }
+    for (int i = 0; i < 3; ++i) velocity[i] += accelspeed * wishdir[i];
 }
 
 void SV_AirAccelerate(Vector3 wishveloc)
 {
     float wishspd = wishveloc.normalize();
-    if (wishspd > 30.0f) {
-        wishspd = 30.0f;
-    }
+    if (wishspd > 30.0f) wishspd = 30.0f;
 
     const float currentspeed = DotProduct(velocity, wishveloc);
     const float addspeed = wishspd - currentspeed;
-    if (addspeed <= 0.0f) {
-        return;
-    }
+    if (addspeed <= 0.0f) return;
 
     float accelspeed = static_cast<float>(sv_accelerate.value * wishspeed * host_frametime);
-    if (accelspeed > addspeed) {
-        accelspeed = addspeed;
-    }
+    if (accelspeed > addspeed) accelspeed = addspeed;
 
-    for (int i = 0; i < 3; ++i) {
-        velocity[i] += accelspeed * wishveloc[i];
-    }
+    for (int i = 0; i < 3; ++i) velocity[i] += accelspeed * wishveloc[i];
 }
 
 void DropPunchAngle()
 {
     float len = sv_player->v.punchangle.normalize();
     len -= static_cast<float>(10.0 * host_frametime);
-    if (len < 0.0f) {
-        len = 0.0f;
-    }
-
+    if (len < 0.0f) len = 0.0f;
     sv_player->v.punchangle *= len;
 }
 
-/*
-===================
-SV_WaterMove
-
-===================
-*/
 void SV_WaterMove()
 {
     Vector3 forward{}, right{}, up{};
@@ -2683,11 +2162,8 @@ void SV_WaterMove()
 
     Vector3 wishvel = forward * cmd.forwardmove + right * cmd.sidemove;
 
-    if (!cmd.forwardmove && !cmd.sidemove && !cmd.upmove) {
-        wishvel.z -= 60.0f; // drift towards bottom
-    } else {
-        wishvel.z += cmd.upmove;
-    }
+    if (!cmd.forwardmove && !cmd.sidemove && !cmd.upmove) wishvel.z -= 60.0f;
+    else wishvel.z += cmd.upmove;
 
     float w_speed = wishvel.length();
     if (w_speed > sv_maxspeed.value) {
@@ -2701,31 +2177,20 @@ void SV_WaterMove()
     float newspeed = 0.0f;
     if (speed) {
         newspeed = speed - static_cast<float>(host_frametime * speed * sv_friction.value);
-        if (newspeed < 0.0f) {
-            newspeed = 0.0f;
-        }
-
+        if (newspeed < 0.0f) newspeed = 0.0f;
         VectorScale(velocity, newspeed / speed, velocity);
     }
 
-    if (!w_speed) {
-        return;
-    }
+    if (!w_speed) return;
 
     const float addspeed = w_speed - newspeed;
-    if (addspeed <= 0.0f) {
-        return;
-    }
+    if (addspeed <= 0.0f) return;
 
     wishvel.normalize();
     float accelspeed = static_cast<float>(sv_accelerate.value * w_speed * host_frametime);
-    if (accelspeed > addspeed) {
-        accelspeed = addspeed;
-    }
+    if (accelspeed > addspeed) accelspeed = addspeed;
 
-    for (int i = 0; i < 3; ++i) {
-        velocity[i] += accelspeed * wishvel[i];
-    }
+    for (int i = 0; i < 3; ++i) velocity[i] += accelspeed * wishvel[i];
 }
 
 void SV_WaterJump()
@@ -2739,12 +2204,6 @@ void SV_WaterJump()
     sv_player->v.velocity.y = sv_player->v.movedir.y;
 }
 
-/*
-===================
-SV_AirMove
-
-===================
-*/
 void SV_AirMove()
 {
     Vector3 forward{}, right{}, up{};
@@ -2753,16 +2212,11 @@ void SV_AirMove()
     float fmove = cmd.forwardmove;
     float smove = cmd.sidemove;
 
-    if (sv.time < sv_player->v.teleport_time && fmove < 0.0f) {
-        fmove = 0.0f;
-    }
+    if (sv.time < sv_player->v.teleport_time && fmove < 0.0f) fmove = 0.0f;
 
     Vector3 wishvel = forward * fmove + right * smove;
-    if (static_cast<int>(sv_player->v.movetype) != MOVETYPE_WALK) {
-        wishvel.z = cmd.upmove;
-    } else {
-        wishvel.z = 0.0f;
-    }
+    if (static_cast<int>(sv_player->v.movetype) != MOVETYPE_WALK) wishvel.z = cmd.upmove;
+    else wishvel.z = 0.0f;
 
     wishdir = wishvel;
     wishspeed = wishdir.normalize();
@@ -2781,17 +2235,9 @@ void SV_AirMove()
     }
 }
 
-/*
-===================
-SV_ClientThink
-
-===================
-*/
 void SV_ClientThink()
 {
-    if (sv_player->v.movetype == MOVETYPE_NONE) {
-        return;
-    }
+    if (sv_player->v.movetype == MOVETYPE_NONE) return;
 
     onground = static_cast<int>(sv_player->v.flags) & FL_ONGROUND;
     origin = sv_player->v.origin;
@@ -2799,9 +2245,7 @@ void SV_ClientThink()
 
     DropPunchAngle();
 
-    if (sv_player->v.health <= 0.0f) {
-        return;
-    }
+    if (sv_player->v.health <= 0.0f) return;
 
     cmd = host_client->cmd;
     angles = sv_player->v.angles;
@@ -2826,11 +2270,6 @@ void SV_ClientThink()
     SV_AirMove();
 }
 
-/*
-===================
-SV_ReadClientMove
-===================
-*/
 void SV_ReadClientMove(usercmd_t* move)
 {
     host_client->ping_times[static_cast<size_t>(host_client->num_pings % NUM_PING_TIMES)] = static_cast<float>(sv.time) - MSG_ReadFloat();
@@ -2851,18 +2290,9 @@ void SV_ReadClientMove(usercmd_t* move)
     host_client->edict->v.button2 = static_cast<float>((bits & 2) >> 1);
 
     const int impulse = MSG_ReadByte();
-    if (impulse) {
-        host_client->edict->v.impulse = static_cast<float>(impulse);
-    }
+    if (impulse) host_client->edict->v.impulse = static_cast<float>(impulse);
 }
 
-/*
-===================
-SV_ReadClientMessage
-
-Returns false if the client should be killed
-===================
-*/
 qboolean SV_ReadClientMessage()
 {
     static constexpr eastl::array<eastl::string_view, 19> allowed_commands = {
@@ -2880,16 +2310,12 @@ qboolean SV_ReadClientMessage()
             return false;
         }
 
-        if (!ret) {
-            return true;
-        }
+        if (!ret) return true;
 
         MSG_BeginReading();
 
         while (true) {
-            if (!host_client->active) {
-                return false;
-            }
+            if (!host_client->active) return false;
 
             if (msg_badread) {
                 Sys_Printf("SV_ReadClientMessage: badread\n");
@@ -2944,19 +2370,12 @@ qboolean SV_ReadClientMessage()
     return true;
 }
 
-/*
-==================
-SV_RunClients
-==================
-*/
 void SV_RunClients()
 {
     auto clients = svs.GetClients();
     for (auto& client : clients) {
         host_client = &client;
-        if (!host_client->active) {
-            continue;
-        }
+        if (!host_client->active) continue;
 
         sv_player = host_client->edict;
 
@@ -2976,4 +2395,81 @@ void SV_RunClients()
     }
 }
 
+void SV_ClientPrintf(const char* fmt, ...)
+{
+    va_list argptr;
+    char string[1024];
+
+    va_start(argptr, fmt);
+    vsprintf_s(string, sizeof(string), fmt, argptr);
+    va_end(argptr);
+
+    MSG_WriteByte(&host_client->message, svc_print);
+    MSG_WriteString(&host_client->message, string);
+}
+
+void SV_BroadcastPrintf(const char* fmt, ...)
+{
+    va_list argptr;
+    char string[1024];
+
+    va_start(argptr, fmt);
+    vsprintf_s(string, sizeof(string), fmt, argptr);
+    va_end(argptr);
+
+    for (int i = 0; i < svs.maxclients; i++) {
+        if (svs.clients[i].active && svs.clients[i].spawned) {
+            MSG_WriteByte(&svs.clients[i].message, svc_print);
+            MSG_WriteString(&svs.clients[i].message, string);
+        }
+    }
+}
+
+void SV_DropClient(bool crash)
+{
+    if (!crash) {
+        if (NET_CanSendMessage(host_client->netconnection)) {
+            MSG_WriteByte(&host_client->message, svc_disconnect);
+            NET_SendMessage(host_client->netconnection, &host_client->message);
+        }
+
+        if (host_client->edict && host_client->spawned) {
+            int saveSelf = pr_global_struct->self;
+            pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(host_client->edict));
+            PR_ExecuteProgram(pr_global_struct->ClientDisconnect);
+            pr_global_struct->self = saveSelf;
+        }
+
+        Sys_Printf("Client %s removed\n", host_client->name.data());
+    }
+
+    NET_Close(host_client->netconnection);
+    host_client->netconnection = nullptr;
+
+    host_client->active = false;
+    host_client->name[0] = 0;
+    host_client->old_frags = -999999;
+    net_activeconnections--;
+
+    for (int i = 0; i < svs.maxclients; i++) {
+        client_t* client = &svs.clients[i];
+        if (!client->active) {
+            continue;
+        }
+
+        MSG_WriteByte(&client->message, svc_updatename);
+        MSG_WriteByte(&client->message, static_cast<int>(host_client - svs.clients));
+        MSG_WriteString(&client->message, "");
+        MSG_WriteByte(&client->message, svc_updatefrags);
+        MSG_WriteByte(&client->message, static_cast<int>(host_client - svs.clients));
+        MSG_WriteShort(&client->message, 0);
+        MSG_WriteByte(&client->message, svc_updatecolors);
+        MSG_WriteByte(&client->message, static_cast<int>(host_client - svs.clients));
+        MSG_WriteByte(&client->message, 0);
+    }
+
+    host_client->netconnection = nullptr;
+}
+
 } // namespace Server
+

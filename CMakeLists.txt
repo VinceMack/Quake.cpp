@@ -45,35 +45,13 @@ FetchContent_MakeAvailable(SDL2 EABase EASTL)
 
 # Gather source files
 set(CORE_SRCS
-    src/chase.cpp
-    src/client.cpp
-    src/cmd.cpp
-    src/common.cpp
-    src/console.cpp
-    src/crc.cpp
-    src/cvar.cpp
-    src/audio.cpp
-    src/rasterizer.cpp
-    src/renderer.cpp
-    src/draw.cpp
-    src/host.cpp
-    src/host_cmd.cpp
-    src/keys.cpp
-    src/mathlib.cpp
-    src/menu.cpp
-    src/model.cpp
-    src/network.cpp
-    src/vm.cpp
-    src/sbar.cpp
-    src/screen.cpp
-    src/server.cpp
-    src/sys_sdl.cpp
-    src/vid_sdl.cpp
-    src/view.cpp
-    src/wad.cpp
-    src/world.cpp
-    src/zone.cpp
-    src/eastl_defaults.cpp
+    src/sys_core.cpp
+    src/sys_render.cpp
+    src/sys_audio.cpp
+    src/sys_network.cpp
+    src/sys_vm.cpp
+    src/sys_server.cpp
+    src/sys_client.cpp
 )
 
 add_executable(Quake.cpp ${CORE_SRCS})

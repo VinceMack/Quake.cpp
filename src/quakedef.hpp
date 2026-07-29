@@ -19,7 +19,6 @@ constexpr double VERSION = 1.09;
 #include <stdlib.h>
 #include <string>
 #include <string_view>
-#include "core_types.hpp"
 
 #if !defined(_WIN32)
 #include <errno.h>
@@ -437,49 +436,11 @@ constexpr int SOUND_CHANNELS = 8;
 // Use for multiplayer testing only - VERY dangerous!!!
 // #define IDGODS
 
-#include "common.hpp"
-#include "bspfile.hpp"
-#include "vid.hpp"
-#include "sys.hpp"
-#include "zone.hpp"
-#include "mathlib.hpp"
+#include "sys_core.hpp"
+#include "sys_render.hpp"
+#include "sys_audio.hpp"
+#include "sys_network.hpp"
+#include "sys_vm.hpp"
+#include "sys_server.hpp"
+#include "sys_client.hpp"
 
-struct entity_state_t {
-    Vector3 origin{};
-    Vector3 angles{};
-    int modelindex = 0;
-    int frame = 0;
-    int colormap = 0;
-    int skin = 0;
-    int effects = 0;
-};
-
-#include "wad.hpp"
-#include "draw.hpp"
-#include "cvar.hpp"
-#include "screen.hpp"
-#include "network.hpp"
-#include "protocol.hpp"
-#include "cmd.hpp"
-#include "sbar.hpp"
-#include "audio.hpp"
-#include "renderer.hpp"
-#include "model.hpp"
-#include "client.hpp"
-#include "vm.hpp"
-#include "server.hpp"
-#include "rasterizer.hpp"
-
-#include "input.hpp"
-#include "world.hpp"
-#include "keys.hpp"
-#include "console.hpp"
-#include "view.hpp"
-#include "menu.hpp"
-#include "crc.hpp"
-
-
-
-//=============================================================================
-
-#include "host.hpp"
