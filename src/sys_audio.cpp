@@ -123,7 +123,10 @@ void S_Init() {
     if (COM_CheckParm("-nosound")) return;
     if (COM_CheckParm("-simsound")) fakedma = true;
 
-    for (auto [name, fn] : {std::pair{"play", S_Play}, {"playvol", S_PlayVol}, {"soundlist", S_SoundList}, {"soundinfo", S_SoundInfo_f}}) Cmd::AddCommand(name, fn);
+    Cmd::AddCommand("play", S_Play);
+    Cmd::AddCommand("playvol", S_PlayVol);
+    Cmd::AddCommand("soundlist", S_SoundList);
+    Cmd::AddCommand("soundinfo", S_SoundInfo_f);
     Cmd::AddCommand("stopsound", []() { S_StopAllSounds(true); });
 
     for (auto* c : {&nosound, &volume, &precache, &loadas8bit, &bgmvolume, &bgmbuffer, &ambient_level, &ambient_fade, &snd_noextraupdate, &snd_show, &_snd_mixahead})
