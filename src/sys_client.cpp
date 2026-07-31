@@ -1,5 +1,4 @@
 // sys_client.cpp -- Subsystem Client Implementation
-// Modernized idiomatic C++ refactoring using EASTL & range abstractions
 #include "quakedef.hpp"
 #include <EASTL/array.h>
 #include <EASTL/string.h>
