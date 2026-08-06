@@ -198,52 +198,60 @@ class NetDriver {
 public:
     virtual ~NetDriver() = default;
     virtual const char* GetName() const = 0;
-    virtual qboolean IsInitialized() const = 0;
-    virtual void SetInitialized(qboolean state) = 0;
-    virtual int GetControlSocket() const = 0;
-    virtual void SetControlSocket(int sock) = 0;
+    virtual qboolean IsInitialized() const { return initialized; }
+    virtual void SetInitialized(qboolean state) { initialized = state; }
+    virtual int GetControlSocket() const { return controlSock; }
+    virtual void SetControlSocket(int sock) { controlSock = sock; }
 
-    virtual int Init() = 0;
-    virtual void Listen(qboolean state) = 0;
-    virtual void SearchForHosts(qboolean xmit) = 0;
-    virtual qsocket_t* Connect(const char* host) = 0;
-    virtual qsocket_t* CheckNewConnections() = 0;
-    virtual int GetMessage(qsocket_t* sock) = 0;
-    virtual int SendMessage(qsocket_t* sock, sizebuf_t* data) = 0;
-    virtual int SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data) = 0;
-    virtual qboolean CanSendMessage(qsocket_t* sock) = 0;
-    virtual qboolean CanSendUnreliableMessage() = 0;
-    virtual void Close(qsocket_t* sock) = 0;
-    virtual void Shutdown() = 0;
+    virtual int Init() { return 0; }
+    virtual void Listen(qboolean) {}
+    virtual void SearchForHosts(qboolean) {}
+    virtual qsocket_t* Connect(const char*) { return nullptr; }
+    virtual qsocket_t* CheckNewConnections() { return nullptr; }
+    virtual int GetMessage(qsocket_t*) { return 0; }
+    virtual int SendMessage(qsocket_t*, sizebuf_t*) { return 0; }
+    virtual int SendUnreliableMessage(qsocket_t*, sizebuf_t*) { return 0; }
+    virtual qboolean CanSendMessage(qsocket_t*) { return false; }
+    virtual qboolean CanSendUnreliableMessage() { return true; }
+    virtual void Close(qsocket_t*) {}
+    virtual void Shutdown() {}
+
+protected:
+    qboolean initialized = false;
+    int controlSock = 0;
 };
 
 class NetLanDriver {
 public:
     virtual ~NetLanDriver() = default;
     virtual const char* GetName() const = 0;
-    virtual qboolean IsInitialized() const = 0;
-    virtual void SetInitialized(qboolean state) = 0;
-    virtual int GetControlSocket() const = 0;
-    virtual void SetControlSocket(int sock) = 0;
+    virtual qboolean IsInitialized() const { return initialized; }
+    virtual void SetInitialized(qboolean state) { initialized = state; }
+    virtual int GetControlSocket() const { return controlSock; }
+    virtual void SetControlSocket(int sock) { controlSock = sock; }
 
-    virtual int Init() = 0;
-    virtual void Shutdown() = 0;
-    virtual void Listen(qboolean state) = 0;
-    virtual int OpenSocket(int port) = 0;
-    virtual int CloseSocket(int socket) = 0;
-    virtual int Connect(int socket, struct qsockaddr* addr) = 0;
-    virtual int CheckNewConnections() = 0;
-    virtual int Read(int socket, byte* buf, int len, struct qsockaddr* addr) = 0;
-    virtual int Write(int socket, byte* buf, int len, struct qsockaddr* addr) = 0;
-    virtual int Broadcast(int socket, byte* buf, int len) = 0;
-    virtual char* AddrToString(struct qsockaddr* addr) = 0;
-    virtual int StringToAddr(const char* string, struct qsockaddr* addr) = 0;
-    virtual int GetSocketAddr(int socket, struct qsockaddr* addr) = 0;
-    virtual int GetNameFromAddr(struct qsockaddr* addr, char* name) = 0;
-    virtual int GetAddrFromName(const char* name, struct qsockaddr* addr) = 0;
-    virtual int AddrCompare(struct qsockaddr* addr1, struct qsockaddr* addr2) = 0;
-    virtual int GetSocketPort(struct qsockaddr* addr) = 0;
-    virtual int SetSocketPort(struct qsockaddr* addr, int port) = 0;
+    virtual int Init() { return 0; }
+    virtual void Shutdown() {}
+    virtual void Listen(qboolean) {}
+    virtual int OpenSocket(int) { return -1; }
+    virtual int CloseSocket(int) { return -1; }
+    virtual int Connect(int, struct qsockaddr*) { return 0; }
+    virtual int CheckNewConnections() { return -1; }
+    virtual int Read(int, byte*, int, struct qsockaddr*) { return 0; }
+    virtual int Write(int, byte*, int, struct qsockaddr*) { return 0; }
+    virtual int Broadcast(int, byte*, int) { return 0; }
+    virtual char* AddrToString(struct qsockaddr*) { return nullptr; }
+    virtual int StringToAddr(const char*, struct qsockaddr*) { return -1; }
+    virtual int GetSocketAddr(int, struct qsockaddr*) { return -1; }
+    virtual int GetNameFromAddr(struct qsockaddr*, char*) { return -1; }
+    virtual int GetAddrFromName(const char*, struct qsockaddr*) { return -1; }
+    virtual int AddrCompare(struct qsockaddr*, struct qsockaddr*) { return -1; }
+    virtual int GetSocketPort(struct qsockaddr*) { return 0; }
+    virtual int SetSocketPort(struct qsockaddr*, int) { return 0; }
+
+protected:
+    qboolean initialized = false;
+    int controlSock = 0;
 };
 
 #define MAX_NET_DRIVERS 8
@@ -326,66 +334,11 @@ extern qboolean slistLocal;
 
 void NET_Slist_f(void);
 
-// Drivers Declarations (from net_loop, net_dgrm, net_udp, net_vcr)
-int Loop_Init();
-void Loop_Listen(bool state);
-void Loop_SearchForHosts(bool xmit);
-qsocket_t* Loop_Connect(const char* host);
-qsocket_t* Loop_CheckNewConnections();
-int Loop_GetMessage(qsocket_t* sock);
-int Loop_SendMessage(qsocket_t* sock, sizebuf_t* data);
-int Loop_SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data);
-bool Loop_CanSendMessage(qsocket_t* sock);
-bool Loop_CanSendUnreliableMessage();
-void Loop_Close(qsocket_t* sock);
-void Loop_Shutdown();
-
-int Datagram_Init();
-void Datagram_Listen(bool state);
-void Datagram_SearchForHosts(bool xmit);
-qsocket_t* Datagram_Connect(const char* host);
-qsocket_t* Datagram_CheckNewConnections();
-int Datagram_GetMessage(qsocket_t* sock);
-int Datagram_SendMessage(qsocket_t* sock, sizebuf_t* data);
-int Datagram_SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data);
-bool Datagram_CanSendMessage(qsocket_t* sock);
-bool Datagram_CanSendUnreliableMessage();
-void Datagram_Close(qsocket_t* sock);
-void Datagram_Shutdown();
-
-int UDP_Init();
-void UDP_Shutdown();
-void UDP_Listen(bool state);
-int UDP_OpenSocket(int port);
-int UDP_CloseSocket(int socket);
-int UDP_Connect(int socket, qsockaddr* addr);
-int UDP_CheckNewConnections();
-int UDP_Read(int socket, std::uint8_t* buf, int len, qsockaddr* addr);
-int UDP_Write(int socket, std::uint8_t* buf, int len, qsockaddr* addr);
-int UDP_Broadcast(int socket, std::uint8_t* buf, int len);
-char* UDP_AddrToString(qsockaddr* addr);
-int UDP_StringToAddr(const char* string, qsockaddr* addr);
-int UDP_GetSocketAddr(int socket, qsockaddr* addr);
-int UDP_GetNameFromAddr(qsockaddr* addr, char* name);
-int UDP_GetAddrFromName(const char* name, qsockaddr* addr);
-int UDP_AddrCompare(qsockaddr* addr1, qsockaddr* addr2);
-int UDP_GetSocketPort(qsockaddr* addr);
-int UDP_SetSocketPort(qsockaddr* addr, int port);
-
 constexpr int VCR_OP_CONNECT = 1;
 constexpr int VCR_OP_GETMESSAGE = 2;
 constexpr int VCR_OP_SENDMESSAGE = 3;
 constexpr int VCR_OP_CANSENDMESSAGE = 4;
 constexpr int VCR_MAX_MESSAGE = 4;
 
-int VCR_Init();
-void VCR_SearchForHosts(bool xmit);
-qsocket_t* VCR_Connect(const char* host);
-qsocket_t* VCR_CheckNewConnections();
-int VCR_GetMessage(qsocket_t* sock);
-int VCR_SendMessage(qsocket_t* sock, sizebuf_t* data);
-bool VCR_CanSendMessage(qsocket_t* sock);
-void VCR_Close(qsocket_t* sock);
-void VCR_Shutdown();
-
 } // namespace Net
+
