@@ -864,6 +864,7 @@ cvar_t temp1          = { "temp1", "0", {}, {}, {}, {} };
     inerror = true; Screen::GetScreenSystem().EndLoadingPlaque();
     va_start(argptr, error); vsprintf_s(string, sizeof(string), error, argptr); va_end(argptr);
     Con_Printf("Host_Error: %s\n", string);
+    Sys_Printf("Host_Error: %s\n", string);
     if (sv.active) Host_ShutdownServer(false);
     if (cls.state == ca_dedicated) Sys_Error("Host_Error: %s\n", string);
     CL_Disconnect(); cls.demonum = -1; inerror = false;
@@ -1118,7 +1119,16 @@ void Host_Restart_f() {
 void Host_Reconnect_f() { Screen::GetScreenSystem().BeginLoadingPlaque(); cls.signon = 0; }
 void Host_Connect_f() {
     cls.demonum = -1; if (cls.demoplayback) { CL_StopPlayback(); CL_Disconnect(); }
-    char name[MAX_QPATH]; Q_strcpy(name, Cmd::Argv(1)); CL_EstablishConnection(name); Host_Reconnect_f();
+    eastl::string_view args = Cmd::Args();
+    while (!args.empty() && (args.front() == ' ' || args.front() == '\t')) args.remove_prefix(1);
+    while (!args.empty() && (args.back() == ' ' || args.back() == '\t' || args.back() == '\r' || args.back() == '\n')) args.remove_suffix(1);
+    char name[MAX_QPATH];
+    if (!args.empty()) {
+        Q_strncpy(name, eastl::string(args.data(), args.length()).c_str(), sizeof(name) - 1);
+    } else {
+        Q_strcpy(name, Cmd::Argv(1));
+    }
+    CL_EstablishConnection(name); Host_Reconnect_f();
 }
 
 #define SAVEGAME_VERSION 5
@@ -1420,7 +1430,7 @@ void Host_Startdemos_f() {
         eastl::string_view arg = Cmd::Argv(i);
         sprintf_s(cls.demos[i - 1].data(), cls.demos[i - 1].size(), "%.*s", static_cast<int>(arg.length()), arg.data());
     }
-    if (!sv.active && !cls.demoplayback) { cls.demonum = 0; CL_NextDemo(); } else cls.demonum = -1;
+    if (!sv.active && cls.state != ca_connected && !cls.demoplayback) { cls.demonum = 0; CL_NextDemo(); } else cls.demonum = -1;
 }
 
 void Host_Demos_f() { if (cls.state != ca_dedicated) { if (cls.demonum == -1) cls.demonum = 1; CL_Disconnect_f(); CL_NextDemo(); } }

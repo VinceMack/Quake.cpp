@@ -386,17 +386,45 @@ int UDP_OpenSocket(int port)
     struct sockaddr_in address;
 
     if ((newsocket = static_cast<int>(socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP))) == -1) {
+        Sys_Printf("UDP_OpenSocket: socket() failed\n");
         return -1;
     }
+
+    unsigned long _true = 1;
+    if (ioctl(newsocket, FIONBIO, &_true) == -1) {
+        Sys_Printf("UDP_OpenSocket: ioctl(FIONBIO) failed\n");
+        close(newsocket);
+        return -1;
+    }
+
+#ifdef _WIN32
+    #ifndef SIO_UDP_CONNRESET
+    #define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
+    #endif
+    BOOL bNewBehavior = FALSE;
+    DWORD dwBytesReturned = 0;
+    WSAIoctl(newsocket, SIO_UDP_CONNRESET, &bNewBehavior, sizeof(bNewBehavior), NULL, 0, &dwBytesReturned, NULL, NULL);
+#endif
+
+    int opt = 1;
+    setsockopt(newsocket, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
 
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(static_cast<u_short>(port));
     if (bind(newsocket, (struct sockaddr*)&address, sizeof(address)) == -1) {
+        int err = 0;
+#ifdef _WIN32
+        err = WSAGetLastError();
+#else
+        err = errno;
+#endif
+        Sys_Printf("UDP_OpenSocket: bind() to port %d failed (error %d)\n", port, err);
         close(newsocket);
         return -1;
     }
 
+    Sys_Printf("UDP_OpenSocket: socket %d bound to port %d\n", newsocket, port);
     return newsocket;
 }
 
@@ -463,7 +491,14 @@ int UDP_Read(int socket, byte* buf, int len, struct qsockaddr* addr)
 {
     socklen_t addrlen = sizeof(struct qsockaddr);
     int ret = recvfrom(socket, (char*)buf, len, 0, (struct sockaddr*)addr, &addrlen);
-    if (ret == -1 && (errno == EWOULDBLOCK || errno == ECONNREFUSED)) return 0;
+    if (ret == -1) {
+        int err = errno;
+#ifdef _WIN32
+        if (err == WSAEWOULDBLOCK || err == WSAECONNRESET || err == WSAECONNREFUSED || err == WSAEMSGSIZE) return 0;
+#endif
+        if (err == EWOULDBLOCK || err == ECONNREFUSED) return 0;
+        return -1;
+    }
     return ret;
 }
 
@@ -478,7 +513,14 @@ int UDP_MakeSocketBroadcastCapable(int socket)
 int UDP_Write(int socket, byte* buf, int len, struct qsockaddr* addr)
 {
     int ret = sendto(socket, (const char*)buf, len, 0, (struct sockaddr*)addr, sizeof(struct qsockaddr));
-    if (ret == -1 && errno == EWOULDBLOCK) return 0;
+    if (ret == -1) {
+        int err = errno;
+#ifdef _WIN32
+        if (err == WSAEWOULDBLOCK || err == WSAECONNRESET || err == WSAENOBUFS) return 0;
+#endif
+        if (err == EWOULDBLOCK) return 0;
+        return -1;
+    }
     return ret;
 }
 
@@ -1225,8 +1267,8 @@ static qsocket_t* _Datagram_CheckNewConnections(void)
     for (s = net_activeSockets; s; s = s->next) {
         if (s->driver != net_driverlevel) continue;
         ret = dfunc.AddrCompare(&clientaddr, &s->addr);
-        if (ret >= 0) {
-            if (ret == 0 && net_time - s->connecttime < 2.0) {
+        if (ret == 0) {
+            if (net_time - s->connecttime < 2.0) {
                 SZ_Clear(&net_message);
                 MSG_WriteLong(&net_message, 0);
                 MSG_WriteByte(&net_message, CCREP_ACCEPT);
@@ -1238,7 +1280,7 @@ static qsocket_t* _Datagram_CheckNewConnections(void)
                 return NULL;
             }
             NET_Close(s);
-            return NULL;
+            break;
         }
     }
 
@@ -1385,9 +1427,16 @@ static qsocket_t* _Datagram_Connect(const char* host)
     double start_time;
     const char* reason;
 
-    if (dfunc.GetAddrFromName(host, &sendaddr) == -1) return NULL;
+    Sys_Printf("_Datagram_Connect: connecting to '%s'...\n", host);
+    if (dfunc.GetAddrFromName(host, &sendaddr) == -1) {
+        Sys_Printf("_Datagram_Connect: GetAddrFromName failed for '%s'\n", host);
+        return NULL;
+    }
     newsock = dfunc.OpenSocket(0);
-    if (newsock == -1) return NULL;
+    if (newsock == -1) {
+        Sys_Printf("_Datagram_Connect: OpenSocket failed\n");
+        return NULL;
+    }
 
     sock = NET_NewQSocket();
     if (sock == NULL) goto ErrorReturn2;
@@ -1398,10 +1447,10 @@ static qsocket_t* _Datagram_Connect(const char* host)
     if (dfunc.Connect(newsock, &sendaddr) == -1) goto ErrorReturn;
 
     Con_Printf("trying...\n");
+    Sys_Printf("_Datagram_Connect: sending connect request to %s (socket %d)...\n", dfunc.AddrToString(&sendaddr), newsock);
     Screen::GetScreenSystem().UpdateScreen();
-    start_time = net_time;
-
     for (reps = 0; reps < 3; reps++) {
+        start_time = SetNetTime();
         SZ_Clear(&net_message);
         MSG_WriteLong(&net_message, 0);
         MSG_WriteByte(&net_message, CCREQ_CONNECT);
@@ -1429,12 +1478,16 @@ static qsocket_t* _Datagram_Connect(const char* host)
                 if ((static_cast<unsigned int>(control) & (~NETFLAG_LENGTH_MASK)) != NETFLAG_CTL) { ret = 0; continue; }
                 if ((control & NETFLAG_LENGTH_MASK) != ret) { ret = 0; continue; }
             }
+#ifdef _WIN32
+            if (ret == 0) Sleep(1);
+#else
+            if (ret == 0) usleep(1000);
+#endif
         } while (ret == 0 && (SetNetTime() - start_time) < 2.5);
         if (ret) break;
 
         Con_Printf("still trying...\n");
         Screen::GetScreenSystem().UpdateScreen();
-        start_time = SetNetTime();
     }
 
     if (ret == 0) {
@@ -2333,7 +2386,6 @@ static PollProcedure* pollProcedureList = NULL;
 
 void NET_Poll(void)
 {
-    PollProcedure* pp;
     qboolean useModem;
 
     if (!configRestored) {
@@ -2349,10 +2401,11 @@ void NET_Poll(void)
 
     SetNetTime();
 
-    for (pp = pollProcedureList; pp; pp = pp->next) {
-        if (pp->nextTime <= net_time) {
-            pp->procedure();
-        }
+    while (pollProcedureList && pollProcedureList->nextTime <= net_time) {
+        PollProcedure* pp = pollProcedureList;
+        pollProcedureList = pp->next;
+        pp->next = nullptr;
+        pp->procedure();
     }
 }
 
@@ -2360,8 +2413,20 @@ void SchedulePollProcedure(PollProcedure* pp, double timeOffset)
 {
     pp->nextTime = net_time + timeOffset;
 
+    // Unlink pp from pollProcedureList if already present to prevent cycles
+    if (pollProcedureList == pp) {
+        pollProcedureList = pp->next;
+    } else if (pollProcedureList) {
+        for (PollProcedure* p = pollProcedureList; p->next; p = p->next) {
+            if (p->next == pp) {
+                p->next = pp->next;
+                break;
+            }
+        }
+    }
+    pp->next = nullptr;
+
     if (pollProcedureList == NULL) {
-        pp->next = NULL;
         pollProcedureList = pp;
         return;
     }
@@ -2381,7 +2446,6 @@ void SchedulePollProcedure(PollProcedure* pp, double timeOffset)
         }
     }
 
-    pp->next = NULL;
     p->next = pp;
 }
 
