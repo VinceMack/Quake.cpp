@@ -527,86 +527,55 @@ void Draw_String(int x, int y, eastl::string_view str)
     }
 }
 
-void Draw_Pic(int x, int y, qpic_t* pic)
+template<bool Trans, bool Translate>
+static inline void Draw_Pic_Impl(int x, int y, qpic_t* pic, const byte* translation = nullptr)
 {
-    if ((x < 0) || (unsigned)(x + pic->width) > vid.width || (y < 0) || (unsigned)(y + pic->height) > vid.height) {
+    if (x < 0 || (unsigned)(x + pic->width) > vid.width || y < 0 || (unsigned)(y + pic->height) > vid.height) {
         Sys_Error("Draw_Pic: bad coordinates");
     }
 
     const byte* source = pic->data;
     if (r_pixbytes == 1) {
         byte* dest = vid.buffer + y * vid.rowbytes + x;
-        for (int v = 0; v < pic->height; v++) {
-            std::memcpy(dest, source, pic->width);
-            dest += vid.rowbytes;
-            source += pic->width;
+        for (int v = 0; v < pic->height; v++, dest += vid.rowbytes, source += pic->width) {
+            if constexpr (!Trans) {
+                std::memcpy(dest, source, pic->width);
+            } else {
+                for (int u = 0; u < pic->width; u++) {
+                    if (const byte tbyte = source[u]; tbyte != TRANSPARENT_COLOR) {
+                        dest[u] = Translate ? translation[tbyte] : tbyte;
+                    }
+                }
+            }
         }
     } else {
         auto* pusdest = (unsigned short*)vid.buffer + y * (vid.rowbytes >> 1) + x;
-        for (int v = 0; v < pic->height; v++) {
+        for (int v = 0; v < pic->height; v++, pusdest += vid.rowbytes >> 1, source += pic->width) {
             for (int u = 0; u < pic->width; u++) {
-                pusdest[u] = d_8to16table[source[u]];
+                const byte tbyte = source[u];
+                if constexpr (Trans) {
+                    if (tbyte == TRANSPARENT_COLOR) continue;
+                }
+                const byte final_byte = (Trans && Translate) ? translation[tbyte] : tbyte;
+                pusdest[u] = d_8to16table[final_byte];
             }
-            pusdest += vid.rowbytes >> 1;
-            source += pic->width;
         }
     }
+}
+
+void Draw_Pic(int x, int y, qpic_t* pic)
+{
+    Draw_Pic_Impl<false, false>(x, y, pic);
 }
 
 void Draw_TransPic(int x, int y, qpic_t* pic)
 {
-    if (x < 0 || (unsigned)(x + pic->width) > vid.width || y < 0 || (unsigned)(y + pic->height) > vid.height) {
-        Sys_Error("Draw_TransPic: bad coordinates");
-    }
-
-    const byte* source = pic->data;
-    if (r_pixbytes == 1) {
-        byte* dest = vid.buffer + y * vid.rowbytes + x;
-        for (int v = 0; v < pic->height; v++) {
-            for (int u = 0; u < pic->width; u++) {
-                if (const byte tbyte = source[u]; tbyte != TRANSPARENT_COLOR) dest[u] = tbyte;
-            }
-            dest += vid.rowbytes;
-            source += pic->width;
-        }
-    } else {
-        auto* pusdest = (unsigned short*)vid.buffer + y * (vid.rowbytes >> 1) + x;
-        for (int v = 0; v < pic->height; v++) {
-            for (int u = 0; u < pic->width; u++) {
-                if (const byte tbyte = source[u]; tbyte != TRANSPARENT_COLOR) pusdest[u] = d_8to16table[tbyte];
-            }
-            pusdest += vid.rowbytes >> 1;
-            source += pic->width;
-        }
-    }
+    Draw_Pic_Impl<true, false>(x, y, pic);
 }
 
 void Draw_TransPicTranslate(int x, int y, qpic_t* pic, const byte* translation)
 {
-    if (x < 0 || (unsigned)(x + pic->width) > vid.width || y < 0 || (unsigned)(y + pic->height) > vid.height) {
-        Sys_Error("Draw_TransPic: bad coordinates");
-    }
-
-    const byte* source = pic->data;
-    if (r_pixbytes == 1) {
-        byte* dest = vid.buffer + y * vid.rowbytes + x;
-        for (int v = 0; v < pic->height; v++) {
-            for (int u = 0; u < pic->width; u++) {
-                if (const byte tbyte = source[u]; tbyte != TRANSPARENT_COLOR) dest[u] = translation[tbyte];
-            }
-            dest += vid.rowbytes;
-            source += pic->width;
-        }
-    } else {
-        auto* pusdest = (unsigned short*)vid.buffer + y * (vid.rowbytes >> 1) + x;
-        for (int v = 0; v < pic->height; v++) {
-            for (int u = 0; u < pic->width; u++) {
-                if (const byte tbyte = source[u]; tbyte != TRANSPARENT_COLOR) pusdest[u] = d_8to16table[tbyte];
-            }
-            pusdest += vid.rowbytes >> 1;
-            source += pic->width;
-        }
-    }
+    Draw_Pic_Impl<true, true>(x, y, pic, translation);
 }
 
 void Draw_CharToConback(int num, byte* dest)
@@ -672,50 +641,42 @@ void Draw_ConsoleBackground(int lines)
     }
 }
 
+template<typename T, bool Transparent>
+static inline void R_DrawRect_T(const vrect_t* prect, int rowbytes, const byte* psrc, const T* table = nullptr)
+{
+    auto* pdest = reinterpret_cast<T*>(vid.buffer) + (prect->y * (vid.rowbytes / sizeof(T))) + prect->x;
+    const int srcdelta = rowbytes - prect->width;
+    const int destdelta = (vid.rowbytes / sizeof(T)) - prect->width;
+
+    for (int i = 0; i < prect->height; i++) {
+        for (int j = 0; j < prect->width; j++) {
+            if (const byte t = *psrc; !Transparent || t != TRANSPARENT_COLOR) {
+                *pdest = table ? table[t] : static_cast<T>(t);
+            }
+            psrc++; pdest++;
+        }
+        psrc += srcdelta; pdest += destdelta;
+    }
+}
+
 void R_DrawRect8(const vrect_t* prect, int rowbytes, const byte* psrc, bool transparent)
 {
-    byte* pdest = vid.buffer + (prect->y * vid.rowbytes) + prect->x;
-    const int srcdelta = rowbytes - prect->width;
-    const int destdelta = vid.rowbytes - prect->width;
-
     if (transparent) {
-        for (int i = 0; i < prect->height; i++) {
-            for (int j = 0; j < prect->width; j++) {
-                if (const byte t = *psrc; t != TRANSPARENT_COLOR) *pdest = t;
-                psrc++; pdest++;
-            }
-            psrc += srcdelta; pdest += destdelta;
-        }
+        R_DrawRect_T<byte, true>(prect, rowbytes, psrc);
     } else {
-        for (int i = 0; i < prect->height; i++) {
+        byte* pdest = vid.buffer + (prect->y * vid.rowbytes) + prect->x;
+        for (int i = 0; i < prect->height; i++, psrc += rowbytes, pdest += vid.rowbytes) {
             std::memcpy(pdest, psrc, prect->width);
-            psrc += rowbytes; pdest += vid.rowbytes;
         }
     }
 }
 
 void R_DrawRect16(const vrect_t* prect, int rowbytes, const byte* psrc, bool transparent)
 {
-    auto* pdest = (unsigned short*)vid.buffer + (prect->y * (vid.rowbytes >> 1)) + prect->x;
-    const int srcdelta = rowbytes - prect->width;
-    const int destdelta = (vid.rowbytes >> 1) - prect->width;
-
     if (transparent) {
-        for (int i = 0; i < prect->height; i++) {
-            for (int j = 0; j < prect->width; j++) {
-                if (const byte t = *psrc; t != TRANSPARENT_COLOR) *pdest = d_8to16table[t];
-                psrc++; pdest++;
-            }
-            psrc += srcdelta; pdest += destdelta;
-        }
+        R_DrawRect_T<unsigned short, true>(prect, rowbytes, psrc, d_8to16table);
     } else {
-        for (int i = 0; i < prect->height; i++) {
-            for (int j = 0; j < prect->width; j++) {
-                *pdest = d_8to16table[*psrc];
-                psrc++; pdest++;
-            }
-            psrc += srcdelta; pdest += destdelta;
-        }
+        R_DrawRect_T<unsigned short, false>(prect, rowbytes, psrc, d_8to16table);
     }
 }
 
@@ -809,34 +770,6 @@ void Draw_EndDisc()
 
 } // namespace Draw
 
-// Include renderer, rasterizer, model, sbar, screen, view implementations
-
-// Subsystem Render Implementation Parts
-// renderer.cpp -- merged renderer subsystem
-
-
-using namespace Client;
-using namespace Common;
-using namespace Console;
-using namespace Render;
-using namespace Draw;
-using namespace Host;
-using namespace Input;
-using namespace Keys;
-using namespace Math;
-using namespace Menu;
-using namespace Model;
-using namespace Net;
-using namespace VM;
-using namespace Sbar;
-using namespace Screen;
-using namespace Server;
-using namespace Audio;
-using namespace Vid;
-using namespace View;
-using namespace Wad;
-using namespace Cvar;
-using namespace Cmd;
 
 #include <EASTL/vector.h>
 #include <EASTL/array.h>
