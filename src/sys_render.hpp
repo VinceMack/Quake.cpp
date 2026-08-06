@@ -66,52 +66,21 @@ void D_EndDirectRect(int x, int y, int width, int height);
 // BSP Map Structures
 //=============================================================================
 
-inline constexpr int MAX_MAP_HULLS = 4;
-inline constexpr int MAX_MAP_MODELS = 256;
-inline constexpr int MAX_MAP_BRUSHES = 4096;
-inline constexpr int MAX_MAP_ENTITIES = 1024;
-inline constexpr int MAX_MAP_ENTSTRING = 65536;
-inline constexpr int MAX_MAP_PLANES = 32767;
-inline constexpr int MAX_MAP_NODES = 32767;
-inline constexpr int MAX_MAP_CLIPNODES = 32767;
-inline constexpr int MAX_MAP_LEAFS = 8192;
-inline constexpr int MAX_MAP_VERTS = 65535;
-inline constexpr int MAX_MAP_FACES = 65535;
-inline constexpr int MAX_MAP_MARKSURFACES = 65535;
-inline constexpr int MAX_MAP_TEXINFO = 4096;
-inline constexpr int MAX_MAP_EDGES = 256000;
-inline constexpr int MAX_MAP_SURFEDGES = 512000;
-inline constexpr int MAX_MAP_TEXTURES = 512;
-inline constexpr int MAX_MAP_MIPTEX = 0x200000;
-inline constexpr int MAX_MAP_LIGHTING = 0x100000;
-inline constexpr int MAX_MAP_VISIBILITY = 0x100000;
-inline constexpr int MAX_MAP_PORTALS = 65536;
-inline constexpr int MAX_KEY = 32;
-inline constexpr int MAX_VALUE = 1024;
-inline constexpr int BSPVERSION = 29;
-inline constexpr int TOOLVERSION = 2;
+inline constexpr int MAX_MAP_HULLS = 4, MAX_MAP_MODELS = 256, MAX_MAP_BRUSHES = 4096, MAX_MAP_ENTITIES = 1024;
+inline constexpr int MAX_MAP_ENTSTRING = 65536, MAX_MAP_PLANES = 32767, MAX_MAP_NODES = 32767, MAX_MAP_CLIPNODES = 32767;
+inline constexpr int MAX_MAP_LEAFS = 8192, MAX_MAP_VERTS = 65535, MAX_MAP_FACES = 65535, MAX_MAP_MARKSURFACES = 65535;
+inline constexpr int MAX_MAP_TEXINFO = 4096, MAX_MAP_EDGES = 256000, MAX_MAP_SURFEDGES = 512000, MAX_MAP_TEXTURES = 512;
+inline constexpr int MAX_MAP_MIPTEX = 0x200000, MAX_MAP_LIGHTING = 0x100000, MAX_MAP_VISIBILITY = 0x100000, MAX_MAP_PORTALS = 65536;
+inline constexpr int MAX_KEY = 32, MAX_VALUE = 1024, BSPVERSION = 29, TOOLVERSION = 2;
 
 struct lump_t {
     int32_t fileofs = 0;
     int32_t filelen = 0;
 };
 
-inline constexpr int LUMP_ENTITIES = 0;
-inline constexpr int LUMP_PLANES = 1;
-inline constexpr int LUMP_TEXTURES = 2;
-inline constexpr int LUMP_VERTEXES = 3;
-inline constexpr int LUMP_VISIBILITY = 4;
-inline constexpr int LUMP_NODES = 5;
-inline constexpr int LUMP_TEXINFO = 6;
-inline constexpr int LUMP_FACES = 7;
-inline constexpr int LUMP_LIGHTING = 8;
-inline constexpr int LUMP_CLIPNODES = 9;
-inline constexpr int LUMP_LEAFS = 10;
-inline constexpr int LUMP_MARKSURFACES = 11;
-inline constexpr int LUMP_EDGES = 12;
-inline constexpr int LUMP_SURFEDGES = 13;
-inline constexpr int LUMP_MODELS = 14;
-inline constexpr int HEADER_LUMPS = 15;
+inline constexpr int LUMP_ENTITIES = 0, LUMP_PLANES = 1, LUMP_TEXTURES = 2, LUMP_VERTEXES = 3, LUMP_VISIBILITY = 4;
+inline constexpr int LUMP_NODES = 5, LUMP_TEXINFO = 6, LUMP_FACES = 7, LUMP_LIGHTING = 8, LUMP_CLIPNODES = 9;
+inline constexpr int LUMP_LEAFS = 10, LUMP_MARKSURFACES = 11, LUMP_EDGES = 12, LUMP_SURFEDGES = 13, LUMP_MODELS = 14, HEADER_LUMPS = 15;
 
 struct dmodel_t {
     float mins[3]{};
@@ -146,12 +115,7 @@ struct dvertex_t {
     float point[3]{};
 };
 
-inline constexpr int PLANE_X = 0;
-inline constexpr int PLANE_Y = 1;
-inline constexpr int PLANE_Z = 2;
-inline constexpr int PLANE_ANYX = 3;
-inline constexpr int PLANE_ANYY = 4;
-inline constexpr int PLANE_ANYZ = 5;
+inline constexpr int PLANE_X = 0, PLANE_Y = 1, PLANE_Z = 2, PLANE_ANYX = 3, PLANE_ANYY = 4, PLANE_ANYZ = 5;
 
 struct dplane_t {
     float normal[3]{};
@@ -159,20 +123,9 @@ struct dplane_t {
     int32_t type = 0;
 };
 
-inline constexpr int CONTENTS_EMPTY = -1;
-inline constexpr int CONTENTS_SOLID = -2;
-inline constexpr int CONTENTS_WATER = -3;
-inline constexpr int CONTENTS_SLIME = -4;
-inline constexpr int CONTENTS_LAVA = -5;
-inline constexpr int CONTENTS_SKY = -6;
-inline constexpr int CONTENTS_ORIGIN = -7;
-inline constexpr int CONTENTS_CLIP = -8;
-inline constexpr int CONTENTS_CURRENT_0 = -9;
-inline constexpr int CONTENTS_CURRENT_90 = -10;
-inline constexpr int CONTENTS_CURRENT_180 = -11;
-inline constexpr int CONTENTS_CURRENT_270 = -12;
-inline constexpr int CONTENTS_CURRENT_UP = -13;
-inline constexpr int CONTENTS_CURRENT_DOWN = -14;
+inline constexpr int CONTENTS_EMPTY = -1, CONTENTS_SOLID = -2, CONTENTS_WATER = -3, CONTENTS_SLIME = -4, CONTENTS_LAVA = -5;
+inline constexpr int CONTENTS_SKY = -6, CONTENTS_ORIGIN = -7, CONTENTS_CLIP = -8, CONTENTS_CURRENT_0 = -9, CONTENTS_CURRENT_90 = -10;
+inline constexpr int CONTENTS_CURRENT_180 = -11, CONTENTS_CURRENT_270 = -12, CONTENTS_CURRENT_UP = -13, CONTENTS_CURRENT_DOWN = -14;
 
 struct dnode_t {
     int32_t planenum = 0;
@@ -212,11 +165,7 @@ struct dface_t {
     int32_t lightofs = 0;
 };
 
-inline constexpr int AMBIENT_WATER = 0;
-inline constexpr int AMBIENT_SKY = 1;
-inline constexpr int AMBIENT_SLIME = 2;
-inline constexpr int AMBIENT_LAVA = 3;
-inline constexpr int NUM_AMBIENTS = 4;
+inline constexpr int AMBIENT_WATER = 0, AMBIENT_SKY = 1, AMBIENT_SLIME = 2, AMBIENT_LAVA = 3, NUM_AMBIENTS = 4;
 
 struct dleaf_t {
     int32_t contents = 0;
@@ -232,9 +181,7 @@ struct dleaf_t {
 // Alias & Sprite Definitions
 //=============================================================================
 
-inline constexpr int ALIAS_VERSION = 6;
-inline constexpr int ALIAS_ONSEAM = 0x0020;
-inline constexpr int DT_FACES_FRONT = 0x0010;
+inline constexpr int ALIAS_VERSION = 6, ALIAS_ONSEAM = 0x0020, DT_FACES_FRONT = 0x0010;
 inline constexpr std::uint32_t IDPOLYHEADER = (('O' << 24) + ('P' << 16) + ('D' << 8) + 'I');
 
 #ifndef SYNCTYPE_T
@@ -321,12 +268,8 @@ struct daliasskintype_t {
     aliasskintype_t type = aliasskintype_t::ALIAS_SKIN_SINGLE;
 };
 
-inline constexpr int SPRITE_VERSION = 1;
-inline constexpr int SPR_VP_PARALLEL_UPRIGHT = 0;
-inline constexpr int SPR_FACING_UPRIGHT = 1;
-inline constexpr int SPR_VP_PARALLEL = 2;
-inline constexpr int SPR_ORIENTED = 3;
-inline constexpr int SPR_VP_PARALLEL_ORIENTED = 4;
+inline constexpr int SPRITE_VERSION = 1, SPR_VP_PARALLEL_UPRIGHT = 0, SPR_FACING_UPRIGHT = 1;
+inline constexpr int SPR_VP_PARALLEL = 2, SPR_ORIENTED = 3, SPR_VP_PARALLEL_ORIENTED = 4;
 
 enum class spriteframetype_t : int {
     SPR_SINGLE = 0,
@@ -373,9 +316,7 @@ struct mvertex_t {
     Vector3 position{};
 };
 
-inline constexpr int SIDE_FRONT = 0;
-inline constexpr int SIDE_BACK = 1;
-inline constexpr int SIDE_ON = 2;
+inline constexpr int SIDE_FRONT = 0, SIDE_BACK = 1, SIDE_ON = 2;
 
 struct mplane_s {
     Vector3 normal{};
@@ -397,12 +338,8 @@ struct texture_s {
 };
 using texture_t = texture_s;
 
-inline constexpr int SURF_PLANEBACK = 2;
-inline constexpr int SURF_DRAWSKY = 4;
-inline constexpr int SURF_DRAWSPRITE = 8;
-inline constexpr int SURF_DRAWTURB = 0x10;
-inline constexpr int SURF_DRAWTILED = 0x20;
-inline constexpr int SURF_DRAWBACKGROUND = 0x40;
+inline constexpr int SURF_PLANEBACK = 2, SURF_DRAWSKY = 4, SURF_DRAWSPRITE = 8;
+inline constexpr int SURF_DRAWTURB = 0x10, SURF_DRAWTILED = 0x20, SURF_DRAWBACKGROUND = 0x40;
 
 struct medge_t {
     unsigned short v[2]{};
@@ -553,14 +490,8 @@ enum modtype_t {
     mod_alias
 };
 
-inline constexpr int EF_ROCKET = 1;
-inline constexpr int EF_GRENADE = 2;
-inline constexpr int EF_GIB = 4;
-inline constexpr int EF_ROTATE = 8;
-inline constexpr int EF_TRACER = 16;
-inline constexpr int EF_ZOMGIB = 32;
-inline constexpr int EF_TRACER2 = 64;
-inline constexpr int EF_TRACER3 = 128;
+inline constexpr int EF_ROCKET = 1, EF_GRENADE = 2, EF_GIB = 4, EF_ROTATE = 8;
+inline constexpr int EF_TRACER = 16, EF_ZOMGIB = 32, EF_TRACER2 = 64, EF_TRACER3 = 128;
 
 struct model_s {
     char name[MAX_QPATH]{};
@@ -723,13 +654,9 @@ struct refdef_t {
 // Refresh Shared & Local & Rasterizer
 //=============================================================================
 
-inline constexpr int SCANBUFFERPAD = 0x1000;
-inline constexpr int R_SKY_SMASK = 0x007F0000;
-inline constexpr int R_SKY_TMASK = 0x007F0000;
-inline constexpr int DS_SPAN_LIST_END = -128;
-inline constexpr int SURFCACHE_SIZE_AT_320X200 = 600 * 1024;
+inline constexpr int SCANBUFFERPAD = 0x1000, R_SKY_SMASK = 0x007F0000, R_SKY_TMASK = 0x007F0000;
+inline constexpr int DS_SPAN_LIST_END = -128, SURFCACHE_SIZE_AT_320X200 = 600 * 1024, BMODEL_FULLY_CLIPPED = 0x10;
 inline constexpr double ALIAS_BASE_SIZE_RATIO = 1.0 / 11.0;
-inline constexpr int BMODEL_FULLY_CLIPPED = 0x10;
 
 extern short* d_pzbuffer;
 
@@ -757,20 +684,9 @@ struct espan_t {
     espan_t* pnext = nullptr;
 };
 
-inline constexpr int MAXVERTS = 16;
-inline constexpr int MAXWORKINGVERTS = MAXVERTS + 4;
-inline constexpr int MAXHEIGHT = 2160;
-inline constexpr int MAXWIDTH = 3840;
-inline constexpr int MAXDIMENSION = (MAXHEIGHT > MAXWIDTH) ? MAXHEIGHT : MAXWIDTH;
-inline constexpr int CYCLE = 256;
-inline constexpr int SIN_BUFFER_SIZE = MAXDIMENSION + CYCLE;
-inline constexpr int INFINITE_DISTANCE = 0x10000;
-
-inline constexpr int NUMSTACKEDGES = 2400;
-inline constexpr int MINEDGES = NUMSTACKEDGES;
-inline constexpr int NUMSTACKSURFACES = 800;
-inline constexpr int MINSURFACES = NUMSTACKSURFACES;
-inline constexpr int MAXSPANS = 8000;
+inline constexpr int MAXVERTS = 16, MAXWORKINGVERTS = MAXVERTS + 4, MAXHEIGHT = 2160, MAXWIDTH = 3840;
+inline constexpr int MAXDIMENSION = (MAXHEIGHT > MAXWIDTH) ? MAXHEIGHT : MAXWIDTH, CYCLE = 256, SIN_BUFFER_SIZE = MAXDIMENSION + CYCLE, INFINITE_DISTANCE = 0x10000;
+inline constexpr int NUMSTACKEDGES = 2400, MINEDGES = NUMSTACKEDGES, NUMSTACKSURFACES = 800, MINSURFACES = NUMSTACKSURFACES, MAXSPANS = 8000;
 
 struct surf_t {
     surf_t* next = nullptr;
@@ -788,12 +704,8 @@ struct surf_t {
     eastl::array<int, 2> pad{};
 };
 
-inline constexpr int ALIAS_LEFT_CLIP = 0x0001;
-inline constexpr int ALIAS_TOP_CLIP = 0x0002;
-inline constexpr int ALIAS_RIGHT_CLIP = 0x0004;
-inline constexpr int ALIAS_BOTTOM_CLIP = 0x0008;
-inline constexpr int ALIAS_Z_CLIP = 0x0010;
-inline constexpr int ALIAS_XY_CLIP_MASK = 0x000F;
+inline constexpr int ALIAS_LEFT_CLIP = 0x0001, ALIAS_TOP_CLIP = 0x0002, ALIAS_RIGHT_CLIP = 0x0004;
+inline constexpr int ALIAS_BOTTOM_CLIP = 0x0008, ALIAS_Z_CLIP = 0x0010, ALIAS_XY_CLIP_MASK = 0x000F;
 
 struct edge_t {
     int64_t u = 0;
