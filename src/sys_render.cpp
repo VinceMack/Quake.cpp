@@ -1429,10 +1429,21 @@ constexpr eastl::array<int, 8> ramp3 = { 0x6d, 0x6b, 6, 5, 4, 3, 0, 0 };
 particle_t* active_particles = nullptr;
 particle_t* free_particles = nullptr;
 
+static inline particle_t* AllocParticle()
+{
+    if (!free_particles) return nullptr;
+    particle_t* p = free_particles;
+    free_particles = p->next;
+    p->next = active_particles;
+    active_particles = p;
+    return p;
+}
+
 eastl::vector<particle_t> particles;
 int r_numparticles = 0;
 
 Vector3 r_pright, r_pup, r_ppn;
+
 
 /*
 ===============
@@ -1616,95 +1627,43 @@ void R_ParseParticleEffect(void)
     R_RunParticleEffect(org, dir, color, count);
 }
 
-/*
-===============
-R_ParticleExplosion
-
-===============
-*/
 void R_ParticleExplosion(const Vector3& org)
 {
-    int i;
-    particle_t* p;
-
-    for (i = 0; i < 1024; i++) {
-        if (!free_particles) {
-            return;
-        }
-
-        p = free_particles;
-        free_particles = p->next;
-        p->next = active_particles;
-        active_particles = p;
+    for (int i = 0; i < 1024; i++) {
+        particle_t* p = AllocParticle();
+        if (!p) return;
 
         p->die = static_cast<float>(cl.time + 5);
         p->color = static_cast<float>(ramp1[0]);
         p->ramp = static_cast<float>(rand() & 3);
-        if (i & 1) {
-            p->type = ptype_t::Explode;
-        } else {
-            p->type = ptype_t::Explode2;
-        }
+        p->type = (i & 1) ? ptype_t::Explode : ptype_t::Explode2;
         p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
         p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
     }
 }
 
-/*
-===============
-R_ParticleExplosion2
-
-===============
-*/
 void R_ParticleExplosion2(const Vector3& org, int colorStart, int colorLength)
 {
-    int i;
-    particle_t* p;
     int colorMod = 0;
-
-    for (i = 0; i < 512; i++) {
-        if (!free_particles) {
-            return;
-        }
-
-        p = free_particles;
-        free_particles = p->next;
-        p->next = active_particles;
-        active_particles = p;
+    for (int i = 0; i < 512; i++) {
+        particle_t* p = AllocParticle();
+        if (!p) return;
 
         p->die = static_cast<float>(cl.time + 0.3);
-        p->color = static_cast<float>(colorStart + (colorMod % colorLength));
-        colorMod++;
-
+        p->color = static_cast<float>(colorStart + (colorMod++ % colorLength));
         p->type = ptype_t::Blob;
         p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
         p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
     }
 }
 
-/*
-===============
-R_BlobExplosion
-
-===============
-*/
 void R_BlobExplosion(const Vector3& org)
 {
-    int i;
-    particle_t* p;
-
-    for (i = 0; i < 1024; i++) {
-        if (!free_particles) {
-            return;
-        }
-
-        p = free_particles;
-        free_particles = p->next;
-        p->next = active_particles;
-        active_particles = p;
+    for (int i = 0; i < 1024; i++) {
+        particle_t* p = AllocParticle();
+        if (!p) return;
 
         p->die = static_cast<float>(cl.time + 1 + (rand() & 8) * 0.05);
-
         if (i & 1) {
             p->type = ptype_t::Blob;
             p->color = static_cast<float>(66 + rand() % 6);
@@ -1717,36 +1676,17 @@ void R_BlobExplosion(const Vector3& org)
     }
 }
 
-/*
-===============
-R_RunParticleEffect
-
-===============
-*/
 void R_RunParticleEffect(const Vector3& org, const Vector3& dir, int color, int count)
 {
-    int i;
-    particle_t* p;
+    for (int i = 0; i < count; i++) {
+        particle_t* p = AllocParticle();
+        if (!p) return;
 
-    for (i = 0; i < count; i++) {
-        if (!free_particles) {
-            return;
-        }
-
-        p = free_particles;
-        free_particles = p->next;
-        p->next = active_particles;
-        active_particles = p;
-
-        if (count == 1024) { // rocket explosion
+        if (count == 1024) {
             p->die = static_cast<float>(cl.time + 5);
             p->color = static_cast<float>(ramp1[0]);
             p->ramp = static_cast<float>(rand() & 3);
-            if (i & 1) {
-                p->type = ptype_t::Explode;
-            } else {
-                p->type = ptype_t::Explode2;
-            }
+            p->type = (i & 1) ? ptype_t::Explode : ptype_t::Explode2;
             p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
             p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
         } else {
@@ -1754,90 +1694,46 @@ void R_RunParticleEffect(const Vector3& org, const Vector3& dir, int color, int 
             p->color = static_cast<float>((color & ~7) + (rand() & 7));
             p->type = ptype_t::SlowGrav;
             p->org = org + Vector3(static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8));
-            p->vel = dir * 15; // + (rand()%300)-150;
+            p->vel = dir * 15;
         }
     }
 }
 
-/*
-===============
-R_LavaSplash
-
-===============
-*/
 void R_LavaSplash(const Vector3& org)
 {
-    int i, j, k;
-    particle_t* p;
-    float vel;
-    Vector3 dir;
+    for (int i = -16; i < 16; i++) {
+        for (int j = -16; j < 16; j++) {
+            particle_t* p = AllocParticle();
+            if (!p) return;
 
-    for (i = -16; i < 16; i++) {
-        for (j = -16; j < 16; j++) {
-            for (k = 0; k < 1; k++) {
-                if (!free_particles) {
-                    return;
-                }
+            p->die = static_cast<float>(cl.time + 2 + (rand() & 31) * 0.02);
+            p->color = static_cast<float>(224 + (rand() & 7));
+            p->type = ptype_t::SlowGrav;
 
-                p = free_particles;
-                free_particles = p->next;
-                p->next = active_particles;
-                active_particles = p;
-
-                p->die = static_cast<float>(cl.time + 2 + (rand() & 31) * 0.02);
-                p->color = static_cast<float>(224 + (rand() & 7));
-                p->type = ptype_t::SlowGrav;
-
-                dir.x = static_cast<float>(j * 8 + (rand() & 7));
-                dir.y = static_cast<float>(i * 8 + (rand() & 7));
-                dir.z = 256;
-
-                p->org = org + Vector3(dir.x, dir.y, static_cast<float>(rand() & 63));
-
-                dir.normalize();
-                vel = static_cast<float>(50 + (rand() & 63));
-                p->vel = dir * vel;
-            }
+            Vector3 dir(static_cast<float>(j * 8 + (rand() & 7)), static_cast<float>(i * 8 + (rand() & 7)), 256.0f);
+            p->org = org + Vector3(dir.x, dir.y, static_cast<float>(rand() & 63));
+            dir.normalize();
+            p->vel = dir * static_cast<float>(50 + (rand() & 63));
         }
     }
 }
 
-/*
-===============
-R_TeleportSplash
-
-===============
-*/
 void R_TeleportSplash(const Vector3& org)
 {
-    int i, j, k;
-    particle_t* p;
-    float vel;
-    Vector3 dir;
-
-    for (i = -16; i < 16; i += 4) {
-        for (j = -16; j < 16; j += 4) {
-            for (k = -24; k < 32; k += 4) {
-                if (!free_particles) {
-                    return;
-                }
-
-                p = free_particles;
-                free_particles = p->next;
-                p->next = active_particles;
-                active_particles = p;
+    for (int i = -16; i < 16; i += 4) {
+        for (int j = -16; j < 16; j += 4) {
+            for (int k = -24; k < 32; k += 4) {
+                particle_t* p = AllocParticle();
+                if (!p) return;
 
                 p->die = static_cast<float>(cl.time + 0.2 + (rand() & 7) * 0.02);
                 p->color = static_cast<float>(7 + (rand() & 7));
                 p->type = ptype_t::SlowGrav;
 
-                dir = Vector3(static_cast<float>(j * 8), static_cast<float>(i * 8), static_cast<float>(k * 8));
-
+                Vector3 dir(static_cast<float>(j * 8), static_cast<float>(i * 8), static_cast<float>(k * 8));
                 p->org = org + Vector3(static_cast<float>(i + (rand() & 3)), static_cast<float>(j + (rand() & 3)), static_cast<float>(k + (rand() & 3)));
-
                 dir.normalize();
-                vel = static_cast<float>(50 + (rand() & 63));
-                p->vel = dir * vel;
+                p->vel = dir * static_cast<float>(50 + (rand() & 63));
             }
         }
     }
@@ -1863,17 +1759,12 @@ void R_RocketTrail(Vector3 start, const Vector3& end, int type)
     while (len > 0) {
         len -= dec;
 
-        if (!free_particles) {
-            return;
-        }
-
-        p = free_particles;
-        free_particles = p->next;
-        p->next = active_particles;
-        active_particles = p;
+        particle_t* p = AllocParticle();
+        if (!p) return;
 
         p->vel = vec3_origin;
         p->die = static_cast<float>(cl.time + 2);
+
 
         switch (type) {
         case 0: // rocket trail
@@ -2502,37 +2393,27 @@ void R_DrawSurface(void)
 
 //=============================================================================
 
-/*
-================
-R_DrawSurfaceBlock8_mip0
-================
-*/
-void R_DrawSurfaceBlock8_mip0(void)
+template<int Shift>
+static inline void R_DrawSurfaceBlock8_mip_T()
 {
-    int v, i, b, lightstep, lighttemp, light;
-    unsigned char pix, *psource, *prowdest;
+    constexpr int BlockCount = 1 << Shift;
+    const auto* psource = reinterpret_cast<const unsigned char*>(pbasesource);
+    auto* prowdest = reinterpret_cast<unsigned char*>(prowdestbase);
+    const auto* colormap = reinterpret_cast<const unsigned char*>(vid.colormap);
 
-    psource = (unsigned char*)pbasesource;
-    prowdest = (unsigned char*)prowdestbase;
-
-    for (v = 0; v < r_numvblocks; v++) {
-        // FIXME: make these locals?
-        // FIXME: use delta rather than both right and left, like ASM?
+    for (int v = 0; v < r_numvblocks; v++) {
         lightleft = r_lightptr[0];
         lightright = r_lightptr[1];
         r_lightptr += r_lightwidth;
-        lightleftstep = (r_lightptr[0] - lightleft) >> 4;
-        lightrightstep = (r_lightptr[1] - lightright) >> 4;
+        lightleftstep = (r_lightptr[0] - lightleft) >> Shift;
+        lightrightstep = (r_lightptr[1] - lightright) >> Shift;
 
-        for (i = 0; i < 16; i++) {
-            lighttemp = lightleft - lightright;
-            lightstep = lighttemp >> 4;
+        for (int i = 0; i < BlockCount; i++) {
+            const int lightstep = (lightleft - lightright) >> Shift;
+            int light = lightright;
 
-            light = lightright;
-
-            for (b = 15; b >= 0; b--) {
-                pix = psource[b];
-                prowdest[b] = ((unsigned char*)vid.colormap)[(light & 0xFF00) + pix];
+            for (int b = BlockCount - 1; b >= 0; b--) {
+                prowdest[b] = colormap[(light & 0xFF00) + psource[b]];
                 light += lightstep;
             }
 
@@ -2548,143 +2429,11 @@ void R_DrawSurfaceBlock8_mip0(void)
     }
 }
 
-/*
-================
-R_DrawSurfaceBlock8_mip1
-================
-*/
-void R_DrawSurfaceBlock8_mip1(void)
-{
-    int v, i, b, lightstep, lighttemp, light;
-    unsigned char pix, *psource, *prowdest;
+void R_DrawSurfaceBlock8_mip0() { R_DrawSurfaceBlock8_mip_T<4>(); }
+void R_DrawSurfaceBlock8_mip1() { R_DrawSurfaceBlock8_mip_T<3>(); }
+void R_DrawSurfaceBlock8_mip2() { R_DrawSurfaceBlock8_mip_T<2>(); }
+void R_DrawSurfaceBlock8_mip3() { R_DrawSurfaceBlock8_mip_T<1>(); }
 
-    psource = (unsigned char*)pbasesource;
-    prowdest = (unsigned char*)prowdestbase;
-
-    for (v = 0; v < r_numvblocks; v++) {
-        // FIXME: make these locals?
-        // FIXME: use delta rather than both right and left, like ASM?
-        lightleft = r_lightptr[0];
-        lightright = r_lightptr[1];
-        r_lightptr += r_lightwidth;
-        lightleftstep = (r_lightptr[0] - lightleft) >> 3;
-        lightrightstep = (r_lightptr[1] - lightright) >> 3;
-
-        for (i = 0; i < 8; i++) {
-            lighttemp = lightleft - lightright;
-            lightstep = lighttemp >> 3;
-
-            light = lightright;
-
-            for (b = 7; b >= 0; b--) {
-                pix = psource[b];
-                prowdest[b] = ((unsigned char*)vid.colormap)[(light & 0xFF00) + pix];
-                light += lightstep;
-            }
-
-            psource += sourcetstep;
-            lightright += lightrightstep;
-            lightleft += lightleftstep;
-            prowdest += surfrowbytes;
-        }
-
-        if (psource >= r_sourcemax) {
-            psource -= r_stepback;
-        }
-    }
-}
-
-/*
-================
-R_DrawSurfaceBlock8_mip2
-================
-*/
-void R_DrawSurfaceBlock8_mip2(void)
-{
-    int v, i, b, lightstep, lighttemp, light;
-    unsigned char pix, *psource, *prowdest;
-
-    psource = (unsigned char*)pbasesource;
-    prowdest = (unsigned char*)prowdestbase;
-
-    for (v = 0; v < r_numvblocks; v++) {
-        // FIXME: make these locals?
-        // FIXME: use delta rather than both right and left, like ASM?
-        lightleft = r_lightptr[0];
-        lightright = r_lightptr[1];
-        r_lightptr += r_lightwidth;
-        lightleftstep = (r_lightptr[0] - lightleft) >> 2;
-        lightrightstep = (r_lightptr[1] - lightright) >> 2;
-
-        for (i = 0; i < 4; i++) {
-            lighttemp = lightleft - lightright;
-            lightstep = lighttemp >> 2;
-
-            light = lightright;
-
-            for (b = 3; b >= 0; b--) {
-                pix = psource[b];
-                prowdest[b] = ((unsigned char*)vid.colormap)[(light & 0xFF00) + pix];
-                light += lightstep;
-            }
-
-            psource += sourcetstep;
-            lightright += lightrightstep;
-            lightleft += lightleftstep;
-            prowdest += surfrowbytes;
-        }
-
-        if (psource >= r_sourcemax) {
-            psource -= r_stepback;
-        }
-    }
-}
-
-/*
-================
-R_DrawSurfaceBlock8_mip3
-================
-*/
-void R_DrawSurfaceBlock8_mip3(void)
-{
-    int v, i, b, lightstep, lighttemp, light;
-    unsigned char pix, *psource, *prowdest;
-
-    psource = (unsigned char*)pbasesource;
-    prowdest = (unsigned char*)prowdestbase;
-
-    for (v = 0; v < r_numvblocks; v++) {
-        // FIXME: make these locals?
-        // FIXME: use delta rather than both right and left, like ASM?
-        lightleft = r_lightptr[0];
-        lightright = r_lightptr[1];
-        r_lightptr += r_lightwidth;
-        lightleftstep = (r_lightptr[0] - lightleft) >> 1;
-        lightrightstep = (r_lightptr[1] - lightright) >> 1;
-
-        for (i = 0; i < 2; i++) {
-            lighttemp = lightleft - lightright;
-            lightstep = lighttemp >> 1;
-
-            light = lightright;
-
-            for (b = 1; b >= 0; b--) {
-                pix = psource[b];
-                prowdest[b] = ((unsigned char*)vid.colormap)[(light & 0xFF00) + pix];
-                light += lightstep;
-            }
-
-            psource += sourcetstep;
-            lightright += lightrightstep;
-            lightleft += lightleftstep;
-            prowdest += surfrowbytes;
-        }
-
-        if (psource >= r_sourcemax) {
-            psource -= r_stepback;
-        }
-    }
-}
 
 /*
 ================
@@ -10093,65 +9842,14 @@ void Mod_ClearAll(void)
 {
     for (int i = 0; i < mod_numknown; ++i) {
         model_t& mod = mod_known[i];
-        mod.needload = NL_UNREFERENCED;
-        
-        // Clean up EASTL dynamic vectors to free heap memory
-        mod.submodels_owner.clear();
-        mod.submodels = nullptr;
-        
-        mod.planes_owner.clear();
-        mod.planes = nullptr;
-        
-        mod.leafs_owner.clear();
-        mod.leafs = nullptr;
-        
-        mod.vertexes_owner.clear();
-        mod.vertexes = nullptr;
-        
-        mod.edges_owner.clear();
-        mod.edges = nullptr;
-        
-        mod.nodes_owner.clear();
-        mod.nodes = nullptr;
-        
-        mod.texinfo_owner.clear();
-        mod.texinfo = nullptr;
-        
-        mod.surfaces_owner.clear();
-        mod.surfaces = nullptr;
-        
-        mod.surfedges_owner.clear();
-        mod.surfedges = nullptr;
-        
-        mod.clipnodes_owner.clear();
-        mod.clipnodes = nullptr;
-        
-        mod.hull0_clipnodes_owner.clear();
-        
-        mod.marksurfaces_owner.clear();
-        mod.marksurfaces = nullptr;
-        
-        mod.textures_owner.clear();
-        mod.textures = nullptr;
-        
-        mod.visdata_owner.clear();
-        mod.visdata = nullptr;
-        
-        mod.lightdata_owner.clear();
-        mod.lightdata = nullptr;
-        
-        mod.entities_owner.clear();
-        mod.entities = nullptr;
-        
-        mod.texture_allocations.clear();
-        mod.sprite_allocations.clear();
-
-        // FIX FOR CACHE_ALLOC ERRORS:
-        if (mod.type == mod_sprite) {
-            mod.cache.data = nullptr;
+        if (mod.type != mod_alias) {
+            mod.needload = NL_NEEDS_LOADED;
         }
     }
 }
+
+
+
 
 /*
 ==================
