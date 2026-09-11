@@ -45,13 +45,65 @@ FetchContent_MakeAvailable(SDL2 EABase EASTL)
 
 # Gather source files
 set(CORE_SRCS
-    src/sys_core.cpp
-    src/sys_render.cpp
-    src/sys_audio.cpp
-    src/sys_network.cpp
-    src/sys_vm.cpp
-    src/sys_server.cpp
-    src/sys_client.cpp
+    src/core/string_utils.cpp
+    src/core/cvar.cpp
+    src/core/cmd.cpp
+    src/core/memory.cpp
+    src/core/msg.cpp
+    src/core/filesystem.cpp
+    src/core/wad.cpp
+    src/platform/sys_win.cpp
+    src/world/model.cpp
+    src/world/collision.cpp
+    src/host/host.cpp
+    src/ui/console.cpp
+    src/ui/menu.cpp
+    src/ui/hud.cpp
+    src/render/draw2d.cpp
+    src/render/renderer.cpp
+    src/client/screen.cpp
+    src/client/view.cpp
+    src/render/software/sw_vid.cpp
+    src/render/software/sw_part.cpp
+    src/render/software/sw_sky.cpp
+    src/render/software/sw_light.cpp
+    src/render/software/sw_surf.cpp
+    src/render/software/sw_drawface.cpp
+    src/render/software/sw_edge.cpp
+    src/render/software/sw_bsp.cpp
+    src/render/software/sw_sprite.cpp
+    src/render/software/sw_alias_clip.cpp
+    src/render/software/sw_alias.cpp
+    src/render/software/sw_warp.cpp
+    src/render/software/sw_poly.cpp
+    src/render/software/sw_sprite_draw.cpp
+    src/render/software/sw_raster.cpp
+    src/render/software/sw_efrag.cpp
+    src/render/software/sw_frame.cpp
+    src/render/software/sw_main.cpp
+    src/audio/audio_dma.cpp
+    src/audio/audio_wav.cpp
+    src/audio/audio_mix.cpp
+    src/audio/audio_main.cpp
+    src/network/loopback.cpp
+    src/network/udp_driver.cpp
+    src/network/datagram.cpp
+    src/network/net_main.cpp
+    src/vm/program.cpp
+    src/vm/edict.cpp
+    src/vm/interpreter.cpp
+    src/vm/builtins.cpp
+    src/server/server.cpp
+    src/server/world.cpp
+    src/server/physics.cpp
+    src/server/sv_send.cpp
+    src/client/cl_main.cpp
+    src/client/cl_input.cpp
+    src/client/cl_parse.cpp
+    src/client/cl_tent.cpp
+    src/client/cl_demo.cpp
+    src/client/chase.cpp
+    src/client/input.cpp
 )
 
 add_executable(Quake.cpp ${CORE_SRCS})
@@ -79,7 +131,6 @@ if(MSVC)
     target_link_options(Quake.cpp PRIVATE
         /INCREMENTAL:NO
         /OPT:REF       # Eliminate unreferenced functions and data
-        /VERBOSE:REF   # Print out everything the linker throws away
     )
 else()
     target_compile_options(Quake.cpp PRIVATE 
@@ -92,6 +143,5 @@ else()
     )
     target_link_options(Quake.cpp PRIVATE
         -Wl,--gc-sections       # Garbage collect empty sections
-        -Wl,--print-gc-sections # Print out everything the linker throws away
     )
 endif()

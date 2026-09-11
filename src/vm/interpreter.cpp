@@ -1,0 +1,393 @@
+// interpreter.cpp -- Bytecode execution VM and call stack management
+#include "quakedef.hpp"
+#include "vm/interpreter.hpp"
+#include "vm/program.hpp"
+#include "vm/edict.hpp"
+#include "host/host.hpp"
+#include "ui/console.hpp"
+#include "sys_server.hpp"
+
+#include <cstring>
+#include <cstdarg>
+#include <cstdio>
+
+namespace VM {
+
+typedef struct {
+    int s;
+    dfunction_t* f;
+} prstack_t;
+
+constexpr int MAX_STACK_DEPTH = 32;
+static prstack_t pr_stack[MAX_STACK_DEPTH];
+static int pr_depth = 0;
+
+constexpr int LOCALSTACK_SIZE = 2048;
+static int localstack[LOCALSTACK_SIZE];
+static int localstack_used = 0;
+
+qboolean pr_trace = false;
+dfunction_t* pr_xfunction = nullptr;
+int pr_xstatement = 0;
+int pr_argc = 0;
+
+static const char* pr_opnames[] = {
+    "DONE", "MUL_F", "MUL_V", "MUL_FV", "MUL_VF", "DIV", "ADD_F", "ADD_V",
+    "SUB_F", "SUB_V", "EQ_F", "EQ_V", "EQ_S", "EQ_E", "EQ_FNC", "NE_F",
+    "NE_V", "NE_S", "NE_E", "NE_FNC", "LE", "GE", "LT", "GT", "INDIRECT",
+    "INDIRECT", "INDIRECT", "INDIRECT", "INDIRECT", "INDIRECT", "ADDRESS",
+    "STORE_F", "STORE_V", "STORE_S", "STORE_ENT", "STORE_FLD", "STORE_FNC",
+    "STOREP_F", "STOREP_V", "STOREP_S", "STOREP_ENT", "STOREP_FLD", "STOREP_FNC",
+    "RETURN", "NOT_F", "NOT_V", "NOT_S", "NOT_ENT", "NOT_FNC", "IF", "IFNOT",
+    "CALL0", "CALL1", "CALL2", "CALL3", "CALL4", "CALL5", "CALL6", "CALL7",
+    "CALL8", "STATE", "GOTO", "AND", "OR", "BITAND", "BITOR"
+};
+
+void PR_PrintStatement(dstatement_t* s) {
+    if (static_cast<unsigned>(s->op) < sizeof(pr_opnames) / sizeof(pr_opnames[0])) {
+        Console::Con_Printf("%s ", pr_opnames[s->op]);
+        int i = static_cast<int>(std::strlen(pr_opnames[s->op]));
+        for (; i < 10; i++) Console::Con_Printf(" ");
+    }
+
+    if (s->op == OP_IF || s->op == OP_IFNOT) {
+        Console::Con_Printf("%sbranch %i", PR_GlobalString(s->a), s->b);
+    } else if (s->op == OP_GOTO) {
+        Console::Con_Printf("branch %i", s->a);
+    } else if (static_cast<unsigned>(s->op - OP_STORE_F) < 6) {
+        Console::Con_Printf("%s", PR_GlobalString(s->a));
+        Console::Con_Printf("%s", PR_GlobalStringNoContents(s->b));
+    } else {
+        if (s->a) Console::Con_Printf("%s", PR_GlobalString(s->a));
+        if (s->b) Console::Con_Printf("%s", PR_GlobalString(s->b));
+        if (s->c) Console::Con_Printf("%s", PR_GlobalStringNoContents(s->c));
+    }
+
+    Console::Con_Printf("\n");
+}
+
+void PR_StackTrace(void) {
+    if (pr_depth == 0) {
+        Console::Con_Printf("<NO STACK>\n");
+        return;
+    }
+
+    pr_stack[pr_depth].f = pr_xfunction;
+    for (int i = pr_depth; i >= 0; i--) {
+        dfunction_t* f = pr_stack[i].f;
+        if (!f) Console::Con_Printf("<NO FUNCTION>\n");
+        else Console::Con_Printf("%12s : %s\n", PR_GetString(f->s_file), PR_GetString(f->s_name));
+    }
+}
+
+[[noreturn]] void PR_RunError(const char* error, ...) {
+    va_list argptr;
+    char string[1024];
+
+    va_start(argptr, error);
+    vsprintf_s(string, sizeof(string), error, argptr);
+    va_end(argptr);
+
+    PR_PrintStatement(pr_statements + pr_xstatement);
+    PR_StackTrace();
+    Console::Con_Printf("%s\n", string);
+    pr_depth = 0;
+
+    Host::Host_Error("Program error");
+}
+
+static int PR_EnterFunction(dfunction_t* f) {
+    pr_stack[pr_depth].s = pr_xstatement;
+    pr_stack[pr_depth].f = pr_xfunction;
+    pr_depth++;
+    if (pr_depth >= MAX_STACK_DEPTH) PR_RunError("stack overflow");
+
+    int c = f->locals;
+    if (localstack_used + c > LOCALSTACK_SIZE) {
+        PR_RunError("PR_ExecuteProgram: locals stack overflow\n");
+    }
+
+    for (int i = 0; i < c; i++) {
+        localstack[localstack_used + i] = ((int*)pr_globals)[f->parm_start + i];
+    }
+    localstack_used += c;
+
+    int o = f->parm_start;
+    for (int i = 0; i < f->numparms; i++) {
+        for (int j = 0; j < f->parm_size[i]; j++) {
+            ((int*)pr_globals)[o] = ((int*)pr_globals)[OFS_PARM0 + i * 3 + j];
+            o++;
+        }
+    }
+
+    pr_xfunction = f;
+    return f->first_statement - 1;
+}
+
+static int PR_LeaveFunction(void) {
+    if (pr_depth <= 0) Common::Sys_Error("prog stack underflow");
+
+    int c = pr_xfunction->locals;
+    localstack_used -= c;
+    if (localstack_used < 0) PR_RunError("PR_ExecuteProgram: locals stack underflow\n");
+
+    for (int i = 0; i < c; i++) {
+        ((int*)pr_globals)[pr_xfunction->parm_start + i] = localstack[localstack_used + i];
+    }
+
+    pr_depth--;
+    pr_xfunction = pr_stack[pr_depth].f;
+    return pr_stack[pr_depth].s;
+}
+
+void PR_ExecuteProgram(func_t fnum) {
+    eval_t *a, *b, *c;
+    int s, runaway, exitdepth;
+    dstatement_t* st;
+    dfunction_t *f, *newf;
+    edict_t* ed;
+    eval_t* ptr;
+
+    if (!fnum || fnum >= progs->numfunctions) {
+        if (pr_global_struct->self) ED_Print(PROG_TO_EDICT(pr_global_struct->self));
+        Host::Host_Error("PR_ExecuteProgram: NULL function");
+    }
+
+    f = &pr_functions[fnum];
+    runaway = 100000;
+    pr_trace = false;
+    exitdepth = pr_depth;
+    s = PR_EnterFunction(f);
+
+    while (1) {
+        s++;
+        st = &pr_statements[s];
+        a = (eval_t*)&pr_globals[st->a];
+        b = (eval_t*)&pr_globals[st->b];
+        c = (eval_t*)&pr_globals[st->c];
+
+        if (!--runaway) PR_RunError("runaway loop error");
+
+        pr_xfunction->profile++;
+        pr_xstatement = s;
+
+        if (pr_trace) PR_PrintStatement(st);
+
+        switch (st->op) {
+        case OP_ADD_F:
+            c->_float = a->_float + b->_float;
+            break;
+        case OP_ADD_V:
+            c->vector[0] = a->vector[0] + b->vector[0];
+            c->vector[1] = a->vector[1] + b->vector[1];
+            c->vector[2] = a->vector[2] + b->vector[2];
+            break;
+        case OP_SUB_F:
+            c->_float = a->_float - b->_float;
+            break;
+        case OP_SUB_V:
+            c->vector[0] = a->vector[0] - b->vector[0];
+            c->vector[1] = a->vector[1] - b->vector[1];
+            c->vector[2] = a->vector[2] - b->vector[2];
+            break;
+        case OP_MUL_F:
+            c->_float = a->_float * b->_float;
+            break;
+        case OP_MUL_V:
+            c->_float = a->vector[0] * b->vector[0] + a->vector[1] * b->vector[1] + a->vector[2] * b->vector[2];
+            break;
+        case OP_MUL_FV:
+            c->vector[0] = a->_float * b->vector[0];
+            c->vector[1] = a->_float * b->vector[1];
+            c->vector[2] = a->_float * b->vector[2];
+            break;
+        case OP_MUL_VF:
+            c->vector[0] = b->_float * a->vector[0];
+            c->vector[1] = b->_float * a->vector[1];
+            c->vector[2] = b->_float * a->vector[2];
+            break;
+        case OP_DIV_F:
+            c->_float = a->_float / b->_float;
+            break;
+        case OP_BITAND:
+            c->_float = static_cast<float>(static_cast<int>(a->_float) & static_cast<int>(b->_float));
+            break;
+        case OP_BITOR:
+            c->_float = static_cast<float>(static_cast<int>(a->_float) | static_cast<int>(b->_float));
+            break;
+        case OP_GE:
+            c->_float = a->_float >= b->_float;
+            break;
+        case OP_LE:
+            c->_float = a->_float <= b->_float;
+            break;
+        case OP_GT:
+            c->_float = a->_float > b->_float;
+            break;
+        case OP_LT:
+            c->_float = a->_float < b->_float;
+            break;
+        case OP_AND:
+            c->_float = a->_float && b->_float;
+            break;
+        case OP_OR:
+            c->_float = a->_float || b->_float;
+            break;
+        case OP_NOT_F:
+            c->_float = !a->_float;
+            break;
+        case OP_NOT_V:
+            c->_float = !a->vector[0] && !a->vector[1] && !a->vector[2];
+            break;
+        case OP_NOT_S:
+            c->_float = !a->string || !*PR_GetString(a->string);
+            break;
+        case OP_NOT_FNC:
+            c->_float = !a->function;
+            break;
+        case OP_NOT_ENT:
+            c->_float = (PROG_TO_EDICT(a->edict) == Server::sv.edicts);
+            break;
+        case OP_EQ_F:
+            c->_float = a->_float == b->_float;
+            break;
+        case OP_EQ_V:
+            c->_float = (a->vector[0] == b->vector[0]) && (a->vector[1] == b->vector[1]) && (a->vector[2] == b->vector[2]);
+            break;
+        case OP_EQ_S:
+            c->_float = !std::strcmp(PR_GetString(a->string), PR_GetString(b->string));
+            break;
+        case OP_EQ_E:
+            c->_float = a->_int == b->_int;
+            break;
+        case OP_EQ_FNC:
+            c->_float = a->function == b->function;
+            break;
+        case OP_NE_F:
+            c->_float = a->_float != b->_float;
+            break;
+        case OP_NE_V:
+            c->_float = (a->vector[0] != b->vector[0]) || (a->vector[1] != b->vector[1]) || (a->vector[2] != b->vector[2]);
+            break;
+        case OP_NE_S:
+            c->_float = static_cast<float>(std::strcmp(PR_GetString(a->string), PR_GetString(b->string)));
+            break;
+        case OP_NE_E:
+            c->_float = a->_int != b->_int;
+            break;
+        case OP_NE_FNC:
+            c->_float = a->function != b->function;
+            break;
+
+        case OP_STORE_F:
+        case OP_STORE_ENT:
+        case OP_STORE_FLD:
+        case OP_STORE_S:
+        case OP_STORE_FNC:
+            b->_int = a->_int;
+            break;
+        case OP_STORE_V:
+            b->vector[0] = a->vector[0];
+            b->vector[1] = a->vector[1];
+            b->vector[2] = a->vector[2];
+            break;
+
+        case OP_STOREP_F:
+        case OP_STOREP_ENT:
+        case OP_STOREP_FLD:
+        case OP_STOREP_S:
+        case OP_STOREP_FNC:
+            ptr = (eval_t*)((byte*)Server::sv.edicts + b->_int);
+            ptr->_int = a->_int;
+            break;
+        case OP_STOREP_V:
+            ptr = (eval_t*)((byte*)Server::sv.edicts + b->_int);
+            ptr->vector[0] = a->vector[0];
+            ptr->vector[1] = a->vector[1];
+            ptr->vector[2] = a->vector[2];
+            break;
+
+        case OP_ADDRESS:
+            ed = PROG_TO_EDICT(a->edict);
+            if (ed == (edict_t*)Server::sv.edicts && Server::sv.state == ss_active) {
+                PR_RunError("assignment to world entity");
+            }
+            c->_int = static_cast<int>((byte*)((int*)&ed->v + b->_int) - (byte*)Server::sv.edicts);
+            break;
+
+        case OP_LOAD_F:
+        case OP_LOAD_FLD:
+        case OP_LOAD_ENT:
+        case OP_LOAD_S:
+        case OP_LOAD_FNC:
+            ed = PROG_TO_EDICT(a->edict);
+            a = (eval_t*)((int*)&ed->v + b->_int);
+            c->_int = a->_int;
+            break;
+
+        case OP_LOAD_V:
+            ed = PROG_TO_EDICT(a->edict);
+            a = (eval_t*)((int*)&ed->v + b->_int);
+            c->vector[0] = a->vector[0];
+            c->vector[1] = a->vector[1];
+            c->vector[2] = a->vector[2];
+            break;
+
+        case OP_IFNOT:
+            if (!a->_int) s += st->b - 1;
+            break;
+
+        case OP_IF:
+            if (a->_int) s += st->b - 1;
+            break;
+
+        case OP_GOTO:
+            s += st->a - 1;
+            break;
+
+        case OP_CALL0:
+        case OP_CALL1:
+        case OP_CALL2:
+        case OP_CALL3:
+        case OP_CALL4:
+        case OP_CALL5:
+        case OP_CALL6:
+        case OP_CALL7:
+        case OP_CALL8:
+            pr_argc = st->op - OP_CALL0;
+            if (!a->function) PR_RunError("NULL function");
+
+            newf = &pr_functions[a->function];
+            if (newf->first_statement < 0) {
+                int built_num = -newf->first_statement;
+                if (built_num >= pr_numbuiltins) PR_RunError("Bad builtin call number");
+                pr_builtins[built_num]();
+                break;
+            }
+            s = PR_EnterFunction(newf);
+            break;
+
+        case OP_DONE:
+        case OP_RETURN:
+            pr_globals[OFS_RETURN] = pr_globals[st->a];
+            pr_globals[OFS_RETURN + 1] = pr_globals[st->a + 1];
+            pr_globals[OFS_RETURN + 2] = pr_globals[st->a + 2];
+
+            s = PR_LeaveFunction();
+            if (pr_depth == exitdepth) return;
+            break;
+
+        case OP_STATE:
+            ed = PROG_TO_EDICT(pr_global_struct->self);
+            ed->v.nextthink = pr_global_struct->time + 0.1f;
+            if (a->_float != ed->v.frame) ed->v.frame = a->_float;
+            ed->v.think = b->function;
+            break;
+
+        default:
+            PR_RunError("Bad opcode %i", st->op);
+        }
+    }
+}
+
+} // namespace VM
