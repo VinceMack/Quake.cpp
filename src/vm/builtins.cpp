@@ -101,7 +101,7 @@ void PF_setorigin(void)
     Server::SV_LinkEdict(e, false);
 }
 
-static void SetMinMaxSize(edict_t* e, const float* min, const float* max, qboolean rotate)
+static void SetMinMaxSize(edict_t* e, const Vector3& min, const Vector3& max, qboolean rotate)
 {
     Vector3 rmin, rmax;
     float bounds[2][3];
@@ -118,7 +118,7 @@ static void SetMinMaxSize(edict_t* e, const float* min, const float* max, qboole
         rmin = Vector3(min);
         rmax = Vector3(max);
     } else {
-        float* angles = e->v.angles;
+        float* angles = e->v.angles.data();
         float a = angles[1] / 180.0f * static_cast<float>(M_PI);
 
         xvector[0] = std::cos(a);
@@ -163,7 +163,7 @@ void PF_setsize(void)
     edict_t* e = G_EDICT(OFS_PARM0);
     float* min = G_VECTOR(OFS_PARM1);
     float* max = G_VECTOR(OFS_PARM2);
-    SetMinMaxSize(e, min, max, false);
+    SetMinMaxSize(e, Vector3(min), Vector3(max), false);
 }
 
 void PF_setmodel(void)

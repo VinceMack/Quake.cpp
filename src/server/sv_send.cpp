@@ -677,15 +677,15 @@ void SV_ClientThink()
     if (sv_player->v.movetype == MOVETYPE_NONE) return;
 
     onground = static_cast<int>(sv_player->v.flags) & FL_ONGROUND;
-    origin = sv_player->v.origin;
-    velocity = sv_player->v.velocity;
+    origin = sv_player->v.origin.data();
+    velocity = sv_player->v.velocity.data();
 
     DropPunchAngle();
 
     if (sv_player->v.health <= 0.0f) return;
 
     cmd = Host::host_client->cmd;
-    angles = sv_player->v.angles;
+    angles = sv_player->v.angles.data();
 
     const Vector3 v_angle = sv_player->v.v_angle + sv_player->v.punchangle;
     angles[ROLL] = View::V_CalcRoll(sv_player->v.angles, sv_player->v.velocity) * 4.0f;

@@ -47,8 +47,10 @@ struct Vector3 {
     constexpr float operator[](size_t i) const { return i == 0 ? x : (i == 1 ? y : z); }
     constexpr float& operator[](size_t i) { return i == 0 ? x : (i == 1 ? y : z); }
 
-    constexpr operator float*() { return &x; }
-    constexpr operator const float*() const { return &x; }
+    // Explicit access to the three floats for code that still speaks raw arrays (QuakeC
+    // globals, on-disk formats, the rasterizer's matrix helpers).
+    constexpr float* data() { return &x; }
+    constexpr const float* data() const { return &x; }
 
     constexpr Vector3 operator+(const Vector3& o) const { return { x + o.x, y + o.y, z + o.z }; }
     constexpr Vector3 operator-(const Vector3& o) const { return { x - o.x, y - o.y, z - o.z }; }
