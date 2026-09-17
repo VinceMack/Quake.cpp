@@ -43,7 +43,7 @@ void D_WarpScreen()
 {
     std::array<byte*, MAXHEIGHT + (AMP2 * 2)> rowptr { };
     std::array<int, MAXWIDTH + (AMP2 * 2)> column { };
-    const auto& scr_vrect = Screen::GetScreenSystem().GetVrect();
+    const auto& scr_vrect = Screen::GetScreenSystem().vrect;
     int w = r_refdef.vrect.width;
     int h = r_refdef.vrect.height;
     float wratio = static_cast<float>(w) / static_cast<float>(scr_vrect.width);

@@ -32,10 +32,6 @@ struct trace_t {
 
 enum class MoveMode : int { Normal = 0, NoMonsters = 1, Missile = 2 };
 
-constexpr int MOVE_NORMAL = 0;
-constexpr int MOVE_NOMONSTERS = 1;
-constexpr int MOVE_MISSILE = 2;
-
 namespace Collision {
 
 void InitBoxHull();

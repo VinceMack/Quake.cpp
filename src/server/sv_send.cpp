@@ -504,7 +504,7 @@ void SV_SetIdealPitch()
         Vector3 bottom = top;
         bottom.z -= 160.0f;
 
-        const trace_t tr = SV_Move(top, Math::vec3_origin, Math::vec3_origin, bottom, 1, sv_player);
+        const trace_t tr = SV_Move(top, Math::vec3_origin, Math::vec3_origin, bottom, MoveMode::NoMonsters, sv_player);
         if (tr.allsolid || tr.fraction == 1.0f) return;
 
         z[static_cast<size_t>(i)] = top.z + tr.fraction * (bottom.z - top.z);
@@ -540,7 +540,7 @@ static void SV_UserFriction()
     Vector3 stop = start;
     stop.z -= 34.0f;
 
-    const trace_t trace = SV_Move(start, Math::vec3_origin, Math::vec3_origin, stop, true, sv_player);
+    const trace_t trace = SV_Move(start, Math::vec3_origin, Math::vec3_origin, stop, MoveMode::NoMonsters, sv_player);
     const float friction = (trace.fraction == 1.0f) ? (sv_friction.value * sv_edgefriction.value) : sv_friction.value;
 
     const float control = (speed < sv_stopspeed.value) ? sv_stopspeed.value : speed;

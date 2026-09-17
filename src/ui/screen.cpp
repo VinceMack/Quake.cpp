@@ -35,7 +35,7 @@ void ScreenSystem::CenterPrint(std::string_view str)
 {
     constexpr size_t kMaxCenterString = 1023;
     centerstring_.assign(str.data(), std::min(str.length(), kMaxCenterString));
-    centertime_off_ = centertime_.value;
+    centertime_off = centertime_.value;
     centertime_start_ = static_cast<float>(Client::cl.time);
     center_lines_ = 1;
     for (char ch : centerstring_) {
@@ -57,7 +57,7 @@ void ScreenSystem::EraseCenterString()
     } else {
         y = 48;
     }
-    copytop_ = 1;
+    copytop = 1;
     Draw::Draw_TileClear(0, y, Vid::vid.width, 8 * erase_lines_);
 }
 
@@ -99,12 +99,12 @@ void ScreenSystem::DrawCenterString()
 
 void ScreenSystem::CheckDrawCenterString()
 {
-    copytop_ = 1;
+    copytop = 1;
     if (center_lines_ > erase_lines_) {
         erase_lines_ = center_lines_;
     }
-    centertime_off_ -= static_cast<float>(Host::host_frametime);
-    if (centertime_off_ <= 0.0f && !Client::cl.intermission) {
+    centertime_off -= static_cast<float>(Host::host_frametime);
+    if (centertime_off <= 0.0f && !Client::cl.intermission) {
         return;
     }
     if (Keys::key_dest != Keys::key_game) {
@@ -126,25 +126,25 @@ float ScreenSystem::CalcFov(float fov_x, float width, float height)
 void ScreenSystem::CalcRefdef()
 {
     vrect_t vrect { };
-    fullupdate_ = 0;
+    fullupdate = 0;
     Vid::vid.recalc_refdef = 0;
     Sbar::Sbar_Changed();
-    if (viewsize_.value < 30.0f) {
+    if (viewsize.value < 30.0f) {
         Cvar::Set("viewsize", "30");
     }
-    if (viewsize_.value > 120.0f) {
+    if (viewsize.value > 120.0f) {
         Cvar::Set("viewsize", "120");
     }
-    if (fov_.value < 10.0f) {
+    if (fov.value < 10.0f) {
         Cvar::Set("fov", "10");
     }
-    if (fov_.value > 170.0f) {
+    if (fov.value > 170.0f) {
         Cvar::Set("fov", "170");
     }
-    Render::r_refdef.fov_x = fov_.value;
+    Render::r_refdef.fov_x = fov.value;
     Render::r_refdef.fov_y = CalcFov(Render::r_refdef.fov_x, static_cast<float>(Render::r_refdef.vrect.width),
         static_cast<float>(Render::r_refdef.vrect.height));
-    float size = Client::cl.intermission ? 120.0f : viewsize_.value;
+    float size = Client::cl.intermission ? 120.0f : viewsize.value;
     if (size >= 120.0f) {
         sb_lines = 0;
     } else if (size >= 110.0f) {
@@ -156,9 +156,9 @@ void ScreenSystem::CalcRefdef()
     vrect.y = 0;
     vrect.width = Vid::vid.width;
     vrect.height = Vid::vid.height;
-    Render::R_SetVrect(&vrect, &vrect_, sb_lines);
-    if (con_current_ > static_cast<float>(Vid::vid.height)) {
-        con_current_ = static_cast<float>(Vid::vid.height);
+    Render::R_SetVrect(&vrect, &vrect, sb_lines);
+    if (con_current > static_cast<float>(Vid::vid.height)) {
+        con_current = static_cast<float>(Vid::vid.height);
     }
     Render::R_ViewChanged(&vrect, sb_lines, Vid::vid.aspect);
 }
@@ -176,21 +176,21 @@ void ScreenSystem::SizeDown()
 void ScreenSystem::SizeUp_f()
 {
     auto& sys = GetScreenSystem();
-    Cvar::SetValue("viewsize", sys.viewsize_.value + 10.0f);
+    Cvar::SetValue("viewsize", sys.viewsize.value + 10.0f);
     Vid::vid.recalc_refdef = 1;
 }
 
 void ScreenSystem::SizeDown_f()
 {
     auto& sys = GetScreenSystem();
-    Cvar::SetValue("viewsize", sys.viewsize_.value - 10.0f);
+    Cvar::SetValue("viewsize", sys.viewsize.value - 10.0f);
     Vid::vid.recalc_refdef = 1;
 }
 
 void ScreenSystem::Init()
 {
-    Cvar::Register(&fov_);
-    Cvar::Register(&viewsize_);
+    Cvar::Register(&fov);
+    Cvar::Register(&viewsize);
     Cvar::Register(&conspeed_);
     Cvar::Register(&showram_);
     Cvar::Register(&showturtle_);
@@ -211,7 +211,7 @@ void ScreenSystem::DrawRam()
     if (!showram_.value || !Render::r_cache_thrash) {
         return;
     }
-    Draw::Draw_Pic(vrect_.x + 32, vrect_.y, ram_pic_);
+    Draw::Draw_Pic(vrect.x + 32, vrect.y, ram_pic_);
 }
 
 void ScreenSystem::DrawTurtle()
@@ -228,7 +228,7 @@ void ScreenSystem::DrawTurtle()
     if (count < 3) {
         return;
     }
-    Draw::Draw_Pic(vrect_.x, vrect_.y, turtle_pic_);
+    Draw::Draw_Pic(vrect.x, vrect.y, turtle_pic_);
 }
 
 void ScreenSystem::DrawNet()
@@ -236,7 +236,7 @@ void ScreenSystem::DrawNet()
     if (Host::realtime - Client::cl.last_received_message < 0.3 || Client::cls.demoplayback) {
         return;
     }
-    Draw::Draw_Pic(vrect_.x + 64, vrect_.y, net_pic_);
+    Draw::Draw_Pic(vrect.x + 64, vrect.y, net_pic_);
 }
 
 void ScreenSystem::DrawPause()
@@ -263,44 +263,44 @@ void ScreenSystem::SetUpToDrawConsole()
     if (drawloading_) {
         return;
     }
-    Console::GetConsoleSystem().SetForcedUp(!Client::cl.worldmodel || Client::cls.signon != SIGNONS);
-    if (Console::GetConsoleSystem().IsForcedUp()) {
-        conlines_ = static_cast<float>(Vid::vid.height);
-        con_current_ = conlines_;
+    Console::GetConsoleSystem().forcedup = !Client::cl.worldmodel || Client::cls.signon != SIGNONS;
+    if (Console::GetConsoleSystem().forcedup) {
+        conlines = static_cast<float>(Vid::vid.height);
+        con_current = conlines;
     } else if (Keys::key_dest == Keys::key_console) {
-        conlines_ = static_cast<float>(Vid::vid.height / 2);
+        conlines = static_cast<float>(Vid::vid.height / 2);
     } else {
-        conlines_ = 0.0f;
+        conlines = 0.0f;
     }
-    if (conlines_ < con_current_) {
-        con_current_ -= static_cast<float>(conspeed_.value * Host::host_frametime);
-        if (conlines_ > con_current_) {
-            con_current_ = conlines_;
+    if (conlines < con_current) {
+        con_current -= static_cast<float>(conspeed_.value * Host::host_frametime);
+        if (conlines > con_current) {
+            con_current = conlines;
         }
-    } else if (conlines_ > con_current_) {
-        con_current_ += static_cast<float>(conspeed_.value * Host::host_frametime);
-        if (conlines_ < con_current_) {
-            con_current_ = conlines_;
+    } else if (conlines > con_current) {
+        con_current += static_cast<float>(conspeed_.value * Host::host_frametime);
+        if (conlines < con_current) {
+            con_current = conlines;
         }
     }
     if (clearconsole_++ < Vid::vid.numpages) {
-        copytop_ = 1;
+        copytop = 1;
         Draw::Draw_TileClear(
-            0, static_cast<int>(con_current_), Vid::vid.width, Vid::vid.height - static_cast<int>(con_current_));
+            0, static_cast<int>(con_current), Vid::vid.width, Vid::vid.height - static_cast<int>(con_current));
         Sbar::Sbar_Changed();
-    } else if (clearnotify_++ < Vid::vid.numpages) {
-        copytop_ = 1;
-        Draw::Draw_TileClear(0, 0, Vid::vid.width, Console::GetConsoleSystem().GetNotifyLines());
+    } else if (clearnotify++ < Vid::vid.numpages) {
+        copytop = 1;
+        Draw::Draw_TileClear(0, 0, Vid::vid.width, Console::GetConsoleSystem().notifylines);
     } else {
-        Console::GetConsoleSystem().SetNotifyLines(0);
+        Console::GetConsoleSystem().notifylines = 0;
     }
 }
 
 void ScreenSystem::DrawConsole()
 {
-    if (con_current_) {
-        copyeverything_ = 1;
-        Console::GetConsoleSystem().DrawConsole(static_cast<int>(con_current_), true);
+    if (con_current) {
+        copyeverything = 1;
+        Console::GetConsoleSystem().DrawConsole(static_cast<int>(con_current), true);
         clearconsole_ = 0;
     } else {
         if (Keys::key_dest == Keys::key_game || Keys::key_dest == Keys::key_message) {
@@ -398,22 +398,22 @@ void ScreenSystem::BeginLoadingPlaque()
         return;
     }
     Console::GetConsoleSystem().ClearNotify();
-    centertime_off_ = 0.0f;
-    con_current_ = 0.0f;
+    centertime_off = 0.0f;
+    con_current = 0.0f;
     drawloading_ = true;
-    fullupdate_ = 0;
+    fullupdate = 0;
     Sbar::Sbar_Changed();
     UpdateScreen();
     drawloading_ = false;
-    disabled_for_loading_ = true;
+    disabled_for_loading = true;
     disabled_time_ = static_cast<float>(Host::realtime);
-    fullupdate_ = 0;
+    fullupdate = 0;
 }
 
 void ScreenSystem::EndLoadingPlaque()
 {
-    disabled_for_loading_ = false;
-    fullupdate_ = 0;
+    disabled_for_loading = false;
+    fullupdate = 0;
     Console::GetConsoleSystem().ClearNotify();
 }
 
@@ -452,7 +452,7 @@ bool ScreenSystem::ModalMessage(std::string_view text)
         return true;
     }
     notifystring_ = text;
-    fullupdate_ = 0;
+    fullupdate = 0;
     drawdialog_ = true;
     UpdateScreen();
     drawdialog_ = false;
@@ -461,7 +461,7 @@ bool ScreenSystem::ModalMessage(std::string_view text)
         Keys::key_count = -1;
         Common::Sys_SendKeyEvents();
     } while (Keys::key_lastpress != 'y' && Keys::key_lastpress != 'n' && Keys::key_lastpress != Keys::K_ESCAPE);
-    fullupdate_ = 0;
+    fullupdate = 0;
     UpdateScreen();
     return Keys::key_lastpress == 'y';
 }
@@ -471,43 +471,43 @@ void ScreenSystem::UpdateScreen()
     static float oldscr_viewsize = 0.0f;
     static float oldlcd_x = 0.0f;
     vrect_t vrect { };
-    if (skipupdate_ || block_drawing_) {
+    if (skipupdate || block_drawing) {
         return;
     }
-    copytop_ = 0;
-    copyeverything_ = 0;
-    if (disabled_for_loading_) {
+    copytop = 0;
+    copyeverything = 0;
+    if (disabled_for_loading) {
         if (Host::realtime - disabled_time_ > 60) {
-            disabled_for_loading_ = false;
+            disabled_for_loading = false;
             Console::Con_Printf("load failed.\n");
         } else {
             return;
         }
     }
-    if (Client::cls.state == ca_dedicated || !initialized_ || !Console::GetConsoleSystem().IsInitialized()) {
+    if (Client::cls.state == ca_dedicated || !initialized_ || !Console::GetConsoleSystem().initialized) {
         return;
     }
-    if (viewsize_.value != oldscr_viewsize) {
-        oldscr_viewsize = viewsize_.value;
+    if (viewsize.value != oldscr_viewsize) {
+        oldscr_viewsize = viewsize.value;
         Vid::vid.recalc_refdef = 1;
     }
-    if (oldfov_ != fov_.value) {
-        oldfov_ = fov_.value;
+    if (oldfov_ != fov.value) {
+        oldfov_ = fov.value;
         Vid::vid.recalc_refdef = true;
     }
     if (oldlcd_x != View::lcd_x.value) {
         oldlcd_x = View::lcd_x.value;
         Vid::vid.recalc_refdef = true;
     }
-    if (oldscreensize_ != viewsize_.value) {
-        oldscreensize_ = viewsize_.value;
+    if (oldscreensize_ != viewsize.value) {
+        oldscreensize_ = viewsize.value;
         Vid::vid.recalc_refdef = true;
     }
     if (Vid::vid.recalc_refdef) {
         CalcRefdef();
     }
-    if (fullupdate_++ < Vid::vid.numpages) {
-        copyeverything_ = 1;
+    if (fullupdate++ < Vid::vid.numpages) {
+        copyeverything = 1;
         Draw::Draw_TileClear(0, 0, Vid::vid.width, Vid::vid.height);
         Sbar::Sbar_Changed();
     }
@@ -519,7 +519,7 @@ void ScreenSystem::UpdateScreen()
         Sbar::Sbar_Draw();
         Draw::Draw_FadeScreen();
         DrawNotifyString();
-        copyeverything_ = true;
+        copyeverything = true;
     } else if (drawloading_) {
         DrawLoading();
         Sbar::Sbar_Draw();
@@ -544,14 +544,14 @@ void ScreenSystem::UpdateScreen()
         Render::D_UpdateRects(pconupdate_);
     }
     View::V_UpdatePalette();
-    if (copyeverything_) {
+    if (copyeverything) {
         vrect.x = 0;
         vrect.y = 0;
         vrect.width = Vid::vid.width;
         vrect.height = Vid::vid.height;
         vrect.pnext = nullptr;
         Vid::VID_Update(&vrect);
-    } else if (copytop_) {
+    } else if (copytop) {
         vrect.x = 0;
         vrect.y = 0;
         vrect.width = Vid::vid.width;
@@ -559,10 +559,10 @@ void ScreenSystem::UpdateScreen()
         vrect.pnext = nullptr;
         Vid::VID_Update(&vrect);
     } else {
-        vrect.x = vrect_.x;
-        vrect.y = vrect_.y;
-        vrect.width = vrect_.width;
-        vrect.height = vrect_.height;
+        vrect.x = vrect.x;
+        vrect.y = vrect.y;
+        vrect.width = vrect.width;
+        vrect.height = vrect.height;
         vrect.pnext = nullptr;
         Vid::VID_Update(&vrect);
     }

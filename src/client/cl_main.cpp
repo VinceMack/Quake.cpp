@@ -40,11 +40,15 @@ cvar_t cl_yawspeed = { "cl_yawspeed", "140", { }, { }, { }, { } };
 cvar_t cl_pitchspeed = { "cl_pitchspeed", "150", { }, { }, { }, { } };
 cvar_t cl_anglespeedkey = { "cl_anglespeedkey", "1.5", { }, { }, { }, { } };
 
-ClientSubsystem& GetClientSubsystem() noexcept
-{
-    static ClientSubsystem subsystem;
-    return subsystem;
-}
+client_static_t cls;
+client_state_t cl;
+EfragArray cl_efrags;
+EntityArray cl_entities;
+StaticEntityArray cl_static_entities;
+LightstyleArray cl_lightstyle;
+DlightArray cl_dlights;
+TempEntityArray cl_temp_entities;
+BeamArray cl_beams;
 
 int cl_numvisedicts = 0;
 entity_t* cl_visedicts[MAX_VISEDICTS];

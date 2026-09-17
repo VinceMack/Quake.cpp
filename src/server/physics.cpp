@@ -110,7 +110,7 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
         if (ent->v.velocity == Math::vec3_origin) break;
 
         const Vector3 end = ent->v.origin + ent->v.velocity * time_left;
-        trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, false, ent);
+        trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MoveMode::Normal, ent);
 
         if (trace.allsolid) {
             ent->v.velocity = Math::vec3_origin;
@@ -201,11 +201,11 @@ trace_t SV_PushEntity(edict_t* ent, const Vector3& push)
     trace_t trace { };
 
     if (ent->v.movetype == MOVETYPE_FLYMISSILE) {
-        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_MISSILE, ent);
+        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MoveMode::Missile, ent);
     } else if (ent->v.solid == SOLID_TRIGGER || ent->v.solid == SOLID_NOT) {
-        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_NOMONSTERS, ent);
+        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MoveMode::NoMonsters, ent);
     } else {
-        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent);
+        trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MoveMode::Normal, ent);
     }
 
     ent->v.origin = trace.endpos;
@@ -710,7 +710,7 @@ realcheck:
     start.x = stop.x = (mins.x + maxs.x) * 0.5f;
     start.y = stop.y = (mins.y + maxs.y) * 0.5f;
     stop.z = start.z - 2.0f * STEPSIZE;
-    trace_t trace = SV_Move(start, Math::vec3_origin, Math::vec3_origin, stop, true, ent);
+    trace_t trace = SV_Move(start, Math::vec3_origin, Math::vec3_origin, stop, MoveMode::NoMonsters, ent);
 
     if (trace.fraction == 1.0f) return false;
 
@@ -722,7 +722,7 @@ realcheck:
             start.x = stop.x = x ? maxs.x : mins.x;
             start.y = stop.y = y ? maxs.y : mins.y;
 
-            trace = SV_Move(start, Math::vec3_origin, Math::vec3_origin, stop, true, ent);
+            trace = SV_Move(start, Math::vec3_origin, Math::vec3_origin, stop, MoveMode::NoMonsters, ent);
 
             if (trace.fraction != 1.0f && trace.endpos.z > bottom) bottom = trace.endpos.z;
             if (trace.fraction == 1.0f || mid - trace.endpos.z > STEPSIZE) return false;
@@ -748,7 +748,7 @@ bool SV_movestep(edict_t* ent, const Vector3& move, bool relink)
                 if (dz < 30.0f) neworg.z += 8.0f;
             }
 
-            trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, neworg, false, ent);
+            trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, neworg, MoveMode::Normal, ent);
 
             if (trace.fraction == 1.0f) {
                 if ((static_cast<int>(ent->v.flags) & FL_SWIM) && SV_PointContents(trace.endpos) == CONTENTS_EMPTY) {
@@ -770,13 +770,13 @@ bool SV_movestep(edict_t* ent, const Vector3& move, bool relink)
     Vector3 end = neworg;
     end.z -= STEPSIZE * 2;
 
-    trace_t trace = SV_Move(neworg, ent->v.mins, ent->v.maxs, end, false, ent);
+    trace_t trace = SV_Move(neworg, ent->v.mins, ent->v.maxs, end, MoveMode::Normal, ent);
 
     if (trace.allsolid) return false;
 
     if (trace.startsolid) {
         neworg.z -= STEPSIZE;
-        trace = SV_Move(neworg, ent->v.mins, ent->v.maxs, end, false, ent);
+        trace = SV_Move(neworg, ent->v.mins, ent->v.maxs, end, MoveMode::Normal, ent);
         if (trace.allsolid || trace.startsolid) return false;
     }
 

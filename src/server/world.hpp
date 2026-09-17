@@ -16,7 +16,7 @@ trace_t SV_ClipMoveToEntity(
     edict_t* ent, const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end);
 void SV_MoveBounds(const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end, Vector3& boxmins,
     Vector3& boxmaxs);
-trace_t SV_Move(
-    const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end, int type, edict_t* passedict);
+trace_t SV_Move(const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end, MoveMode type,
+    edict_t* passedict);
 
 } // namespace Server

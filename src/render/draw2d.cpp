@@ -6,7 +6,6 @@
 #include "render/software/sw_local.hpp"
 #include "render/software/sw_vid.hpp"
 #include "core/math.hpp"
-#include "render/renderer.hpp"
 #include "quakedef.hpp"
 #include "core/cmd.hpp"
 #include "core/filesystem.hpp"

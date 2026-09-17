@@ -217,7 +217,7 @@ int SV_PointContents(const Vector3& p)
 
 edict_t* SV_TestEntityPosition(edict_t* ent)
 {
-    trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, 0, ent);
+    trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MoveMode::Normal, ent);
     if (trace.startsolid) return sv.edicts;
     return nullptr;
 }
@@ -250,7 +250,7 @@ typedef struct {
     Vector3 mins2, maxs2;
     Vector3 start, end;
     trace_t trace;
-    int type;
+    MoveMode type;
     edict_t* passedict;
 } moveclip_t;
 
@@ -265,7 +265,7 @@ static void SV_ClipToLinks(areanode_t* node, moveclip_t* clip)
         touch = EDICT_FROM_AREA(l);
         if (touch->v.solid == SOLID_NOT || touch == clip->passedict) continue;
         if (touch->v.solid == SOLID_TRIGGER) Common::Sys_Error("Trigger in clipping list");
-        if (clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP) continue;
+        if (clip->type == MoveMode::NoMonsters && touch->v.solid != SOLID_BSP) continue;
 
         if (clip->boxmins.x > touch->v.absmax.x || clip->boxmins.y > touch->v.absmax.y
             || clip->boxmins.z > touch->v.absmax.z || clip->boxmaxs.x < touch->v.absmin.x
@@ -320,8 +320,8 @@ void SV_MoveBounds(const Vector3& start, const Vector3& mins, const Vector3& max
     }
 }
 
-trace_t SV_Move(
-    const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end, int type, edict_t* passedict)
+trace_t SV_Move(const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end, MoveMode type,
+    edict_t* passedict)
 {
     moveclip_t clip { };
     clip.trace = SV_ClipMoveToEntity(sv.edicts, start, mins, maxs, end);
@@ -332,7 +332,7 @@ trace_t SV_Move(
     clip.type = type;
     clip.passedict = passedict;
 
-    if (type == MOVE_MISSILE) {
+    if (type == MoveMode::Missile) {
         clip.mins2 = Vector3(-15, -15, -15);
         clip.maxs2 = Vector3(15, 15, 15);
     } else {

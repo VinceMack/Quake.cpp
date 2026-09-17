@@ -175,8 +175,7 @@ void R_PrintDSpeeds()
 
 void R_SetVrect(vrect_t* pvrectin, vrect_t* pvrect, int lineadj)
 {
-    float size = Screen::GetScreenSystem().GetViewsize().value > 100.0f ? 100.0f
-                                                                        : Screen::GetScreenSystem().GetViewsize().value;
+    float size = Screen::GetScreenSystem().viewsize.value > 100.0f ? 100.0f : Screen::GetScreenSystem().viewsize.value;
     if (Client::cl.intermission) {
         size = 100.0f;
         lineadj = 0;
@@ -269,7 +268,7 @@ void R_ViewChanged(vrect_t* pvrect, int lineadj, float aspect)
         * (2.0 / r_refdef.horizontalFieldOfView));
     r_aliastransition = r_aliastransbase.value * res_scale;
     r_resfudge = r_aliastransadj.value * res_scale;
-    r_fov_greater_than_90 = (Screen::GetScreenSystem().GetFov().value > 90.0f);
+    r_fov_greater_than_90 = (Screen::GetScreenSystem().fov.value > 90.0f);
     D_ViewChanged();
 }
 

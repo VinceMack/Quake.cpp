@@ -539,7 +539,7 @@ void M_AdjustSliders(int dir)
     switch (options_cursor) {
     case 3:
         Cvar::SetValue(
-            "viewsize", std::clamp<float>(Screen::GetScreenSystem().GetViewsize().value + dir * 10, 30.0f, 120.0f));
+            "viewsize", std::clamp<float>(Screen::GetScreenSystem().viewsize.value + dir * 10, 30.0f, 120.0f));
         break;
     case 4:
         Cvar::SetValue("gamma", std::clamp<float>(View::v_gamma.value - static_cast<float>(dir * 0.05), 0.5f, 1.0f));
@@ -591,7 +591,7 @@ void M_Options_Draw()
     M_Print(16, 40, "         Go to console");
     M_Print(16, 48, "     Reset to defaults");
     M_Print(16, 56, "           Screen size");
-    M_DrawSlider(220, 56, (Screen::GetScreenSystem().GetViewsize().value - 30) / (120 - 30));
+    M_DrawSlider(220, 56, (Screen::GetScreenSystem().viewsize.value - 30) / (120 - 30));
     M_Print(16, 64, "            Brightness");
     M_DrawSlider(220, 64, static_cast<float>((1.0 - View::v_gamma.value) / 0.5));
     M_Print(16, 72, "           Mouse Speed");
@@ -1222,12 +1222,12 @@ void M_Draw()
 {
     if (m_state == MenuState::None || Keys::key_dest != Keys::key_menu) return;
     if (!m_recursiveDraw) {
-        Screen::GetScreenSystem().SetCopyeverything(1);
-        if (Screen::GetScreenSystem().GetConCurrent()) {
+        Screen::GetScreenSystem().copyeverything = 1;
+        if (Screen::GetScreenSystem().con_current) {
             Draw::Draw_ConsoleBackground(Vid::vid.height);
         } else
             Draw::Draw_FadeScreen();
-        Screen::GetScreenSystem().SetFullupdate(0);
+        Screen::GetScreenSystem().fullupdate = 0;
     } else
         m_recursiveDraw = false;
 

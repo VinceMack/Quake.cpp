@@ -119,19 +119,19 @@ void Key_Console(int key)
     }
     auto& con = Console::GetConsoleSystem();
     if (key == K_PGUP || key == K_MWHEELUP) {
-        con.SetBackscroll(std::min(con.GetBackscroll() + 2, con.GetTotalLines() - (int)(Vid::vid.height >> 3) - 1));
+        con.backscroll = std::min(con.backscroll + 2, con.totallines - (int)(Vid::vid.height >> 3) - 1);
         return;
     }
     if (key == K_PGDN || key == K_MWHEELDOWN) {
-        con.SetBackscroll(std::max(0, con.GetBackscroll() - 2));
+        con.backscroll = std::max(0, con.backscroll - 2);
         return;
     }
     if (key == K_HOME) {
-        con.SetBackscroll(con.GetTotalLines() - (Vid::vid.height >> 3) - 1);
+        con.backscroll = con.totallines - (Vid::vid.height >> 3) - 1;
         return;
     }
     if (key == K_END) {
-        con.SetBackscroll(0);
+        con.backscroll = 0;
         return;
     }
     if (key >= 32 && key <= 127 && key_linepos < MAXCMDLINE - 1) {
@@ -325,7 +325,7 @@ void Key_Event(int key, bool down)
         return;
     }
     if ((key_dest == key_menu && menubound[key]) || (key_dest == key_console && !consolekeys[key])
-        || (key_dest == key_game && (!Console::GetConsoleSystem().IsForcedUp() || !consolekeys[key]))) {
+        || (key_dest == key_game && (!Console::GetConsoleSystem().forcedup || !consolekeys[key]))) {
         const auto& kb = keybindings[key];
         if (!kb.empty()) {
             if (kb[0] == '+')

@@ -222,23 +222,9 @@ extern cvar_t sv_maxspeed;
 extern cvar_t sv_accelerate;
 extern cvar_t sv_edgefriction;
 
-class ServerSubsystem {
-public:
-    [[nodiscard]] server_static_t& GetStaticState() noexcept { return svs_; }
-    [[nodiscard]] const server_static_t& GetStaticState() const noexcept { return svs_; }
-
-    [[nodiscard]] server_t& GetState() noexcept { return sv_; }
-    [[nodiscard]] const server_t& GetState() const noexcept { return sv_; }
-
-private:
-    server_static_t svs_ { };
-    server_t sv_ { };
-};
-
-[[nodiscard]] ServerSubsystem& GetServerSubsystem() noexcept;
-
-inline server_static_t& svs = GetServerSubsystem().GetStaticState();
-inline server_t& sv = GetServerSubsystem().GetState();
+// The persistent server (connected clients) and the currently running level.
+extern server_static_t svs;
+extern server_t sv;
 
 extern edict_t* sv_player;
 

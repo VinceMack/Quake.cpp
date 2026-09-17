@@ -600,13 +600,13 @@ void Sbar_DrawFace()
 
 void Sbar_Draw()
 {
-    if (Screen::GetScreenSystem().GetConCurrent() == Vid::vid.height) {
+    if (Screen::GetScreenSystem().con_current == Vid::vid.height) {
         return; // console is full screen
     }
     if (sb_updates >= Vid::vid.numpages) {
         return;
     }
-    Screen::GetScreenSystem().SetCopyeverything(1);
+    Screen::GetScreenSystem().copyeverything = 1;
     sb_updates++;
     if (sb_lines && Vid::vid.width > 320) {
         Draw::Draw_TileClear(0, Vid::vid.height - sb_lines, Vid::vid.width, sb_lines);
@@ -724,8 +724,8 @@ void Sbar_IntermissionNumber(int x, int y, int num, int digits, int color)
 
 void Sbar_DeathmatchOverlay()
 {
-    Screen::GetScreenSystem().SetCopyeverything(1);
-    Screen::GetScreenSystem().SetFullupdate(0);
+    Screen::GetScreenSystem().copyeverything = 1;
+    Screen::GetScreenSystem().fullupdate = 0;
     qpic_t* pic = Draw::Draw_CachePic("gfx/ranking.lmp");
     Menu::M_DrawPic((320 - pic->width) / 2, 8, pic);
     // scores
@@ -768,8 +768,8 @@ void Sbar_MiniDeathmatchOverlay()
     if (Vid::vid.width < 512 || !sb_lines) {
         return;
     }
-    Screen::GetScreenSystem().SetCopyeverything(1);
-    Screen::GetScreenSystem().SetFullupdate(0);
+    Screen::GetScreenSystem().copyeverything = 1;
+    Screen::GetScreenSystem().fullupdate = 0;
     // scores
     Sbar_SortFrags();
     // draw the text
@@ -829,8 +829,8 @@ void Sbar_MiniDeathmatchOverlay()
 
 void Sbar_IntermissionOverlay()
 {
-    Screen::GetScreenSystem().SetCopyeverything(1);
-    Screen::GetScreenSystem().SetFullupdate(0);
+    Screen::GetScreenSystem().copyeverything = 1;
+    Screen::GetScreenSystem().fullupdate = 0;
     if (Client::cl.gametype == GAME_DEATHMATCH) {
         Sbar_DeathmatchOverlay();
         return;
@@ -856,7 +856,7 @@ void Sbar_IntermissionOverlay()
 
 void Sbar_FinaleOverlay()
 {
-    Screen::GetScreenSystem().SetCopyeverything(1);
+    Screen::GetScreenSystem().copyeverything = 1;
     qpic_t* pic = Draw::Draw_CachePic("gfx/finale.lmp");
     Draw::Draw_TransPic((Vid::vid.width - pic->width) / 2, 16, pic);
 }

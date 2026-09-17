@@ -68,10 +68,24 @@ points, and all three are frozen by the compatibility promise:
 
 ## The renderer boundary
 
-`Render::IRenderer` exists but the client and UI still reach the software rasterizer
-directly through `R_*`/`Draw_*` calls and the `r_refdef`/`vid` globals. Making the
-interface the only path is the next architectural step; the inventory of what crosses
-the boundary today is: 2D drawing (`Draw_*`), view rendering (`R_RenderView`,
-`R_NewMap`, `R_ViewChanged`), entity fragment linking (`R_AddEfrags`/`R_RemoveEfrags`),
-particle and light submission (`R_RocketTrail`, `R_ParticleExplosion`, `R_PushDlights`,
-...), and presentation (`VID_Update`, `VID_ShiftPalette`).
+There is no renderer interface class yet, on purpose. An earlier `IRenderer` had a
+single caller and no second implementation, so it described nothing; it was removed
+rather than kept as decoration. The boundary is instead documented here as the exact
+set of things that cross it today, so that a hardware backend can be designed against
+the data rather than against the software rasterizer's call shapes:
+
+- **2D drawing**: `Draw_Pic`, `Draw_TransPic`, `Draw_TransPicTranslate`, `Draw_Character`,
+  `Draw_String`, `Draw_Fill`, `Draw_TileClear`, `Draw_FadeScreen`, `Draw_ConsoleBackground`,
+  `Draw_CachePic`, `Draw_PicFromWad`, and the loading-disc indicator.
+- **Scene submission**: `R_RenderView` with `r_refdef` (view origin, angles, FOV,
+  viewport) plus the client entity list (`cl_visedicts`), dynamic lights
+  (`R_PushDlights`), particles (`R_RocketTrail`, `R_ParticleExplosion`,
+  `R_RunParticleEffect`, ...), and lightstyles.
+- **World residency**: `R_NewMap`, and entity fragments (`R_AddEfrags`, `R_RemoveEfrags`)
+  that link static entities into BSP leaves.
+- **Presentation**: `VID_Init`, `VID_Update`, `VID_ShiftPalette`, `VID_Shutdown`, and
+  the `vid` description of the framebuffer that the 2D code writes into directly.
+
+The last item is the real obstacle: the console, HUD and menu draw by poking bytes into
+`vid.buffer`. A hardware backend needs those to become draw commands first. Once a
+second backend exists, the interface should be extracted from this list.

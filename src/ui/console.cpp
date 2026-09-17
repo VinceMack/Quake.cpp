@@ -79,24 +79,24 @@ void ConsoleSystem::CheckResize()
     if (width == linewidth_) return;
     if (width < 1) {
         linewidth_ = 38;
-        totallines_ = CON_TEXTSIZE / linewidth_;
+        totallines = CON_TEXTSIZE / linewidth_;
         std::fill(text_.begin(), text_.end(), ' ');
     } else {
-        int oldwidth = linewidth_, oldtotallines = totallines_;
+        int oldwidth = linewidth_, oldtotallines = totallines;
         linewidth_ = width;
-        totallines_ = CON_TEXTSIZE / linewidth_;
-        int numlines = std::min(oldtotallines, totallines_), numchars = std::min(oldwidth, linewidth_);
+        totallines = CON_TEXTSIZE / linewidth_;
+        int numlines = std::min(oldtotallines, totallines), numchars = std::min(oldwidth, linewidth_);
         std::vector<char> tbuf = text_;
         std::fill(text_.begin(), text_.end(), ' ');
         for (int i = 0; i < numlines; i++) {
             for (int j = 0; j < numchars; j++)
-                text_[(totallines_ - 1 - i) * linewidth_ + j]
+                text_[(totallines - 1 - i) * linewidth_ + j]
                     = tbuf[((current_ - i + oldtotallines) % oldtotallines) * oldwidth + j];
         }
         ClearNotify();
     }
-    backscroll_ = 0;
-    current_ = totallines_ - 1;
+    backscroll = 0;
+    current_ = totallines - 1;
 }
 
 void ConsoleSystem::Init()
@@ -115,21 +115,21 @@ void ConsoleSystem::Init()
         = { { "toggleconsole", ConsoleSystem::ToggleConsole_f }, { "messagemode", Con_MessageMode_f },
               { "messagemode2", Con_MessageMode2_f }, { "clear", ConsoleSystem::Clear_f } };
     for (auto [name, fn] : cmds) Cmd::AddCommand(name, fn);
-    initialized_ = true;
+    initialized = true;
 }
 
 void ConsoleSystem::Linefeed()
 {
-    if (!initialized_) return;
+    if (!initialized) return;
     x_ = 0;
     current_++;
-    std::fill_n(text_.begin() + (current_ % totallines_) * linewidth_, linewidth_, ' ');
+    std::fill_n(text_.begin() + (current_ % totallines) * linewidth_, linewidth_, ' ');
 }
 
 void ConsoleSystem::Print(std::string_view txt)
 {
-    if (!initialized_) return;
-    backscroll_ = 0;
+    if (!initialized) return;
+    backscroll = 0;
     int mask = 0;
     size_t index = 0;
     if (!txt.empty() && txt[0] == 1) {
@@ -166,7 +166,7 @@ void ConsoleSystem::Print(std::string_view txt)
             cr = true;
             break;
         default:
-            text_[(current_ % totallines_) * linewidth_ + x_] = static_cast<char>(c | mask);
+            text_[(current_ % totallines) * linewidth_ + x_] = static_cast<char>(c | mask);
             if (++x_ >= linewidth_) x_ = 0;
             break;
         }
@@ -189,9 +189,9 @@ void ConsoleSystem::Printf(const char* fmt, ...)
     va_end(argptr);
     Common::Sys_Printf("%s", msg);
     if (debuglog_) DebugLog((std::string(Common::com_gamedir) + "/qconsole.log").c_str(), msg);
-    if (!initialized_ || Client::cls.state == ca_dedicated) return;
+    if (!initialized || Client::cls.state == ca_dedicated) return;
     Print(msg);
-    if (Client::cls.signon != SIGNONS && !Screen::GetScreenSystem().GetDisabledForLoading() && !inupdate) {
+    if (Client::cls.signon != SIGNONS && !Screen::GetScreenSystem().disabled_for_loading && !inupdate) {
         inupdate = true;
         Screen::GetScreenSystem().UpdateScreen();
         inupdate = false;
@@ -211,7 +211,7 @@ void ConsoleSystem::DPrintf(const char* fmt, ...)
 
 void ConsoleSystem::DrawInput()
 {
-    if (Keys::key_dest != Keys::key_console && !forcedup_) return;
+    if (Keys::key_dest != Keys::key_console && !forcedup) return;
     char* text = Keys::key_lines[Keys::edit_line].data();
     text[Keys::key_linepos] = static_cast<char>(10 + ((int)(Host::realtime * cursorspeed_) & 1));
     std::fill_n(text + Keys::key_linepos + 1, std::max(0, linewidth_ - (Keys::key_linepos + 1)), ' ');
@@ -227,15 +227,15 @@ void ConsoleSystem::DrawNotify()
         if (i < 0) continue;
         float time = times_[i % NUM_CON_TIMES];
         if (time == 0.0f || (Host::realtime - time) > con_notifytime.value) continue;
-        char* text_ptr = text_.data() + (i % totallines_) * linewidth_;
-        Screen::GetScreenSystem().SetClearnotify(0);
-        Screen::GetScreenSystem().SetCopytop(1);
+        char* text_ptr = text_.data() + (i % totallines) * linewidth_;
+        Screen::GetScreenSystem().clearnotify = 0;
+        Screen::GetScreenSystem().copytop = 1;
         for (int x = 0; x < linewidth_; x++) Draw::Draw_Character((x + 1) << 3, v, text_ptr[x]);
         v += 8;
     }
     if (Keys::key_dest == Keys::key_message) {
-        Screen::GetScreenSystem().SetClearnotify(0);
-        Screen::GetScreenSystem().SetCopytop(1);
+        Screen::GetScreenSystem().clearnotify = 0;
+        Screen::GetScreenSystem().copytop = 1;
         int x = 0;
         Draw::Draw_String(8, v, "say:");
         while (Keys::chat_buffer[x]) {
@@ -245,7 +245,7 @@ void ConsoleSystem::DrawNotify()
         Draw::Draw_Character((x + 5) << 3, v, static_cast<char>(10 + ((int)(Host::realtime * cursorspeed_) & 1)));
         v += 8;
     }
-    if (v > notifylines_) notifylines_ = v;
+    if (v > notifylines) notifylines = v;
 }
 
 void ConsoleSystem::DrawConsole(int lines, bool drawinput)
@@ -255,8 +255,8 @@ void ConsoleSystem::DrawConsole(int lines, bool drawinput)
     vislines_ = lines;
     int rows = (lines - 16) >> 3, y = lines - 16 - (rows << 3);
     for (int i = current_ - rows + 1; i <= current_; i++, y += 8) {
-        int j = std::max(0, i - backscroll_);
-        char* text_ptr = text_.data() + (j % totallines_) * linewidth_;
+        int j = std::max(0, i - backscroll);
+        char* text_ptr = text_.data() + (j % totallines) * linewidth_;
         for (int x = 0; x < linewidth_; x++) Draw::Draw_Character((x + 1) << 3, y, text_ptr[x]);
     }
     if (drawinput) DrawInput();

@@ -27,19 +27,16 @@ public:
     static void Clear_f();
     static void ToggleConsole_f();
 
-    [[nodiscard]] bool IsInitialized() const noexcept { return initialized_; }
-    [[nodiscard]] bool IsForcedUp() const noexcept { return forcedup_; }
-    void SetForcedUp(bool val) noexcept { forcedup_ = val; }
-    [[nodiscard]] int GetTotalLines() const noexcept { return totallines_; }
-    [[nodiscard]] int GetBackscroll() const noexcept { return backscroll_; }
-    void SetBackscroll(int val) noexcept { backscroll_ = val; }
-    [[nodiscard]] int GetNotifyLines() const noexcept { return notifylines_; }
-    void SetNotifyLines(int val) noexcept { notifylines_ = val; }
+    // State shared with the key handler, the screen and the view.
+    bool initialized { false };
+    bool forcedup { false }; // console fills the screen because no level is loaded
+    int totallines { 0 };
+    int backscroll { 0 };
+    int notifylines { 0 };
 
 private:
-    bool initialized_ { false }, forcedup_ { false }, debuglog_ { false };
-    int totallines_ { 0 }, backscroll_ { 0 }, notifylines_ { 0 }, linewidth_ { 0 }, current_ { 0 }, x_ { 0 },
-        vislines_ { 0 };
+    bool debuglog_ { false };
+    int linewidth_ { 0 }, current_ { 0 }, x_ { 0 }, vislines_ { 0 };
     float cursorspeed_ { 4.0f };
     std::vector<char> text_;
     std::vector<float> times_;

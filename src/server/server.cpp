@@ -33,11 +33,8 @@ cvar_t sv_maxspeed = { "sv_maxspeed", "320", false, true };
 cvar_t sv_accelerate = { "sv_accelerate", "10" };
 cvar_t sv_edgefriction = { "edgefriction", "2" };
 
-ServerSubsystem& GetServerSubsystem() noexcept
-{
-    static ServerSubsystem subsystem;
-    return subsystem;
-}
+server_static_t svs;
+server_t sv;
 
 static std::array<std::array<char, 5>, MAX_MODELS> localmodels { };
 
@@ -136,7 +133,7 @@ void SV_SpawnServer(const char* server)
 {
     if (Net::hostname.string.empty()) Cvar::Set("hostname", "UNNAMED");
 
-    Screen::GetScreenSystem().SetCentertimeOff(0.0f);
+    Screen::GetScreenSystem().centertime_off = 0.0f;
     Console::Con_DPrintf("SpawnServer: %s\n", server);
     svs.changelevel_issued = false;
 

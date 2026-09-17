@@ -357,7 +357,8 @@ void PF_traceline(void)
     int no_monsters = static_cast<int>(G_FLOAT(OFS_PARM2));
     edict_t* ent = G_EDICT(OFS_PARM3);
 
-    trace_t trace = Server::SV_Move(v1, Math::vec3_origin, Math::vec3_origin, v2, no_monsters, ent);
+    trace_t trace
+        = Server::SV_Move(v1, Math::vec3_origin, Math::vec3_origin, v2, static_cast<MoveMode>(no_monsters), ent);
 
     pr_global_struct->trace_allsolid = trace.allsolid;
     pr_global_struct->trace_startsolid = trace.startsolid;
@@ -648,7 +649,7 @@ void PF_droptofloor(void)
     Vector3 end = ent->v.origin;
     end.z -= 256;
 
-    trace_t trace = Server::SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, false, ent);
+    trace_t trace = Server::SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MoveMode::Normal, ent);
 
     if (trace.fraction == 1 || trace.allsolid) {
         G_FLOAT(OFS_RETURN) = 0;
@@ -736,7 +737,7 @@ void PF_aim(void)
 
     Vector3 dir = pr_global_struct->v_forward;
     Vector3 end = start + dir * 2048.0f;
-    trace_t tr = Server::SV_Move(start, Math::vec3_origin, Math::vec3_origin, end, false, ent);
+    trace_t tr = Server::SV_Move(start, Math::vec3_origin, Math::vec3_origin, end, MoveMode::Normal, ent);
     if (tr.ent && tr.ent->v.takedamage == DAMAGE_AIM
         && (!Server::teamplay.value || ent->v.team <= 0 || ent->v.team != tr.ent->v.team)) {
         VectorCopy(pr_global_struct->v_forward, G_VECTOR(OFS_RETURN));
@@ -759,7 +760,7 @@ void PF_aim(void)
         float dist = dir.dot(pr_global_struct->v_forward);
         if (dist < bestdist) continue;
 
-        tr = Server::SV_Move(start, Math::vec3_origin, Math::vec3_origin, end, false, ent);
+        tr = Server::SV_Move(start, Math::vec3_origin, Math::vec3_origin, end, MoveMode::Normal, ent);
         if (tr.ent == check) {
             bestdist = dist;
             bestent = check;

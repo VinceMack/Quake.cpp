@@ -1,7 +1,5 @@
 // host.cpp -- Central engine host orchestration (loop, state, error handling, dispatch)
 #include "host/host.hpp"
-#include "render/renderer.hpp"
-#include "render/software/sw_renderer.hpp"
 #include "platform/crt_compat.hpp"
 #include "core/wad.hpp"
 #include "render/software/sw_vid.hpp"
@@ -329,12 +327,10 @@ void Host_Init(quakeparms_t* parms)
         colormap_data = Common::COM_LoadFile("gfx/colormap.lmp");
         if (colormap_data.empty()) Common::Sys_Error("Couldn't load gfx/colormap.lmp");
         host_colormap = colormap_data.data();
-        static Render::SoftwareRenderer sw_renderer;
-        Render::SetRenderer(&sw_renderer);
         Vid::VID_Init(host_basepal);
         Draw::Draw_Init();
         Screen::GetScreenSystem().Init();
-        Render::GetRenderer()->Init();
+        Render::R_Init();
         Audio::S_Init();
         Sbar::Sbar_Init();
         Client::CL_Init();
@@ -353,7 +349,7 @@ void Host_Shutdown()
         return;
     }
     isdown = true;
-    Screen::GetScreenSystem().SetDisabledForLoading(true);
+    Screen::GetScreenSystem().disabled_for_loading = true;
     Host_WriteConfiguration();
     Net::NET_Shutdown();
     Audio::S_Shutdown();

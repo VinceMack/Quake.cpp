@@ -27,52 +27,26 @@ public:
     void EndLoadingPlaque();
     bool ModalMessage(std::string_view text);
 
-    [[nodiscard]] vrect_t& GetVrect() { return vrect_; }
-    [[nodiscard]] const vrect_t& GetVrect() const { return vrect_; }
-
-    [[nodiscard]] cvar_t& GetFov() { return fov_; }
-    [[nodiscard]] const cvar_t& GetFov() const { return fov_; }
-
-    [[nodiscard]] cvar_t& GetViewsize() { return viewsize_; }
-    [[nodiscard]] const cvar_t& GetViewsize() const { return viewsize_; }
-
-    [[nodiscard]] float& GetCentertimeOff() { return centertime_off_; }
-    void SetCentertimeOff(float val) { centertime_off_ = val; }
-
-    [[nodiscard]] float& GetConCurrent() { return con_current_; }
-    void SetConCurrent(float val) { con_current_ = val; }
-
-    [[nodiscard]] float& GetConlines() { return conlines_; }
-    void SetConlines(float val) { conlines_ = val; }
-
-    [[nodiscard]] int& GetFullupdate() { return fullupdate_; }
-    void SetFullupdate(int val) { fullupdate_ = val; }
-
-    [[nodiscard]] int& GetClearnotify() { return clearnotify_; }
-    void SetClearnotify(int val) { clearnotify_ = val; }
-
-    [[nodiscard]] qboolean& GetDisabledForLoading() { return disabled_for_loading_; }
-    void SetDisabledForLoading(qboolean val) { disabled_for_loading_ = val; }
-
-    [[nodiscard]] qboolean& GetSkipupdate() { return skipupdate_; }
-    void SetSkipupdate(qboolean val) { skipupdate_ = val; }
-
-    [[nodiscard]] qboolean& GetBlockDrawing() { return block_drawing_; }
-    void SetBlockDrawing(qboolean val) { block_drawing_ = val; }
-
-    [[nodiscard]] int& GetCopytop() { return copytop_; }
-    void SetCopytop(int val) { copytop_ = val; }
-
-    [[nodiscard]] int& GetCopyeverything() { return copyeverything_; }
-    void SetCopyeverything(int val) { copyeverything_ = val; }
-
     static void ScreenShot_f();
     static void SizeUp_f();
     static void SizeDown_f();
 
+    // State shared with the console, HUD, menu, view and renderer.
+    cvar_t viewsize = { "viewsize", "100", true, false, 0.0f, nullptr };
+    cvar_t fov = { "fov", "90", false, false, 0.0f, nullptr };
+    vrect_t vrect { };        // the 3D view rectangle within the screen
+    float con_current = 0.0f; // console height currently drawn
+    float conlines = 0.0f;    // console height being animated toward
+    float centertime_off = 0.0f;
+    int copytop = 0; // dirty-rectangle bookkeeping for the software refresh
+    int copyeverything = 0;
+    int fullupdate = 0;
+    int clearnotify = 0;
+    qboolean disabled_for_loading = false;
+    qboolean skipupdate = false;
+    qboolean block_drawing = false;
+
 private:
-    cvar_t viewsize_ = { "viewsize", "100", true, false, 0.0f, nullptr };
-    cvar_t fov_ = { "fov", "90", false, false, 0.0f, nullptr };
     cvar_t conspeed_ = { "scr_conspeed", "300", false, false, 0.0f, nullptr };
     cvar_t centertime_ = { "scr_centertime", "2", false, false, 0.0f, nullptr };
     cvar_t showram_ = { "showram", "1", false, false, 0.0f, nullptr };
@@ -80,31 +54,19 @@ private:
     cvar_t showpause_ = { "showpause", "1", false, false, 0.0f, nullptr };
     cvar_t printspeed_ = { "scr_printspeed", "8", false, false, 0.0f, nullptr };
 
-    vrect_t vrect_ { };
-
-    float con_current_ = 0.0f;
-    float conlines_ = 0.0f;
-    float centertime_off_ = 0.0f;
     float centertime_start_ = 0.0f;
     float oldscreensize_ = 0.0f;
     float oldfov_ = 0.0f;
     float disabled_time_ = 0.0f;
 
-    int copytop_ = 0;
-    int copyeverything_ = 0;
-    int fullupdate_ = 0;
     int clearconsole_ = 0;
-    int clearnotify_ = 0;
 
     int center_lines_ = 0;
     int erase_lines_ = 0;
     int erase_center_ = 0;
 
     qboolean initialized_ = false;
-    qboolean disabled_for_loading_ = false;
     qboolean drawloading_ = false;
-    qboolean skipupdate_ = false;
-    qboolean block_drawing_ = false;
     qboolean drawdialog_ = false;
 
     std::string centerstring_;

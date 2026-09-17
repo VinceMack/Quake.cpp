@@ -310,7 +310,7 @@ static void V_CalcRefdef(void)
     view->origin.z += Client::cl.viewheight;
     view->origin += forward * (bob * 0.4f);
     view->origin.z += bob;
-    float viewsize_val = Screen::GetScreenSystem().GetViewsize().value;
+    float viewsize_val = Screen::GetScreenSystem().viewsize.value;
     if (viewsize_val == 110) {
         view->origin[2] += 1;
     } else if (viewsize_val == 100) {
@@ -349,7 +349,7 @@ static void V_CalcRefdef(void)
 
 void V_RenderView(void)
 {
-    if (Console::GetConsoleSystem().IsForcedUp()) {
+    if (Console::GetConsoleSystem().forcedup) {
         return;
     }
     if (Client::cl.maxclients > 1) {
@@ -389,7 +389,7 @@ void V_RenderView(void)
         Render::R_RenderView();
     }
     if (crosshair.value) {
-        const auto& vrect = Screen::GetScreenSystem().GetVrect();
+        const auto& vrect = Screen::GetScreenSystem().vrect;
         Draw::Draw_Character(static_cast<int>(vrect.x + vrect.width / 2 + cl_crossx.value),
             static_cast<int>(vrect.y + vrect.height / 2 + cl_crossy.value), '+');
     }

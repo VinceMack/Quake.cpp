@@ -41,7 +41,6 @@ set(ENGINE_SRCS
     src/ui/hud.cpp
     src/ui/screen.cpp
     src/render/draw2d.cpp
-    src/render/renderer.cpp
     src/client/view.cpp
     src/client/view_blend.cpp
     src/render/software/sw_vid.cpp

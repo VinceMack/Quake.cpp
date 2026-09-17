@@ -132,43 +132,16 @@ using DlightArray = compat_array<dlight_t, MAX_DLIGHTS>;
 using TempEntityArray = compat_array<entity_t, MAX_TEMP_ENTITIES>;
 using BeamArray = compat_array<beam_t, MAX_BEAMS>;
 
-class ClientSubsystem {
-public:
-    [[nodiscard]] client_static_t& GetStaticState() noexcept { return cls_; }
-    [[nodiscard]] const client_static_t& GetStaticState() const noexcept { return cls_; }
-    [[nodiscard]] client_state_t& GetState() noexcept { return cl_; }
-    [[nodiscard]] const client_state_t& GetState() const noexcept { return cl_; }
-    [[nodiscard]] EfragArray& GetEfrags() noexcept { return cl_efrags_; }
-    [[nodiscard]] EntityArray& GetEntities() noexcept { return cl_entities_; }
-    [[nodiscard]] StaticEntityArray& GetStaticEntities() noexcept { return cl_static_entities_; }
-    [[nodiscard]] LightstyleArray& GetLightstyles() noexcept { return cl_lightstyle_; }
-    [[nodiscard]] DlightArray& GetDlights() noexcept { return cl_dlights_; }
-    [[nodiscard]] TempEntityArray& GetTempEntities() noexcept { return cl_temp_entities_; }
-    [[nodiscard]] BeamArray& GetBeams() noexcept { return cl_beams_; }
-
-private:
-    client_static_t cls_ { };
-    client_state_t cl_ { };
-    EfragArray cl_efrags_ { };
-    EntityArray cl_entities_ { };
-    StaticEntityArray cl_static_entities_ { };
-    LightstyleArray cl_lightstyle_ { };
-    DlightArray cl_dlights_ { };
-    TempEntityArray cl_temp_entities_ { };
-    BeamArray cl_beams_ { };
-};
-
-[[nodiscard]] ClientSubsystem& GetClientSubsystem() noexcept;
-
-inline client_static_t& cls = GetClientSubsystem().GetStaticState();
-inline client_state_t& cl = GetClientSubsystem().GetState();
-inline EfragArray& cl_efrags = GetClientSubsystem().GetEfrags();
-inline EntityArray& cl_entities = GetClientSubsystem().GetEntities();
-inline StaticEntityArray& cl_static_entities = GetClientSubsystem().GetStaticEntities();
-inline LightstyleArray& cl_lightstyle = GetClientSubsystem().GetLightstyles();
-inline DlightArray& cl_dlights = GetClientSubsystem().GetDlights();
-inline TempEntityArray& cl_temp_entities = GetClientSubsystem().GetTempEntities();
-inline BeamArray& cl_beams = GetClientSubsystem().GetBeams();
+// The connection (persists across levels) and the level state (reset on every map).
+extern client_static_t cls;
+extern client_state_t cl;
+extern EfragArray cl_efrags;
+extern EntityArray cl_entities;
+extern StaticEntityArray cl_static_entities;
+extern LightstyleArray cl_lightstyle;
+extern DlightArray cl_dlights;
+extern TempEntityArray cl_temp_entities;
+extern BeamArray cl_beams;
 
 extern int cl_numvisedicts;
 extern entity_t* cl_visedicts[MAX_VISEDICTS];

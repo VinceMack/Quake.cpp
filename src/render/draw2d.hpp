@@ -2,7 +2,6 @@
 #pragma once
 #include "render/render_types.hpp"
 #include "core/wad.hpp"
-#include "render/renderer.hpp"
 
 #include <cstdint>
 #include <string_view>
