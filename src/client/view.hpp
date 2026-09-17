@@ -26,6 +26,4 @@ extern float v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
 } // namespace View
 
-using View::V_CalcRoll;
-using View::V_CalcBob;
 

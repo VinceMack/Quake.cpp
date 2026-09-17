@@ -1,7 +1,6 @@
 // sw_edge.hpp -- Edge List Generation, Insertion, and Active Edge Scanline Rasterization
 #pragma once
 
-#include "quakedef.hpp"
 #include "render/software/sw_local.hpp"
 
 namespace Render {

@@ -1,9 +1,22 @@
 // sv_send.cpp -- Server Network Transmission, Client Messaging, and Client Prediction/Think Implementation
-#include "quakedef.hpp"
 #include "server/sv_send.hpp"
 #include "server/server.hpp"
 #include "server/world.hpp"
 #include "server/physics.hpp"
+#include "platform/crt_compat.hpp"
+#include "host/host.hpp"
+#include "platform/system.hpp"
+#include "core/filesystem.hpp"
+#include "client/input.hpp"
+#include "network/net_main.hpp"
+#include "network/protocol.hpp"
+#include "quakedef.hpp"
+#include "network/socket.hpp"
+#include "vm/interpreter.hpp"
+#include "client/view.hpp"
+#include "core/print.hpp"
+#include "audio/audio_types.hpp"
+#include "core/cmd.hpp"
 
 namespace Server {
 
@@ -666,7 +679,7 @@ void SV_ClientThink()
     angles = sv_player->v.angles;
 
     const Vector3 v_angle = sv_player->v.v_angle + sv_player->v.punchangle;
-    angles[ROLL] = V_CalcRoll(sv_player->v.angles, sv_player->v.velocity) * 4.0f;
+    angles[ROLL] = View::V_CalcRoll(sv_player->v.angles, sv_player->v.velocity) * 4.0f;
     if (!sv_player->v.fixangle) {
         angles[PITCH] = -v_angle[PITCH] / 3.0f;
         angles[YAW] = v_angle[YAW];

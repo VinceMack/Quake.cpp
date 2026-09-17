@@ -1,7 +1,6 @@
 // sw_bsp.hpp -- BSP Traversal, Bmodel Rotation and Polygon Rasterization Setup
 #pragma once
 
-#include "quakedef.hpp"
 #include "render/software/sw_local.hpp"
 
 namespace Render {

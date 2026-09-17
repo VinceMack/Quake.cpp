@@ -1,10 +1,11 @@
 // draw2d.hpp -- 2D raster drawing primitives, fonts, pics & caching
 #pragma once
+#include "render/render_types.hpp"
+#include "core/wad.hpp"
+#include "render/renderer.hpp"
 
 #include <cstdint>
 #include <string_view>
-#include "sys_core.hpp"
-
 namespace Draw {
 
 extern qpic_t* draw_disc;

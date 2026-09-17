@@ -1,7 +1,6 @@
 // sw_light.hpp -- BSP Lighting, Style Animation, and Dynamic Lights
 #pragma once
 
-#include "quakedef.hpp"
 #include "render/software/sw_local.hpp"
 
 namespace Render {

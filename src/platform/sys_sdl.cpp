@@ -1,12 +1,10 @@
 // sys_sdl.cpp -- SDL-based operating system layer: file I/O, timers, console, process lifecycle
-#include "quakedef.hpp"
 #include "platform/system.hpp"
 #include "core/cvar.hpp"
 #include "core/cmd.hpp"
 #include "core/filesystem.hpp"
 #include "host/host.hpp"
-#include "sys_client.hpp"
-
+#include "platform/crt_compat.hpp"
 #include <SDL.h>
 #include <csignal>
 #include <cstdlib>

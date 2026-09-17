@@ -1,7 +1,6 @@
 // sw_sprite.hpp -- Sprite Model Transformation, Frustum Clipping and Rasterization Setup
 #pragma once
 
-#include "quakedef.hpp"
 #include "render/software/sw_local.hpp"
 
 namespace Render {

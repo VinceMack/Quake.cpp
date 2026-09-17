@@ -1,7 +1,6 @@
 // sw_surf.hpp -- Surface Rasterization, Lightmaps, Dynamic Lights, and Surface Cache
 #pragma once
 
-#include "quakedef.hpp"
 #include "render/software/sw_local.hpp"
 
 namespace Render {

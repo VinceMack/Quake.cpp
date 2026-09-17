@@ -1,8 +1,9 @@
 // audio_wav.cpp -- RIFF/WAVE Format Parser and Sound Asset Loader Implementation
-#include "quakedef.hpp"
 #include "audio/audio_wav.hpp"
 #include "audio/audio_dma.hpp"
 #include "audio/audio_main.hpp"
+#include "core/print.hpp"
+#include "core/filesystem.hpp"
 
 #include <cstring>
 #include <cstdio>

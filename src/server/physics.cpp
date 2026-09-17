@@ -1,7 +1,11 @@
 // physics.cpp -- Server Physics, Entity Movement, Collisions, and Monster Stepping Implementation
-#include "quakedef.hpp"
 #include "server/physics.hpp"
 #include "server/world.hpp"
+#include "host/host.hpp"
+#include "server/sv_send.hpp"
+#include "quakedef.hpp"
+#include "vm/interpreter.hpp"
+#include "core/print.hpp"
 
 namespace VM {
 void PF_changeyaw();

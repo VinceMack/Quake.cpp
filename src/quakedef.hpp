@@ -1,20 +1,10 @@
-// quakedef.hpp -- primary header for client
+// quakedef.hpp -- Game-wide constants shared by client and server (stats, items, limits)
 #pragma once
 #include <cstdint>
 
 constexpr double VERSION = 1.09;
 
 #define GAMENAME "id1"
-
-#include <math.h>
-#include <string.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
-#include <string_view>
-
-#include "platform/crt_compat.hpp"
 
 constexpr int CACHE_SIZE = 32; // used to align key data structures
 
@@ -127,12 +117,3 @@ constexpr uint32_t HIT_EMPATHY_SHIELDS = (1U << (23 + 3));
 // MAX_SCOREBOARD and MAX_SCOREBOARDNAME defined in core/types.hpp
 
 constexpr int SOUND_CHANNELS = 8;
-
-#include "sys_core.hpp"
-#include "sys_render.hpp"
-#include "sys_audio.hpp"
-#include "sys_network.hpp"
-#include "sys_vm.hpp"
-#include "sys_server.hpp"
-#include "sys_client.hpp"
-

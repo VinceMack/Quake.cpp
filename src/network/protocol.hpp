@@ -1,5 +1,6 @@
 // protocol.hpp -- Quake Network Protocol Constants and Message IDs
 #pragma once
+#include "quakedef.hpp"
 
 #include <cstdint>
 

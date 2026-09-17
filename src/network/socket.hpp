@@ -187,7 +187,6 @@ extern int hostCacheCount;
 extern std::array<hostcache_t, HOSTCACHESIZE> hostcache;
 
 extern double net_time;
-extern sizebuf_t net_message;
 extern int net_activeconnections;
 
 extern qboolean tcpipAvailable;

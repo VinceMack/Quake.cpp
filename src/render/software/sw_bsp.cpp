@@ -4,6 +4,7 @@
 #include "client/client_types.hpp"
 #include "world/bsp_format.hpp"
 #include "platform/system.hpp"
+#include "quakedef.hpp"
 
 #include <cmath>
 

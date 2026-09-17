@@ -1,6 +1,11 @@
 // sw_vid.cpp -- SDL2 Video Output and Surface Management Implementation
-#include "quakedef.hpp"
 #include "render/software/sw_vid.hpp"
+#include "host/host.hpp"
+#include "core/string_utils.hpp"
+#include "render/software/sw_local.hpp"
+#include "render/software/sw_surf.hpp"
+#include "core/filesystem.hpp"
+#include "core/endian.hpp"
 
 #include <SDL.h>
 #include <cstdio>
@@ -109,10 +114,10 @@ void VID_Init(unsigned char* palette)
     vid.rowbytes = screen->pitch;
     vid.conbuffer = vid.buffer;
     vid.conrowbytes = vid.rowbytes;
-    const size_t zbuffer_bytes = static_cast<size_t>(vid.width) * vid.height * sizeof(*d_pzbuffer);
+    const size_t zbuffer_bytes = static_cast<size_t>(vid.width) * vid.height * sizeof(*Render::d_pzbuffer);
     cachesize = Render::D_SurfaceCacheForRes(vid.width, vid.height);
     video_storage.assign(zbuffer_bytes + static_cast<size_t>(cachesize), 0);
-    d_pzbuffer = reinterpret_cast<short*>(video_storage.data());
+    Render::d_pzbuffer = reinterpret_cast<short*>(video_storage.data());
     cache = video_storage.data() + zbuffer_bytes;
     Render::D_InitCaches(cache, cachesize);
     SDL_ShowCursor(0);

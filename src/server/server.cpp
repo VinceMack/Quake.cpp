@@ -1,9 +1,18 @@
 // server.cpp -- Server Lifecycle and Map Spawning Implementation
-#include "quakedef.hpp"
 #include "server/server.hpp"
 #include "server/world.hpp"
 #include "server/physics.hpp"
 #include "server/sv_send.hpp"
+#include "platform/crt_compat.hpp"
+#include "host/host.hpp"
+#include "network/net_main.hpp"
+#include "client/client_types.hpp"
+#include "ui/screen.hpp"
+#include "network/protocol.hpp"
+#include "network/socket.hpp"
+#include "vm/interpreter.hpp"
+#include "core/print.hpp"
+#include "core/cmd.hpp"
 
 namespace Server {
 
@@ -39,6 +48,10 @@ void SV_Init()
         &sv_nostep, &sv_idealpitchscale, &sv_maxspeed, &sv_accelerate, &sv_edgefriction
     };
     for (auto* cvar : cvars) Cvar::Register(cvar);
+
+    Cvar::SetServerChangeCallback([](const cvar_t& var) {
+        if (sv.active) SV_BroadcastPrintf("\"%s\" changed to \"%s\"\n", var.name.c_str(), var.string.c_str());
+    });
 
     for (size_t i = 0; i < localmodels.size(); ++i) {
         sprintf_s(localmodels[i].data(), localmodels[i].size(), "*%i", static_cast<int>(i));

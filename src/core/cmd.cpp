@@ -1,12 +1,11 @@
 // cmd.cpp -- Command parsing, tokenization, ring buffer, and registry implementation
-#include "quakedef.hpp"
 #include "core/cmd.hpp"
 #include "core/cvar.hpp"
 #include "core/string_utils.hpp"
 #include "core/filesystem.hpp"
 #include "core/msg.hpp"
-#include "ui/console.hpp"
-#include "host/host.hpp"
+#include "core/print.hpp"
+#include "platform/system.hpp"
 
 #include <utility>
 #include <vector>
@@ -146,7 +145,6 @@ void CommandRegistry::Init(void) {
 }
 
 void CommandRegistry::AddCommand(std::string_view cmd_name, xcommand_t function) {
-    if (Host::host_initialized) Common::Sys_Error("Cmd::AddCommand after host_initialized");
     if (Cvar::FindVar(cmd_name) != nullptr) {
         Console::Con_Printf("Cmd::AddCommand: %.*s already defined as a var\n", static_cast<int>(cmd_name.length()), cmd_name.data());
         return;
@@ -220,27 +218,6 @@ void CommandRegistry::ExecuteString(std::string_view text, Source src) {
     }
     if (!Cvar::Command()) {
         Console::Con_Printf("Unknown command \"%s\"\n", cmd_name.c_str());
-    }
-}
-
-void ForwardToServer(void) {
-    if (Client::cls.state != ca_connected) {
-        std::string_view cmd_name = Argv(0);
-        Console::Con_Printf("Can't \"%.*s\", not connected\n", static_cast<int>(cmd_name.length()), cmd_name.data());
-        return;
-    }
-    if (Client::cls.demoplayback) return;
-    Common::MSG_WriteByte(&Client::cls.message, clc_stringcmd);
-    std::string argv0(Argv(0).data(), Argv(0).length());
-    if (Common::Q_strcasecmp(argv0.c_str(), "cmd") != 0) {
-        Common::SZ_Print(&Client::cls.message, argv0.c_str());
-        Common::SZ_Print(&Client::cls.message, " ");
-    }
-    if (Argc() > 1) {
-        std::string args_str(Args().data(), Args().length());
-        Common::SZ_Print(&Client::cls.message, args_str.c_str());
-    } else {
-        Common::SZ_Print(&Client::cls.message, "\n");
     }
 }
 

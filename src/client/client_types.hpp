@@ -18,7 +18,6 @@
 #include "render/render_types.hpp"
 
 namespace Audio { struct sfx_t; }
-using Audio::sfx_t;
 
 namespace Client {
 
@@ -106,7 +105,7 @@ struct client_state_t {
     double time{0.0}, oldtime{0.0};
     float last_received_message{0.0f};
     std::array<model_t*, MAX_MODELS> model_precache{};
-    std::array<sfx_t*, MAX_SOUNDS> sound_precache{};
+    std::array<Audio::sfx_t*, MAX_SOUNDS> sound_precache{};
     compat_array<char, 40> levelname{};
     int viewentity{0}, maxclients{0}, gametype{0};
     model_t* worldmodel{nullptr};

@@ -1,10 +1,20 @@
 // hud.cpp -- In-game status bar HUD (health, armor, weapons, ammo, scoreboard)
-#include "quakedef.hpp"
 #include "ui/hud.hpp"
 #include "ui/console.hpp"
 #include "render/draw2d.hpp"
-#include "sys_render.hpp"
-
+#include "platform/crt_compat.hpp"
+#include "core/string_utils.hpp"
+#include "core/wad.hpp"
+#include "render/software/sw_vid.hpp"
+#include "client/client_types.hpp"
+#include "ui/screen.hpp"
+#include "network/protocol.hpp"
+#include "quakedef.hpp"
+#include "core/types.hpp"
+#include "ui/menu.hpp"
+#include "core/filesystem.hpp"
+#include "server/server_types.hpp"
+#include "core/cmd.hpp"
 #include <array>
 #include <string_view>
 #include <algorithm>

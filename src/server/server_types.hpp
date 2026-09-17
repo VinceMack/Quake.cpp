@@ -16,6 +16,7 @@
 #include "core/cvar.hpp"
 #include "vm/edict.hpp"
 #include "world/collision.hpp"
+#include "quakedef.hpp"
 
 //=============================================================================
 // Server Constants and Limits
@@ -238,3 +239,18 @@ inline server_t& sv = GetServerSubsystem().GetState();
 extern edict_t* sv_player;
 
 } // namespace Server
+
+// QuakeC stores entity references as byte offsets from the start of the edict array.
+[[nodiscard]] inline int EDICT_TO_PROG(const edict_t* e)
+{
+    return static_cast<int>(reinterpret_cast<const byte*>(e) - reinterpret_cast<const byte*>(Server::sv.edicts));
+}
+
+[[nodiscard]] inline edict_t* PROG_TO_EDICT(int offset)
+{
+    return reinterpret_cast<edict_t*>(reinterpret_cast<byte*>(Server::sv.edicts) + offset);
+}
+
+// The entity stored in a QuakeC global (an OFS_PARM slot, for example).
+[[nodiscard]] inline edict_t* G_EDICT(int ofs) { return PROG_TO_EDICT(G_INT(ofs)); }
+[[nodiscard]] inline int G_EDICTNUM(int ofs) { return VM::NUM_FOR_EDICT(G_EDICT(ofs)); }

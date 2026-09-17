@@ -1,8 +1,8 @@
 // audio_dma.cpp -- SDL2 Audio DMA Interface Implementation
-#include "quakedef.hpp"
 #include "audio/audio_dma.hpp"
 #include "audio/audio_mix.hpp"
 #include "audio/audio_main.hpp"
+#include "core/print.hpp"
 
 #include <SDL.h>
 

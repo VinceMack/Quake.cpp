@@ -3,6 +3,7 @@
 
 #include "core/types.hpp"
 #include "core/math.hpp"
+#include "world/entity_state.hpp"
 
 inline constexpr int VID_CBITS = 6;
 inline constexpr int VID_GRADES = (1 << VID_CBITS);
@@ -47,16 +48,6 @@ struct efrag_s {
     efrag_s* entnext = nullptr;
 };
 using efrag_t = efrag_s;
-
-struct entity_state_t {
-    Vector3 origin{};
-    Vector3 angles{};
-    int modelindex = 0;
-    int frame = 0;
-    int colormap = 0;
-    int skin = 0;
-    int effects = 0;
-};
 
 struct dlight_t {
     Vector3 origin{};

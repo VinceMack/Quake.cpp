@@ -1,7 +1,8 @@
 // sw_sprite.cpp -- Sprite Model Transformation, Frustum Clipping and Rasterization Setup
 #include "render/software/sw_sprite.hpp"
 #include "client/client_types.hpp"
-#include "ui/console.hpp"
+#include "core/print.hpp"
+#include "quakedef.hpp"
 
 #include <cmath>
 #include <cstring>

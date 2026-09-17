@@ -1,5 +1,4 @@
 // audio_mix.cpp -- Software Audio Mixer and Channel Painting Implementation
-#include "quakedef.hpp"
 #include "audio/audio_mix.hpp"
 #include "audio/audio_dma.hpp"
 #include "audio/audio_main.hpp"

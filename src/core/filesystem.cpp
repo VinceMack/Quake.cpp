@@ -6,11 +6,9 @@
 #include "core/cvar.hpp"
 #include "core/cmd.hpp"
 #include "platform/system.hpp"
-#include "render/draw2d.hpp"
-#include "host/host.hpp"
-#include "ui/console.hpp"
+#include "core/print.hpp"
+#include "platform/crt_compat.hpp"
 #include "quakedef.hpp"
-
 #include <array>
 #include <memory>
 #include <utility>
@@ -145,7 +143,7 @@ void COM_InitArgv(int argc, char** argv) {
     if (COM_CheckParm("-hipnotic")) { hipnotic = true; standard_quake = false; }
 }
 
-void COM_Init() {
+void COM_Init(const char* basedir) {
 #ifdef SDL
     if (SDL_BYTEORDER == SDL_LIL_ENDIAN)
 #else
@@ -161,7 +159,7 @@ void COM_Init() {
     }
     Cvar::Register(&registered); Cvar::Register(&cmdline);
     Cmd::AddCommand("path", COM_Path_f);
-    COM_InitFilesystem();
+    COM_InitFilesystem(basedir);
 
     // QuakeC reads these; stock progs gate the later episodes on "registered".
     Cvar::Set("cmdline", com_cmdline);
@@ -239,15 +237,23 @@ void COM_CloseFile(int h) {
     Sys_FileClose(h);
 }
 
+static void (*com_load_begin)() = nullptr;
+static void (*com_load_end)() = nullptr;
+
+void COM_SetLoadIndicator(void (*begin)(), void (*end)()) {
+    com_load_begin = begin;
+    com_load_end = end;
+}
+
 std::vector<byte> COM_LoadFile(const char* path) {
     int handle = 0;
     int len = COM_OpenFile(path, &handle);
     if (handle == -1) return {};
     std::vector<byte> buffer(static_cast<size_t>(len) + 1); // trailing zero for text files
-    Draw::Draw_BeginDisc();
+    if (com_load_begin) com_load_begin();
     Sys_FileRead(handle, buffer.data(), len);
     COM_CloseFile(handle);
-    Draw::Draw_EndDisc();
+    if (com_load_end) com_load_end();
     return buffer;
 }
 
@@ -294,11 +300,11 @@ void COM_AddGameDirectory(const char* dir) {
     }
 }
 
-void COM_InitFilesystem(void) {
+void COM_InitFilesystem(const char* basedir) {
     char basedir_buf[MAX_OSPATH];
     int i = COM_CheckParm("-basedir");
     if (i && i < com_argc - 1) strcpy_s(basedir_buf, sizeof(basedir_buf), com_argv[i + 1]);
-    else strcpy_s(basedir_buf, sizeof(basedir_buf), Host::host_parms.basedir);
+    else strcpy_s(basedir_buf, sizeof(basedir_buf), basedir);
     int j = static_cast<int>(strlen(basedir_buf));
     if (j > 0 && ((basedir_buf[j - 1] == '\\') || (basedir_buf[j - 1] == '/'))) basedir_buf[j - 1] = 0;
     COM_AddGameDirectory(va("%s/" GAMENAME, basedir_buf));

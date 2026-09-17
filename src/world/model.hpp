@@ -6,8 +6,9 @@
 #include <memory>
 #include <vector>
 #include <string_view>
-#include "sys_core.hpp"
 #include "world/bsp_format.hpp"
+#include "core/types.hpp"
+#include "core/math.hpp"
 
 //=============================================================================
 // In-Memory Model Definitions

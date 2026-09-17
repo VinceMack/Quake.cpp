@@ -1,8 +1,22 @@
 // input.cpp -- Unified keyboard and mouse input handling
-#include "quakedef.hpp"
 #include "client/input.hpp"
 #include "ui/console.hpp"
 #include "ui/menu.hpp"
+#include "host/host.hpp"
+#include "core/cvar.hpp"
+#include "core/string_utils.hpp"
+#include "platform/system.hpp"
+#include "render/software/sw_vid.hpp"
+#include "client/client_types.hpp"
+#include "core/math.hpp"
+#include "ui/screen.hpp"
+#include "client/view.hpp"
+#include "quakedef.hpp"
+#include "core/types.hpp"
+#include "core/filesystem.hpp"
+#include "core/cmd.hpp"
+#include "client/cl_main.hpp"
+#include "client/cl_input.hpp"
 
 #include <SDL.h>
 #include <array>

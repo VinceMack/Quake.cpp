@@ -56,4 +56,8 @@ bool Command();
 void WriteVariables(std::ostream& f);
 cvar_t* FindVar(std::string_view var_name);
 
+// Invoked after a cvar marked `server` changes value; the server uses it to notify clients.
+using ServerChangeCallback = void (*)(const cvar_t& var);
+void SetServerChangeCallback(ServerChangeCallback callback);
+
 } // namespace Cvar

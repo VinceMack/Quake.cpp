@@ -4,6 +4,8 @@
 #include "core/types.hpp"
 #include "core/cvar.hpp"
 #include "render/draw2d.hpp"
+#include "render/render_types.hpp"
+#include "core/wad.hpp"
 
 #include <string>
 #include <string_view>

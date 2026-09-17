@@ -2,9 +2,10 @@
 #pragma once
 
 #include <cstdint>
-#include "sys_core.hpp"
 #include "world/bsp_format.hpp"
 #include "world/model.hpp"
+#include "core/types.hpp"
+#include "core/math.hpp"
 
 struct edict_s;
 using edict_t = edict_s;

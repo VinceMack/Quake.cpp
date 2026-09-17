@@ -4,7 +4,9 @@
 #include "world/bsp_format.hpp"
 #include "core/cmd.hpp"
 #include "core/cvar.hpp"
-#include "ui/console.hpp"
+#include "core/print.hpp"
+#include "render/software/sw_vid.hpp"
+#include "core/filesystem.hpp"
 
 #include <cmath>
 #include <cstddef>

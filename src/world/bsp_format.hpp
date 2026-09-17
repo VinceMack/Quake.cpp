@@ -1,9 +1,9 @@
 // bsp_format.hpp -- On-disk BSP, MDL, and SPR file format structures
 #pragma once
+#include "core/types.hpp"
+#include "core/math.hpp"
 
 #include <cstdint>
-#include "sys_core.hpp"
-
 //=============================================================================
 // BSP Map On-Disk Structures
 //=============================================================================

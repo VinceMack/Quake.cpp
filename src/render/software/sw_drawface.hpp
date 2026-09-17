@@ -1,7 +1,6 @@
 // sw_drawface.hpp -- Polygon and Bmodel Face Clipping and Edge Emission
 #pragma once
 
-#include "quakedef.hpp"
 #include "render/software/sw_local.hpp"
 
 namespace Render {

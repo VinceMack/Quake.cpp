@@ -1,9 +1,16 @@
 // net_main.cpp -- Network Subsystem Lifecycle and Core API Implementation
-#include "quakedef.hpp"
 #include "network/net_main.hpp"
 #include "network/loopback.hpp"
 #include "network/udp_driver.hpp"
 #include "network/datagram.hpp"
+#include "platform/system.hpp"
+#include "host/host.hpp"
+#include "core/filesystem.hpp"
+#include "client/client_types.hpp"
+#include "core/math.hpp"
+#include "core/print.hpp"
+#include "server/server_types.hpp"
+#include "core/cmd.hpp"
 
 #include <memory>
 

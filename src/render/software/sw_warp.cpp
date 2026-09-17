@@ -1,7 +1,8 @@
 // sw_warp.cpp -- Underwater Turbulent Warp and Sky Span Software Rasterizers
 #include "render/software/sw_warp.hpp"
-#include "client/screen.hpp"
+#include "ui/screen.hpp"
 #include "client/client_types.hpp"
+#include "render/software/sw_vid.hpp"
 
 #include <cmath>
 

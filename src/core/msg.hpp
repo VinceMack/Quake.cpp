@@ -43,6 +43,15 @@ inline void MSG_WriteAngle(sizebuf_t* sb, float f) { MSG_WriteByte(sb, (static_c
 extern int msg_readcount;
 extern bool msg_badread;
 
+} // namespace Common
+
+// The buffer MSG_Read* functions read from; filled by the network layer (network/net_main.cpp).
+namespace Net {
+extern sizebuf_t net_message;
+}
+
+namespace Common {
+
 void MSG_BeginReading(void);
 int MSG_ReadChar(void);
 int MSG_ReadByte(void);

@@ -1,6 +1,9 @@
 // udp_driver.cpp -- Winsock / BSD Sockets UDP Driver Implementation
-#include "quakedef.hpp"
 #include "network/udp_driver.hpp"
+#include "platform/crt_compat.hpp"
+#include "core/filesystem.hpp"
+#include "core/print.hpp"
+#include "core/math.hpp"
 
 #ifdef _WIN32
 #include <winsock2.h>

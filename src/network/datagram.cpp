@@ -1,6 +1,17 @@
 // datagram.cpp -- Datagram Network Driver Implementation
-#include "quakedef.hpp"
 #include "network/datagram.hpp"
+#include "host/host.hpp"
+#include "platform/system.hpp"
+#include "core/filesystem.hpp"
+#include "client/input.hpp"
+#include "network/net_main.hpp"
+#include "core/math.hpp"
+#include "ui/screen.hpp"
+#include "ui/menu.hpp"
+#include "quakedef.hpp"
+#include "core/print.hpp"
+#include "server/server_types.hpp"
+#include "core/cmd.hpp"
 
 #ifdef _WIN32
 #include <windows.h>

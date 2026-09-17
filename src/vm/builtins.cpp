@@ -1,5 +1,4 @@
 // builtins.cpp -- QuakeC engine built-in functions and dispatch table
-#include "quakedef.hpp"
 #include "vm/builtins.hpp"
 #include "vm/interpreter.hpp"
 #include "vm/program.hpp"
@@ -9,10 +8,16 @@
 #include "core/msg.hpp"
 #include "core/string_utils.hpp"
 #include "host/host.hpp"
-#include "ui/console.hpp"
+#include "core/print.hpp"
 #include "world/model.hpp"
-#include "sys_server.hpp"
-
+#include "platform/crt_compat.hpp"
+#include "world/collision.hpp"
+#include "server/physics.hpp"
+#include "server/world.hpp"
+#include "server/sv_send.hpp"
+#include "network/protocol.hpp"
+#include "server/server_types.hpp"
+#include "server/server.hpp"
 #include <cmath>
 #include <cstring>
 #include <cstdlib>

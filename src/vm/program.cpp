@@ -1,5 +1,4 @@
 // program.cpp -- QuakeC program loader, string management, and program inspection
-#include "quakedef.hpp"
 #include "vm/program.hpp"
 #include "vm/edict.hpp"
 #include "vm/interpreter.hpp"
@@ -7,7 +6,9 @@
 #include "core/endian.hpp"
 #include "core/string_utils.hpp"
 #include "host/host.hpp"
-#include "ui/console.hpp"
+#include "core/print.hpp"
+#include "platform/crt_compat.hpp"
+#include "server/server_types.hpp"
 
 #include <memory>
 #include <utility>

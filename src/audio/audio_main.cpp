@@ -1,9 +1,15 @@
 // audio_main.cpp -- Audio Subsystem Orchestration, Spatialization, and Lifecycle Implementation
-#include "quakedef.hpp"
 #include "audio/audio_main.hpp"
 #include "audio/audio_dma.hpp"
 #include "audio/audio_wav.hpp"
 #include "audio/audio_mix.hpp"
+#include "host/host.hpp"
+#include "core/filesystem.hpp"
+#include "core/types.hpp"
+#include "core/print.hpp"
+#include "core/cmd.hpp"
+#include "world/model.hpp"
+#include "client/client_types.hpp"
 
 #include <random>
 #include <charconv>

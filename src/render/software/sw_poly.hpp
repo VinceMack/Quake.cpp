@@ -1,7 +1,6 @@
 // sw_poly.hpp -- Alias Model Triangle (Polyset) Rasterization
 #pragma once
 
-#include "quakedef.hpp"
 #include "render/software/sw_local.hpp"
 
 namespace Render {

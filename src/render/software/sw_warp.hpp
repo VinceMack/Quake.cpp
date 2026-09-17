@@ -1,7 +1,6 @@
 // sw_warp.hpp -- Underwater Turbulent Warp and Sky Span Software Rasterizers
 #pragma once
 
-#include "quakedef.hpp"
 #include "render/software/sw_local.hpp"
 
 namespace Render {

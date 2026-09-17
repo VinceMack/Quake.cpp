@@ -1,9 +1,8 @@
 // cvar.cpp -- Console variable registration and management
-#include "quakedef.hpp"
 #include "core/cvar.hpp"
 #include "core/cmd.hpp"
 #include "core/string_utils.hpp"
-#include "ui/console.hpp"
+#include "core/print.hpp"
 
 #include <cstdio>
 
@@ -13,6 +12,9 @@ cvar_t cmdline = { "cmdline", "0", false, true, 0.0f, nullptr };
 namespace Cvar {
 
 CvarRegistry& GetCvarRegistry() { static CvarRegistry registry; return registry; }
+
+static ServerChangeCallback server_change_callback = nullptr;
+void SetServerChangeCallback(ServerChangeCallback callback) { server_change_callback = callback; }
 
 cvar_t* CvarRegistry::FindVar(std::string_view var_name) {
     auto it = vars_map_.find(var_name);
@@ -47,9 +49,7 @@ void CvarRegistry::Set(std::string_view var_name, std::string_view value) {
     bool changed = (value != std::string_view(var->string.data(), var->string.length()));
     var->string = std::string(value.data(), value.length());
     var->value = Common::Q_atof(var->string.c_str());
-    if (var->server && changed && Server::sv.active) {
-        Server::SV_BroadcastPrintf("\"%s\" changed to \"%s\"\n", var->name.c_str(), var->string.c_str());
-    }
+    if (var->server && changed && server_change_callback) server_change_callback(*var);
 }
 
 void CvarRegistry::SetValue(std::string_view var_name, float value) {

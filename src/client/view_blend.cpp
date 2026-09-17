@@ -1,10 +1,12 @@
 // view_blend.cpp -- Palette Blending, Color Shifts, and Damage Flashes Implementation
-#include "quakedef.hpp"
 #include "client/view_blend.hpp"
 #include "client/view.hpp"
-#include "client/screen.hpp"
+#include "ui/screen.hpp"
 #include "render/draw2d.hpp"
 #include "render/software/sw_vid.hpp"
+#include "host/host.hpp"
+#include "core/cmd.hpp"
+#include "quakedef.hpp"
 
 #include <cmath>
 
@@ -220,7 +222,7 @@ void V_UpdatePalette(void)
         newpal[2] = gammatable[b];
         newpal += 3;
     }
-    VID_ShiftPalette(pal);
+    Vid::VID_ShiftPalette(pal);
 }
 
 void V_InitBlend()

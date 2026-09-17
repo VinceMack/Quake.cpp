@@ -6,7 +6,8 @@
 #include "core/cvar.hpp"
 #include "core/cmd.hpp"
 #include "core/filesystem.hpp"
-#include "ui/console.hpp"
+#include "core/print.hpp"
+#include "platform/crt_compat.hpp"
 
 #include <cmath>
 #include <cstdio>

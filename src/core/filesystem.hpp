@@ -19,7 +19,7 @@ extern int com_argc;
 extern char** com_argv;
 
 int COM_CheckParm(const char* parm);
-void COM_Init();
+void COM_Init(const char* basedir);
 void COM_InitArgv(int argc, char** argv);
 
 void COM_FileBase(const char* in, char* out);
@@ -43,7 +43,10 @@ void COM_CloseFile(int h);
 
 
 void COM_AddGameDirectory(const char* dir);
-void COM_InitFilesystem(void);
+void COM_InitFilesystem(const char* basedir);
+
+// Called around every file load so the UI can show its "disc" activity icon.
+void COM_SetLoadIndicator(void (*begin)(), void (*end)());
 void COM_Path_f(void);
 
 extern bool standard_quake, rogue, hipnotic;

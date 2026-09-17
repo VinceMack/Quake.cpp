@@ -2,8 +2,6 @@
 #pragma once
 
 #include <cstdint>
-#include "sys_core.hpp"
-
 struct refdef_t;
 struct qpic_t;
 

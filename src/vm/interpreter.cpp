@@ -1,12 +1,11 @@
 // interpreter.cpp -- Bytecode execution VM and call stack management
-#include "quakedef.hpp"
 #include "vm/interpreter.hpp"
 #include "vm/program.hpp"
 #include "vm/edict.hpp"
 #include "host/host.hpp"
-#include "ui/console.hpp"
-#include "sys_server.hpp"
-
+#include "core/print.hpp"
+#include "platform/crt_compat.hpp"
+#include "server/server_types.hpp"
 #include <cstring>
 #include <cstdarg>
 #include <cstdio>

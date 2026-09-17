@@ -1,7 +1,6 @@
 // sw_part.hpp -- Particle System: Simulations, Explosions, Trails, and Rendering
 #pragma once
 
-#include "quakedef.hpp"
 #include "render/software/sw_local.hpp"
 
 namespace Render {

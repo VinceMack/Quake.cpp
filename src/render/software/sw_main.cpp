@@ -21,7 +21,8 @@
 #include "core/cvar.hpp"
 #include "platform/system.hpp"
 #include "audio/audio_main.hpp"
-#include "ui/console.hpp"
+#include "core/print.hpp"
+#include "quakedef.hpp"
 
 #include <new>
 #include <vector>

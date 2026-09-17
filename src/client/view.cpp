@@ -1,12 +1,18 @@
 // view.cpp -- 3D View Setup, Camera Orientation, Damage/Palette Blending Implementation
-#include "quakedef.hpp"
 #include "client/view.hpp"
 #include "client/view_blend.hpp"
-#include "client/screen.hpp"
+#include "ui/screen.hpp"
 #include "client/chase.hpp"
 #include "ui/console.hpp"
 #include "ui/hud.hpp"
 #include "render/draw2d.hpp"
+#include "host/host.hpp"
+#include "render/software/sw_local.hpp"
+#include "render/software/sw_vid.hpp"
+#include "render/software/sw_main.hpp"
+#include "quakedef.hpp"
+#include "render/software/sw_light.hpp"
+#include "core/cmd.hpp"
 
 #include <cmath>
 

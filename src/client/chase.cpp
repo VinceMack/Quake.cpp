@@ -1,8 +1,9 @@
 // chase.cpp -- Chase Camera Subsystem Implementation
-#include "quakedef.hpp"
 #include "client/chase.hpp"
 #include "client/client_types.hpp"
 #include "server/world.hpp"
+#include "render/software/sw_local.hpp"
+#include "quakedef.hpp"
 
 #include <cmath>
 #include <numbers>

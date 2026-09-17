@@ -376,4 +376,3 @@ extern int r_zistepx, r_zistepy;
 
 } // namespace Render
 
-using Render::d_pzbuffer;

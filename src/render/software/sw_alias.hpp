@@ -1,7 +1,6 @@
 // sw_alias.hpp -- Alias Model (MDL) Transformation, Lighting, and Skin Setup
 #pragma once
 
-#include "quakedef.hpp"
 #include "render/software/sw_local.hpp"
 
 namespace Render {

@@ -2,6 +2,7 @@
 #include "render/software/sw_poly.hpp"
 #include "world/bsp_format.hpp"
 #include "core/math.hpp"
+#include "quakedef.hpp"
 
 #include <cmath>
 #include <tuple>

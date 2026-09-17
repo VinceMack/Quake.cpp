@@ -1,11 +1,22 @@
 // model.cpp -- In-memory model structures (BSP, MDL, SPR) & Model management
-#include "quakedef.hpp"
 #include "world/bsp_format.hpp"
 #include "world/model.hpp"
+#include "platform/crt_compat.hpp"
+#include "core/string_utils.hpp"
+#include "render/software/sw_local.hpp"
+#include "core/math.hpp"
+#include "core/msg.hpp"
+#include "core/print.hpp"
+#include "render/software/sw_sky.hpp"
+#include "core/types.hpp"
+#include "core/filesystem.hpp"
+#include "core/cmd.hpp"
 
 #include <memory>
 #include <utility>
 #include <vector>
+#include <cstring>
+#include <cmath>
 
 namespace Model {
 

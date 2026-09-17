@@ -1,7 +1,7 @@
 // msg.cpp -- Network buffer and message serialization primitives
-#include "quakedef.hpp"
 #include "core/msg.hpp"
-#include "ui/console.hpp"
+#include "core/print.hpp"
+#include "core/math.hpp"
 
 namespace Common {
 

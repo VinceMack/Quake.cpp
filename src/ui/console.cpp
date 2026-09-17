@@ -1,6 +1,18 @@
 // console.cpp -- In-game console subsystem (buffer, rendering, input line, notifications, logging)
-#include "quakedef.hpp"
 #include "ui/console.hpp"
+#include "platform/crt_compat.hpp"
+#include "host/host.hpp"
+#include "core/cvar.hpp"
+#include "platform/system.hpp"
+#include "client/input.hpp"
+#include "render/draw2d.hpp"
+#include "render/software/sw_vid.hpp"
+#include "audio/audio_main.hpp"
+#include "client/client_types.hpp"
+#include "ui/screen.hpp"
+#include "ui/menu.hpp"
+#include "core/filesystem.hpp"
+#include "core/cmd.hpp"
 
 #include <algorithm>
 #include <filesystem>

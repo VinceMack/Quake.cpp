@@ -1,6 +1,7 @@
 // collision.cpp -- World collision, BSP hull tracing & raycasting
-#include "quakedef.hpp"
 #include "world/collision.hpp"
+#include "core/types.hpp"
+#include "core/math.hpp"
 
 namespace Collision {
 

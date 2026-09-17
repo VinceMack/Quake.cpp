@@ -1,5 +1,4 @@
 // renderer.cpp -- IRenderer implementation management
-#include "quakedef.hpp"
 #include "render/renderer.hpp"
 
 namespace Render {

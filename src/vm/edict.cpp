@@ -1,5 +1,4 @@
 // edict.cpp -- Entity dictionary allocation, field reflection, and serialization
-#include "quakedef.hpp"
 #include "vm/edict.hpp"
 #include "vm/program.hpp"
 #include "vm/interpreter.hpp"
@@ -7,9 +6,10 @@
 #include "core/string_utils.hpp"
 #include "core/cmd.hpp"
 #include "host/host.hpp"
-#include "ui/console.hpp"
-#include "sys_server.hpp"
-
+#include "core/print.hpp"
+#include "platform/crt_compat.hpp"
+#include "server/world.hpp"
+#include "server/server_types.hpp"
 #include <cstring>
 #include <cstdlib>
 

@@ -1,11 +1,22 @@
 // cl_main.cpp -- Client Subsystem Lifecycle, Connection, and Frame Orchestration Implementation
-#include "quakedef.hpp"
 #include "client/cl_main.hpp"
 #include "client/cl_input.hpp"
 #include "client/cl_parse.hpp"
 #include "client/cl_tent.hpp"
 #include "client/cl_demo.hpp"
 #include "client/chase.hpp"
+#include "host/host.hpp"
+#include "client/input.hpp"
+#include "network/net_main.hpp"
+#include "render/software/sw_vid.hpp"
+#include "render/software/sw_efrag.hpp"
+#include "audio/audio_main.hpp"
+#include "render/software/sw_part.hpp"
+#include "ui/screen.hpp"
+#include "network/protocol.hpp"
+#include "core/print.hpp"
+#include "server/server_types.hpp"
+#include "core/cmd.hpp"
 
 namespace Client {
 
@@ -303,3 +314,30 @@ void CL_Init() {
 }
 
 } // namespace Client
+
+namespace Cmd {
+
+// Sends the current console command to the server as a clc_stringcmd. Declared in
+// core/cmd.hpp; defined here because it needs the client's connection state.
+void ForwardToServer(void) {
+    if (Client::cls.state != ca_connected) {
+        std::string_view cmd_name = Argv(0);
+        Console::Con_Printf("Can't \"%.*s\", not connected\n", static_cast<int>(cmd_name.length()), cmd_name.data());
+        return;
+    }
+    if (Client::cls.demoplayback) return;
+    Common::MSG_WriteByte(&Client::cls.message, clc_stringcmd);
+    std::string argv0(Argv(0).data(), Argv(0).length());
+    if (Common::Q_strcasecmp(argv0.c_str(), "cmd") != 0) {
+        Common::SZ_Print(&Client::cls.message, argv0.c_str());
+        Common::SZ_Print(&Client::cls.message, " ");
+    }
+    if (Argc() > 1) {
+        std::string args_str(Args().data(), Args().length());
+        Common::SZ_Print(&Client::cls.message, args_str.c_str());
+    } else {
+        Common::SZ_Print(&Client::cls.message, "\n");
+    }
+}
+
+} // namespace Cmd

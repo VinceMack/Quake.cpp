@@ -3,6 +3,7 @@
 #include "render/software/sw_vid.hpp"
 #include "audio/audio_main.hpp"
 #include "world/bsp_format.hpp"
+#include "quakedef.hpp"
 
 #include <climits>
 

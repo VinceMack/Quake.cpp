@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstdint>
+#include "core/print.hpp"
 #include <vector>
 #include <string_view>
 
@@ -48,7 +49,5 @@ private:
 };
 
 [[nodiscard]] ConsoleSystem& GetConsoleSystem() noexcept;
-void Con_Printf(const char* fmt, ...);
-void Con_DPrintf(const char* fmt, ...);
 
 } // namespace Console

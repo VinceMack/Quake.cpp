@@ -3,8 +3,8 @@
 
 #include "render/renderer.hpp"
 #include "render/draw2d.hpp"
-#include "sys_render.hpp"
-
+#include "render/software/sw_local.hpp"
+#include "render/software/sw_main.hpp"
 namespace Render {
 
 class SoftwareRenderer final : public IRenderer {

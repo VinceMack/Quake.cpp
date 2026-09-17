@@ -1,6 +1,6 @@
 // world.cpp -- Server World, Area Nodes, Entity Linking, and Collision Implementation
-#include "quakedef.hpp"
 #include "server/world.hpp"
+#include "vm/interpreter.hpp"
 
 namespace Server {
 

@@ -39,9 +39,9 @@ set(ENGINE_SRCS
     src/ui/console.cpp
     src/ui/menu.cpp
     src/ui/hud.cpp
+    src/ui/screen.cpp
     src/render/draw2d.cpp
     src/render/renderer.cpp
-    src/client/screen.cpp
     src/client/view.cpp
     src/client/view_blend.cpp
     src/render/software/sw_vid.cpp

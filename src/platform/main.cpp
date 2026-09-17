@@ -1,6 +1,11 @@
 // main.cpp -- Process entry point and the top-level frame loop
-#include "quakedef.hpp"
-
+#include "client/client_types.hpp"
+#include "core/filesystem.hpp"
+#include "core/string_utils.hpp"
+#include "core/cmd.hpp"
+#include "core/cvar.hpp"
+#include "host/host.hpp"
+#include "platform/system.hpp"
 #include <SDL.h>
 #include <csignal>
 

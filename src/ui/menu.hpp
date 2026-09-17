@@ -1,10 +1,9 @@
 // menu.hpp -- Quake in-game menu system & screens
 #pragma once
+#include "core/wad.hpp"
 
 #include <cstdint>
 #include <string>
-#include "sys_render.hpp"
-
 namespace Menu {
 
 enum class MenuState {

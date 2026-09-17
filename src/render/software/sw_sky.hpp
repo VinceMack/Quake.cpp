@@ -1,7 +1,6 @@
 // sw_sky.hpp -- Dynamic Scrolling Sky Surface Generation
 #pragma once
 
-#include "quakedef.hpp"
 #include "render/software/sw_local.hpp"
 
 namespace Render {

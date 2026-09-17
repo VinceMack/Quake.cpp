@@ -1,9 +1,9 @@
 // host.hpp -- Central engine host orchestration (loop, state, error handling, dispatch)
 #pragma once
+#include "core/types.hpp"
+#include "core/cvar.hpp"
 
 #include <cstdint>
-#include "sys_core.hpp"
-
 struct client_t;
 
 //=============================================================================

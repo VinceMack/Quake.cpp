@@ -1,6 +1,9 @@
 // loopback.cpp -- In-Memory Loopback Network Driver Implementation
-#include "quakedef.hpp"
 #include "network/loopback.hpp"
+#include "server/server_types.hpp"
+#include "client/client_types.hpp"
+#include "core/cmd.hpp"
+#include "core/math.hpp"
 
 namespace Net {
 

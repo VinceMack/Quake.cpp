@@ -1,10 +1,25 @@
 // screen.cpp -- 2D Screen Refresh, Layout Management, and Loading System Implementation
-#include "quakedef.hpp"
-#include "client/screen.hpp"
+#include "ui/screen.hpp"
 #include "ui/console.hpp"
 #include "ui/menu.hpp"
 #include "ui/hud.hpp"
 #include "render/draw2d.hpp"
+#include "platform/crt_compat.hpp"
+#include "render/render_types.hpp"
+#include "host/host.hpp"
+#include "core/wad.hpp"
+#include "platform/system.hpp"
+#include "client/input.hpp"
+#include "render/software/sw_local.hpp"
+#include "render/software/sw_vid.hpp"
+#include "render/software/sw_raster.hpp"
+#include "render/software/sw_frame.hpp"
+#include "client/client_types.hpp"
+#include "core/math.hpp"
+#include "audio/audio_main.hpp"
+#include "client/view.hpp"
+#include "core/filesystem.hpp"
+#include "core/cmd.hpp"
 
 #include <cmath>
 

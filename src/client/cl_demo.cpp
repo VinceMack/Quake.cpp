@@ -1,7 +1,16 @@
 // cl_demo.cpp -- Client Demo Recording and Playback Subsystem Implementation
-#include "quakedef.hpp"
 #include "client/cl_demo.hpp"
 #include "client/cl_main.hpp"
+#include "platform/crt_compat.hpp"
+#include "host/host.hpp"
+#include "core/filesystem.hpp"
+#include "network/net_main.hpp"
+#include "ui/screen.hpp"
+#include "network/protocol.hpp"
+#include "quakedef.hpp"
+#include "network/socket.hpp"
+#include "core/print.hpp"
+#include "core/cmd.hpp"
 
 #ifdef GetMessage
 #undef GetMessage

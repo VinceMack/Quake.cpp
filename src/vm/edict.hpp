@@ -6,9 +6,7 @@
 #include "core/types.hpp"
 #include "core/math.hpp"
 #include "vm/program.hpp"
-
-// Forward declare entity_state_t
-struct entity_state_t;
+#include "world/entity_state.hpp"
 
 //=============================================================================
 // Program Variables (from progdefs.q1)
@@ -214,14 +212,13 @@ void ED_ClearFieldCache();
 
 } // namespace VM
 
+// Accessors for QuakeC globals and entity fields by offset. The edict/offset conversions
+// that need the server's edict base (EDICT_TO_PROG, PROG_TO_EDICT, G_EDICT, G_EDICTNUM)
+// live in server/server_types.hpp.
 #define NEXT_EDICT(e) ((edict_t*)((byte*)e + VM::pr_edict_size))
-#define EDICT_TO_PROG(e) ((byte*)e - (byte*)Server::sv.edicts)
-#define PROG_TO_EDICT(e) ((edict_t*)((byte*)Server::sv.edicts + e))
 
 #define G_FLOAT(o) (VM::pr_globals[o])
 #define G_INT(o) (*(int*)&VM::pr_globals[o])
-#define G_EDICT(o) ((edict_t*)((byte*)Server::sv.edicts + *(int*)&VM::pr_globals[o]))
-#define G_EDICTNUM(o) VM::NUM_FOR_EDICT(G_EDICT(o))
 #define G_VECTOR(o) (&VM::pr_globals[o])
 #define G_STRING(o) (VM::PR_GetString(*(string_t*)&VM::pr_globals[o]))
 #define G_FUNCTION(o) (*(func_t*)&VM::pr_globals[o])

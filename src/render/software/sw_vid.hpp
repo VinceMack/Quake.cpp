@@ -23,5 +23,3 @@ void D_EndDirectRect(int x, int y, int width, int height);
 
 } // namespace Vid
 
-using Vid::VID_SetPalette;
-using Vid::VID_ShiftPalette;

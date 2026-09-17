@@ -1,7 +1,13 @@
 // cl_input.cpp -- Client Movement Input and Command Generation Implementation
-#include "quakedef.hpp"
 #include "client/cl_input.hpp"
 #include "client/cl_main.hpp"
+#include "host/host.hpp"
+#include "network/net_main.hpp"
+#include "client/view.hpp"
+#include "quakedef.hpp"
+#include "network/protocol.hpp"
+#include "core/print.hpp"
+#include "core/cmd.hpp"
 
 namespace Client {
 

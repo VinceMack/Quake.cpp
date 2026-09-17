@@ -1,9 +1,15 @@
 // draw2d.cpp -- 2D raster drawing primitives, fonts, pics & caching
-#include "quakedef.hpp"
 #include "render/draw2d.hpp"
-#include "sys_render.hpp"
-#include "sys_audio.hpp"
-
+#include "render/render_types.hpp"
+#include "platform/system.hpp"
+#include "core/string_utils.hpp"
+#include "render/software/sw_local.hpp"
+#include "render/software/sw_vid.hpp"
+#include "core/math.hpp"
+#include "render/renderer.hpp"
+#include "quakedef.hpp"
+#include "core/cmd.hpp"
+#include "core/filesystem.hpp"
 #include <vector>
 #include <memory>
 #include <string>
@@ -64,6 +70,7 @@ void Draw_Init()
     draw_chars = (byte*)Wad::W_GetLumpName("conchars");
     draw_disc = (qpic_t*)Wad::W_GetLumpName("disc");
     draw_backtile = (qpic_t*)Wad::W_GetLumpName("backtile");
+    Common::COM_SetLoadIndicator(Draw_BeginDisc, Draw_EndDisc);
     r_rectdesc.width = draw_backtile->width;
     r_rectdesc.height = draw_backtile->height;
     r_rectdesc.ptexbytes = draw_backtile->data;

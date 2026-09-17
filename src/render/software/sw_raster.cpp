@@ -6,6 +6,7 @@
 #include "render/software/sw_bsp.hpp"
 #include "client/client_types.hpp"
 #include "core/cvar.hpp"
+#include "render/software/sw_vid.hpp"
 
 namespace Render {
 

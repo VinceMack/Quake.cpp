@@ -2,7 +2,8 @@
 #include "render/software/sw_alias.hpp"
 #include "render/software/sw_alias_clip.hpp"
 #include "client/client_types.hpp"
-#include "ui/console.hpp"
+#include "core/print.hpp"
+#include "quakedef.hpp"
 
 #include <cmath>
 

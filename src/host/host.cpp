@@ -1,13 +1,54 @@
 // host.cpp -- Central engine host orchestration (loop, state, error handling, dispatch)
-#include "quakedef.hpp"
 #include "host/host.hpp"
 #include "render/renderer.hpp"
 #include "render/software/sw_renderer.hpp"
+#include "platform/crt_compat.hpp"
+#include "core/wad.hpp"
+#include "render/software/sw_vid.hpp"
+#include "audio/audio_main.hpp"
+#include "core/math.hpp"
+#include "vm/program.hpp"
+#include "ui/screen.hpp"
+#include "core/cvar.hpp"
+#include "core/string_utils.hpp"
+#include "network/net_main.hpp"
+#include "client/client_types.hpp"
+#include "render/software/sw_surf.hpp"
+#include "core/msg.hpp"
+#include "ui/menu.hpp"
+#include "server/server.hpp"
+#include "core/types.hpp"
+#include "ui/hud.hpp"
+#include "network/socket.hpp"
+#include "core/filesystem.hpp"
+#include "quakedef.hpp"
+#include "core/cmd.hpp"
+#include "world/model.hpp"
+#include "render/render_types.hpp"
+#include "platform/system.hpp"
+#include "vm/edict.hpp"
+#include "render/software/sw_main.hpp"
+#include "server/sv_send.hpp"
+#include "client/view.hpp"
+#include "vm/interpreter.hpp"
+#include "ui/console.hpp"
+#include "server/server_types.hpp"
+#include "world/collision.hpp"
+#include "client/input.hpp"
+#include "render/software/sw_local.hpp"
+#include "server/world.hpp"
+#include "network/protocol.hpp"
+#include "client/cl_tent.hpp"
+#include "client/cl_main.hpp"
+#include "server/physics.hpp"
+#include "client/chase.hpp"
+#include "client/cl_demo.hpp"
 
 #include <algorithm>
 #include <fstream>
 #include <limits>
 #include <vector>
+#include <cstring>
 
 namespace Host {
 
@@ -193,7 +234,7 @@ void Host_Frame(float time) {
 void Host_Init(quakeparms_t* parms) {
     host_parms = *parms;
     Common::com_argc = parms->argc; Common::com_argv = parms->argv;
-    Cmd::BufferInit(); Cmd::Init(); View::V_Init(); Client::Chase_Init(); Common::COM_Init(); Host_InitLocal();
+    Cmd::BufferInit(); Cmd::Init(); View::V_Init(); Client::Chase_Init(); Common::COM_Init(parms->basedir); Host_InitLocal();
     Wad::W_LoadWadFile("gfx.wad"); Keys::Key_Init(); Console::GetConsoleSystem().Init(); Menu::M_Init(); VM::PR_Init(); Model::Mod_Init(); Net::NET_Init(); Server::SV_Init();
     Console::Con_Printf("Exe: " __TIME__ " " __DATE__ "\n");
     Render::R_InitTextures();

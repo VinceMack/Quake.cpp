@@ -1,10 +1,32 @@
 // menu.cpp -- Quake in-game menu system & screens
-#include "quakedef.hpp"
 #include "ui/menu.hpp"
+#include "platform/crt_compat.hpp"
+#include "core/wad.hpp"
+#include "render/software/sw_vid.hpp"
+#include "audio/audio_main.hpp"
+#include "ui/screen.hpp"
+#include "core/string_utils.hpp"
+#include "core/cvar.hpp"
+#include "render/draw2d.hpp"
+#include "quakedef.hpp"
+#include "network/socket.hpp"
+#include "core/types.hpp"
+#include "core/filesystem.hpp"
+#include "core/cmd.hpp"
+#include "world/model.hpp"
+#include "render/render_types.hpp"
+#include "client/view.hpp"
+#include "ui/console.hpp"
+#include "server/server_types.hpp"
+#include "host/host.hpp"
+#include "client/input.hpp"
+#include "client/cl_demo.hpp"
+#include "network/net_main.hpp"
 
 #include <algorithm>
 #include <fstream>
 #include <limits>
+#include <cstring>
 
 // ============================================================================
 // MENU SUBSYSTEM (Modernized & Table-Driven LoC Reduction)

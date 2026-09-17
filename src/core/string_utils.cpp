@@ -1,5 +1,6 @@
 // string_utils.cpp -- String utilities implementation
 #include "core/string_utils.hpp"
+#include "platform/crt_compat.hpp"
 #include <cctype>
 #include <cstdio>
 

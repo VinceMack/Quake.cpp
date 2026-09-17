@@ -1,9 +1,9 @@
 // wad.cpp -- WAD archive loader implementation
-#include "quakedef.hpp"
 #include "core/wad.hpp"
 #include "core/filesystem.hpp"
 #include "core/endian.hpp"
 #include "core/string_utils.hpp"
+#include "core/math.hpp"
 #include <array>
 #include <vector>
 #include <cctype>
