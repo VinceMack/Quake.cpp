@@ -21,7 +21,7 @@ using namespace Cmd;
 
 namespace Client {
 
-constexpr auto svc_strings = eastl::array{
+constexpr auto svc_strings = std::array{
     "svc_bad", "svc_nop", "svc_disconnect", "svc_updatestat", "svc_version", "svc_setview",
     "svc_sound", "svc_time", "svc_print", "svc_stufftext", "svc_setangle", "svc_serverinfo",
     "svc_lightstyle", "svc_updatename", "svc_updatefrags", "svc_clientdata", "svc_stopsound",
@@ -30,7 +30,7 @@ constexpr auto svc_strings = eastl::array{
     "svc_killedmonster", "svc_foundsecret", "svc_spawnstaticsound", "svc_intermission",
     "svc_finale", "svc_cdtrack", "svc_sellscreen", "svc_cutscene"
 };
-static eastl::array<int, 16> bitcounts{};
+static std::array<int, 16> bitcounts{};
 
 void CL_ParseStartSoundPacket() {
     int packet_vol = DEFAULT_SOUND_PACKET_VOLUME;
@@ -50,8 +50,8 @@ void CL_ParseStartSoundPacket() {
 void CL_KeepaliveMessage() {
     if (sv.active || cls.demoplayback) return;
     sizebuf_t old = net_message;
-    eastl::array<byte, 8192> olddata;
-    eastl::copy_n(net_message.data, eastl::min(static_cast<int>(olddata.size()), net_message.cursize), olddata.begin());
+    std::array<byte, 8192> olddata;
+    std::copy_n(net_message.data, std::min(static_cast<int>(olddata.size()), net_message.cursize), olddata.begin());
     int ret;
     do {
         ret = CL_GetMessage();
@@ -63,7 +63,7 @@ void CL_KeepaliveMessage() {
         }
     } while (ret);
     net_message = old;
-    eastl::copy_n(olddata.begin(), eastl::min(static_cast<int>(olddata.size()), net_message.cursize), net_message.data);
+    std::copy_n(olddata.begin(), std::min(static_cast<int>(olddata.size()), net_message.cursize), net_message.data);
     const float time = static_cast<float>(Sys_FloatTime());
     static float lastmsg = 0.0f;
     if (time - lastmsg < 5.0f) return;
@@ -86,8 +86,8 @@ void CL_ParseServerInfo() {
     strncpy_s(cl.levelname.data(), cl.levelname.size(), str, _TRUNCATE);
     Con_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n%c%s\n", 2, str);
 
-    eastl::array<eastl::string, MAX_MODELS> model_names{};
-    eastl::array<eastl::string, MAX_SOUNDS> sound_names{};
+    std::array<std::string, MAX_MODELS> model_names{};
+    std::array<std::string, MAX_SOUNDS> sound_names{};
     cl.model_precache.fill(nullptr);
     cl.sound_precache.fill(nullptr);
 
@@ -208,12 +208,12 @@ void CL_NewTranslation(int slot) {
     if (slot > cl.maxclients) Sys_Error("CL_NewTranslation: slot > cl.maxclients");
     byte* dest = cl.scores[slot].translations.data();
     const byte* source = vid.colormap;
-    eastl::copy_n(vid.colormap, cl.scores[slot].translations.size(), dest);
+    std::copy_n(vid.colormap, cl.scores[slot].translations.size(), dest);
     const int top = cl.scores[slot].colors & 0xf0, bottom = (cl.scores[slot].colors & 15) << 4;
     for (int i = 0; i < VID_GRADES; ++i, dest += 256, source += 256) {
-        if (top < 128) eastl::copy_n(source + top, 16, dest + TOP_RANGE);
+        if (top < 128) std::copy_n(source + top, 16, dest + TOP_RANGE);
         else for (int j = 0; j < 16; ++j) dest[TOP_RANGE + j] = source[top + 15 - j];
-        if (bottom < 128) eastl::copy_n(source + bottom, 16, dest + BOTTOM_RANGE);
+        if (bottom < 128) std::copy_n(source + bottom, 16, dest + BOTTOM_RANGE);
         else for (int j = 0; j < 16; ++j) dest[BOTTOM_RANGE + j] = source[bottom + 15 - j];
     }
 }

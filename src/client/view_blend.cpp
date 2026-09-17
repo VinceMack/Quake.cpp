@@ -40,7 +40,7 @@ static cshift_t cshift_lava  = { { 255, 80, 0 }, 150 };
 cvar_t v_gamma = { "gamma", "1", true };
 cvar_t gl_cshiftpercent = { "gl_cshiftpercent", "100", false };
 
-eastl::array<byte, 256> gammatable{};
+std::array<byte, 256> gammatable{};
 
 static void BuildGammaTable(float g)
 {

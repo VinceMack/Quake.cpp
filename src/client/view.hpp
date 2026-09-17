@@ -9,7 +9,7 @@ namespace View {
 extern cvar_t v_gamma;
 extern cvar_t lcd_x, lcd_yaw;
 extern cvar_t v_kicktime, v_kickroll, v_kickpitch;
-extern eastl::array<byte, 256> gammatable;
+extern std::array<byte, 256> gammatable;
 
 void V_Init();
 void V_RenderView();

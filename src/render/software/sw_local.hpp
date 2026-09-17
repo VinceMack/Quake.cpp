@@ -8,7 +8,7 @@
 #include "world/bsp_format.hpp"
 #include "world/model.hpp"
 
-#include <EASTL/array.h>
+#include <array>
 
 inline constexpr int SCANBUFFERPAD = 0x1000, R_SKY_SMASK = 0x007F0000, R_SKY_TMASK = 0x007F0000;
 inline constexpr int DS_SPAN_LIST_END = -128, SURFCACHE_SIZE_AT_320X200 = 600 * 1024, BMODEL_FULLY_CLIPPED = 0x10;
@@ -60,7 +60,7 @@ struct surf_t {
     float nearzi = 0.0f;
     qboolean insubmodel = {};
     float d_ziorigin = 0.0f, d_zistepu = 0.0f, d_zistepv = 0.0f;
-    eastl::array<int, 2> pad{};
+    std::array<int, 2> pad{};
 };
 
 inline constexpr int ALIAS_LEFT_CLIP = 0x0001, ALIAS_TOP_CLIP = 0x0002, ALIAS_RIGHT_CLIP = 0x0004;
@@ -72,7 +72,7 @@ struct edge_t {
     int64_t u_step = 0;
     edge_t* prev = nullptr;
     edge_t* next = nullptr;
-    eastl::array<unsigned short, 2> surfs{};
+    std::array<unsigned short, 2> surfs{};
     edge_t* nextremove = nullptr;
     float nearzi = 0.0f;
     medge_t* owner = nullptr;
@@ -85,12 +85,12 @@ struct alight_t {
 };
 
 struct bedge_t {
-    eastl::array<mvertex_t*, 2> v{};
+    std::array<mvertex_t*, 2> v{};
     bedge_t* pnext = nullptr;
 };
 
 struct auxvert_t {
-    eastl::array<float, 3> fv{};
+    std::array<float, 3> fv{};
 };
 
 inline constexpr int WARP_WIDTH = 320;
@@ -137,7 +137,7 @@ struct polydesc_t {
 };
 
 struct finalvert_t {
-    eastl::array<int, 6> v{};
+    std::array<int, 6> v{};
     int flags = 0;
     float reserved = 0.0f;
 };
@@ -189,7 +189,7 @@ struct clipplane_t {
     clipplane_t* next = nullptr;
     uint8_t leftedge = 0;
     uint8_t rightedge = 0;
-    eastl::array<uint8_t, 2> reserved{};
+    std::array<uint8_t, 2> reserved{};
 };
 
 inline constexpr int SKYSHIFT = 7;
@@ -208,7 +208,7 @@ struct drawsurf_t {
     pixel_t* surfdat = nullptr;
     int rowbytes = 0;
     msurface_t* surf = nullptr;
-    eastl::array<fixed8_t, MAXLIGHTMAPS> lightadj{};
+    std::array<fixed8_t, MAXLIGHTMAPS> lightadj{};
     texture_t* texture = nullptr;
     int surfmip = 0;
     int surfwidth = 0;
@@ -248,7 +248,7 @@ extern int c_surf;
 extern byte* r_warpbuffer;
 
 inline constexpr int NUMVERTEXNORMALS = 162;
-extern eastl::array<eastl::array<float, 3>, NUMVERTEXNORMALS> r_avertexnormals;
+extern std::array<std::array<float, 3>, NUMVERTEXNORMALS> r_avertexnormals;
 extern float xscaleshrink, yscaleshrink;
 
 void D_StartParticles();
@@ -267,7 +267,7 @@ extern mnode_t* r_pefragtopnode;
 extern Vector3 r_emins, r_emaxs;
 extern int r_dlightframecount;
 extern int c_faceclip;
-extern eastl::array<clipplane_t, 4> view_clipplanes;
+extern std::array<clipplane_t, 4> view_clipplanes;
 extern edge_t* auxedges;
 extern edge_t *r_edges, *edge_p, *edge_max;
 extern surf_t *surfaces, *surface_p, *surf_max;
@@ -281,8 +281,8 @@ extern unsigned int d_zrowbytes, d_zwidth;
 extern short* d_pzbuffer;
 extern float pixelAspect;
 extern int r_drawnpolycount;
-extern eastl::array<int, SIN_BUFFER_SIZE> sintable;
-extern eastl::array<int, SIN_BUFFER_SIZE> intsintable;
+extern std::array<int, SIN_BUFFER_SIZE> sintable;
+extern std::array<int, SIN_BUFFER_SIZE> intsintable;
 extern int r_emitted;
 extern float r_nearzi;
 extern float r_u1, r_v1, r_lzi1;
@@ -294,8 +294,8 @@ extern bool insubmodel;
 void TransformVector(const Vector3& in, Vector3& out);
 void R_TransformFrustum();
 void R_StoreEfrags(efrag_t** ppefrag);
-extern eastl::array<edge_t*, MAXHEIGHT> newedges;
-extern eastl::array<edge_t*, MAXHEIGHT> removeedges;
+extern std::array<edge_t*, MAXHEIGHT> newedges;
+extern std::array<edge_t*, MAXHEIGHT> removeedges;
 extern int r_currentkey;
 extern edge_t edge_head, edge_tail, edge_aftertail;
 extern Vector3 r_entorigin;
@@ -321,10 +321,10 @@ extern int r_clipflags;
 extern bool r_fov_greater_than_90;
 extern float aliasxscale, aliasyscale, aliasxcenter, aliasycenter;
 extern float screenAspect, verticalFieldOfView, xOrigin, yOrigin;
-extern eastl::array<mplane_t, 4> screenedge;
+extern std::array<mplane_t, 4> screenedge;
 extern int r_visframecount, r_polycount, r_wholepolycount;
-extern eastl::array<int*, 4> pfrustum_indexes;
-extern eastl::array<int, 4 * 6> r_frustum_indexes;
+extern std::array<int*, 4> pfrustum_indexes;
+extern std::array<int, 4 * 6> r_frustum_indexes;
 extern mleaf_t *r_viewleaf, *r_oldviewleaf;
 extern float r_aliastransition, r_resfudge;
 extern float dp_time1, dp_time2, db_time1, db_time2, rw_time1, rw_time2;
@@ -348,12 +348,12 @@ extern pixel_t* cacheblock;
 extern int cachewidth;
 extern pixel_t* d_viewbuffer;
 extern int d_minmip;
-extern eastl::array<float, 3> d_scalemip;
+extern std::array<float, 3> d_scalemip;
 extern void (*d_drawspans)(espan_t* pspan);
 extern int d_vrectx, d_vrecty, d_vrectright_particle, d_vrectbottom_particle;
 extern int d_y_aspect_shift, d_pix_min, d_pix_max, d_pix_shift;
-extern eastl::array<int, MAXHEIGHT> d_scantable;
-extern eastl::array<short*, MAXHEIGHT> zspantable;
+extern std::array<int, MAXHEIGHT> d_scantable;
+extern std::array<short*, MAXHEIGHT> zspantable;
 extern int miplevel;
 extern float scale_for_mip;
 extern int ubasestep, errorterm, erroradjustup, erroradjustdown;
@@ -365,7 +365,7 @@ extern surfcache_t* sc_base;
 extern surfcache_t* d_initial_rover;
 extern qboolean d_roverwrapped;
 extern entity_t* currententity;
-extern eastl::array<int, 256> d_lightstylevalue;
+extern std::array<int, 256> d_lightstylevalue;
 extern unsigned char* r_turb_pbase;
 extern unsigned char* r_turb_pdest;
 extern fixed16_t r_turb_s, r_turb_t, r_turb_sstep, r_turb_tstep;

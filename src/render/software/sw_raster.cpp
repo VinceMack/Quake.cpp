@@ -21,14 +21,14 @@ cvar_t d_subdiv16 = { "d_subdiv16", "1", false, false, 0.0f, nullptr };
 cvar_t d_mipcap = { "d_mipcap", "0", false, false, 0.0f, nullptr };
 cvar_t d_mipscale = { "d_mipscale", "1", false, false, 0.0f, nullptr };
 int d_minmip = 0;
-eastl::array<float, 3> d_scalemip{};
-constexpr eastl::array<float, 3> basemip = { 1.0f, 0.5f * 0.8f, 0.25f * 0.8f };
+std::array<float, 3> d_scalemip{};
+constexpr std::array<float, 3> basemip = { 1.0f, 0.5f * 0.8f, 0.25f * 0.8f };
 void (*d_drawspans)(espan_t* pspan) = nullptr;
 
 int d_vrectx = 0, d_vrecty = 0, d_vrectright_particle = 0, d_vrectbottom_particle = 0;
 int d_y_aspect_shift = 0, d_pix_min = 0, d_pix_max = 0, d_pix_shift = 0;
-eastl::array<int, MAXHEIGHT> d_scantable{};
-eastl::array<short*, MAXHEIGHT> zspantable{};
+std::array<int, MAXHEIGHT> d_scantable{};
+std::array<short*, MAXHEIGHT> zspantable{};
 
 int miplevel = 0;
 float scale_for_mip = 0.0f;

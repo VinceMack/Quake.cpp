@@ -14,7 +14,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
-#include <EASTL/array.h>
+#include <array>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -57,7 +57,7 @@ void Sys_Quit(void) {
 }
 
 constexpr size_t MAX_HANDLES = 10;
-static eastl::array<FILE*, MAX_HANDLES> sys_handles{};
+static std::array<FILE*, MAX_HANDLES> sys_handles{};
 
 static FILE* get_file_handle(int handle) {
     if (handle >= 0 && static_cast<size_t>(handle) < sys_handles.size()) return sys_handles[static_cast<size_t>(handle)];

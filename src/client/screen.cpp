@@ -39,13 +39,10 @@ ScreenSystem& GetScreenSystem()
     return instance;
 }
 
-void ScreenSystem::CenterPrint(eastl::string_view str)
+void ScreenSystem::CenterPrint(std::string_view str)
 {
-    if (str.length() >= centerstring_.capacity()) {
-        centerstring_.assign(str.data(), centerstring_.capacity() - 1);
-    } else {
-        centerstring_.assign(str.data(), str.length());
-    }
+    constexpr size_t kMaxCenterString = 1023;
+    centerstring_.assign(str.data(), std::min(str.length(), kMaxCenterString));
     centertime_off_ = centertime_.value;
     centertime_start_ = static_cast<float>(cl.time);
     center_lines_ = 1;
@@ -347,7 +344,7 @@ static void WritePCXfile(const char* filename,
     int rowbytes,
     const byte* palette)
 {
-    eastl::vector<uint8_t> buffer;
+    std::vector<uint8_t> buffer;
     buffer.reserve(sizeof(pcx_header_t) + width * height * 2 + 1024);
     buffer.resize(sizeof(pcx_header_t));
     auto* pcx = reinterpret_cast<pcx_header_t*>(buffer.data());
@@ -386,7 +383,7 @@ static void WritePCXfile(const char* filename,
 void ScreenSystem::ScreenShot_f()
 {
     int i = 0;
-    eastl::fixed_string<char, 80> pcxname = "quake00.pcx";
+    std::string pcxname = "quake00.pcx";
     char checkname[MAX_OSPATH];
     for (i = 0; i <= 99; i++) {
         pcxname[5] = static_cast<char>(i / 10 + '0');
@@ -459,7 +456,7 @@ void ScreenSystem::DrawNotifyString()
     } while (true);
 }
 
-bool ScreenSystem::ModalMessage(eastl::string_view text)
+bool ScreenSystem::ModalMessage(std::string_view text)
 {
     if (cls.state == ca_dedicated) {
         return true;

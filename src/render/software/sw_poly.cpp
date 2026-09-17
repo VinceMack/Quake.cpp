@@ -15,13 +15,13 @@ constexpr int DPS_MAXSPANS = MAXHEIGHT + 1;
 struct edgetable {
     int isflattop = 0;
     int numleftedges = 0;
-    const eastl::array<int, 6>* pleftedgevert0 = nullptr;
-    const eastl::array<int, 6>* pleftedgevert1 = nullptr;
-    const eastl::array<int, 6>* pleftedgevert2 = nullptr;
+    const std::array<int, 6>* pleftedgevert0 = nullptr;
+    const std::array<int, 6>* pleftedgevert1 = nullptr;
+    const std::array<int, 6>* pleftedgevert2 = nullptr;
     int numrightedges = 0;
-    const eastl::array<int, 6>* prightedgevert0 = nullptr;
-    const eastl::array<int, 6>* prightedgevert1 = nullptr;
-    const eastl::array<int, 6>* prightedgevert2 = nullptr;
+    const std::array<int, 6>* prightedgevert0 = nullptr;
+    const std::array<int, 6>* prightedgevert1 = nullptr;
+    const std::array<int, 6>* prightedgevert2 = nullptr;
 };
 
 struct spanpackage_t {
@@ -32,7 +32,7 @@ struct spanpackage_t {
     int sfrac = 0, tfrac = 0, light = 0, zi = 0;
 };
 
-static eastl::array<int, 6> r_p0{}, r_p1{}, r_p2{};
+static std::array<int, 6> r_p0{}, r_p1{}, r_p2{};
 static byte* d_pcolormap = nullptr;
 static int d_xdenom = 0;
 
@@ -69,11 +69,11 @@ static int d_lightbasestep = 0, d_pdestbasestep = 0, d_ptexbasestep = 0;
 static int d_sfracbasestep = 0, d_tfracbasestep = 0;
 static int d_ziextrastep = 0, d_zibasestep = 0;
 static int d_pzextrastep = 0, d_pzbasestep = 0;
-static eastl::array<byte*, MAX_LBM_HEIGHT> skintable{};
+static std::array<byte*, MAX_LBM_HEIGHT> skintable{};
 static int skinwidth = 0;
 static byte* skinstart = nullptr;
 
-static void D_PolysetRecursiveTriangle(const eastl::array<int, 6>* p1, const eastl::array<int, 6>* p2, const eastl::array<int, 6>* p3);
+static void D_PolysetRecursiveTriangle(const std::array<int, 6>* p1, const std::array<int, 6>* p2, const std::array<int, 6>* p3);
 static void D_PolysetSetEdgeTable();
 static void D_RasterizeAliasPolySmooth();
 static void D_PolysetScanLeftEdge(int height);
@@ -183,12 +183,12 @@ void D_DrawNonSubdiv()
     }
 }
 
-static void D_PolysetRecursiveTriangle(const eastl::array<int, 6>* lp1,
-    const eastl::array<int, 6>* lp2,
-    const eastl::array<int, 6>* lp3)
+static void D_PolysetRecursiveTriangle(const std::array<int, 6>* lp1,
+    const std::array<int, 6>* lp2,
+    const std::array<int, 6>* lp3)
 {
-    const eastl::array<int, 6>* temp;
-    eastl::array<int, 6> new_poly{};
+    const std::array<int, 6>* temp;
+    std::array<int, 6> new_poly{};
 
     int d = (*lp2)[0] - (*lp1)[0];
     if (d < -1 || d > 1) {
@@ -404,10 +404,10 @@ static void D_PolysetDrawSpans8(spanpackage_t* pspanpackage)
 
 static void D_RasterizeAliasPolySmooth()
 {
-    const eastl::array<int, 6>* plefttop = pedgetable->pleftedgevert0;
-    const eastl::array<int, 6>* prighttop = pedgetable->prightedgevert0;
-    const eastl::array<int, 6>* pleftbottom = pedgetable->pleftedgevert1;
-    const eastl::array<int, 6>* prightbottom = pedgetable->prightedgevert1;
+    const std::array<int, 6>* plefttop = pedgetable->pleftedgevert0;
+    const std::array<int, 6>* prighttop = pedgetable->prightedgevert0;
+    const std::array<int, 6>* pleftbottom = pedgetable->pleftedgevert1;
+    const std::array<int, 6>* prightbottom = pedgetable->prightedgevert1;
     int initialleftheight = (*pleftbottom)[1] - (*plefttop)[1];
     int initialrightheight = (*prightbottom)[1] - (*prighttop)[1];
 

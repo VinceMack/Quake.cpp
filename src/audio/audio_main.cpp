@@ -7,8 +7,8 @@
 
 #include <random>
 #include <charconv>
-#include <EASTL/algorithm.h>
-#include <EASTL/numeric_limits.h>
+#include <algorithm>
+#include <limits>
 
 using namespace Common;
 using namespace Console;
@@ -24,14 +24,14 @@ namespace Audio {
 SPSCQueue<AudioCommand, 256> command_queue;
 float local_volume = 0.7f;
 
-eastl::array<channel_t, MAX_CHANNELS> channels;
+std::array<channel_t, MAX_CHANNELS> channels;
 std::atomic<int> total_channels{MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS};
 bool snd_ambient = true, sound_started = false, fakedma = false, snd_initialized = false;
 Vector3 listener_origin, listener_forward, listener_right, listener_up;
 int paintedtime = 0;
 
-eastl::fixed_vector<sfx_t, MAX_SFX, false> known_sfx;
-eastl::array<sfx_t*, NUM_AMBIENTS> ambient_sfx;
+std::vector<sfx_t> known_sfx;
+std::array<sfx_t*, NUM_AMBIENTS> ambient_sfx;
 
 int snd_blocked = 0;
 vec_t sound_nominal_clip_dist = 1000.0;
@@ -94,6 +94,7 @@ void S_Init() {
     S_Startup();
     SND_InitScaletable();
     known_sfx.clear();
+    known_sfx.reserve(MAX_SFX);
 
     if (fakedma) {
         shm = &the_shm;
@@ -113,27 +114,26 @@ void S_Shutdown() {
     if (!fakedma) SNDDMA_Shutdown();
 }
 
-sfx_t* S_FindName(eastl::string_view name) {
+sfx_t* S_FindName(std::string_view name) {
     if (name.empty()) Sys_Error("S_FindName: NULL\n");
     if (name.length() >= MAX_QPATH) {
         Sys_Error("Sound name too long: %.*s", static_cast<int>(name.length()), name.data());
     }
-    auto it = eastl::find_if(known_sfx.begin(), known_sfx.end(), [name](const sfx_t& s) {
-        return eastl::string_view(s.name) == name;
+    auto it = std::find_if(known_sfx.begin(), known_sfx.end(), [name](const sfx_t& s) {
+        return std::string_view(s.name) == name;
     });
-    if (it != known_sfx.end()) return it;
-    if (known_sfx.full()) Sys_Error("S_FindName: out of sfx_t");
-    sfx_t& new_sfx = known_sfx.push_back();
-    new_sfx = {};
+    if (it != known_sfx.end()) return &*it;
+    if (known_sfx.size() >= MAX_SFX) Sys_Error("S_FindName: out of sfx_t");
+    sfx_t& new_sfx = known_sfx.emplace_back();
     name.copy(new_sfx.name, name.length());
     return &new_sfx;
 }
 
-void S_TouchSound(eastl::string_view name) {
+void S_TouchSound(std::string_view name) {
     if (sound_started) Cache_Check(&S_FindName(name)->cache);
 }
 
-sfx_t* S_PrecacheSound(eastl::string_view name) {
+sfx_t* S_PrecacheSound(std::string_view name) {
     if (!sound_started || nosound.value) return nullptr;
     sfx_t* sfx = S_FindName(name);
     if (precache.value) static_cast<void>(S_LoadSound(sfx));
@@ -142,8 +142,8 @@ sfx_t* S_PrecacheSound(eastl::string_view name) {
 
 channel_t* SND_PickChannel(int entnum, int entchannel) {
     channel_t* first_to_die = nullptr;
-    int life_left = eastl::numeric_limits<int>::max();
-    for (auto& chan : eastl::span(channels).subspan(NUM_AMBIENTS, MAX_DYNAMIC_CHANNELS)) {
+    int life_left = std::numeric_limits<int>::max();
+    for (auto& chan : std::span(channels).subspan(NUM_AMBIENTS, MAX_DYNAMIC_CHANNELS)) {
         if (entchannel != 0 && chan.entnum == entnum && (chan.entchannel == entchannel || entchannel == -1)) {
             chan.sfx = nullptr;
             return &chan;
@@ -167,8 +167,8 @@ void SND_Spatialize(channel_t* ch) {
     vec_t dist = source_vec.normalize() * ch->dist_mult;
     vec_t dot = listener_right.dot(source_vec);
     bool mono = (shm->channels.load(std::memory_order_relaxed) == 1);
-    ch->rightvol = eastl::max(0, static_cast<int>(ch->master_vol * (1.0 - dist) * (mono ? 1.0 : 1.0 + dot)));
-    ch->leftvol  = eastl::max(0, static_cast<int>(ch->master_vol * (1.0 - dist) * (mono ? 1.0 : 1.0 - dot)));
+    ch->rightvol = std::max(0, static_cast<int>(ch->master_vol * (1.0 - dist) * (mono ? 1.0 : 1.0 + dot)));
+    ch->leftvol  = std::max(0, static_cast<int>(ch->master_vol * (1.0 - dist) * (mono ? 1.0 : 1.0 - dot)));
 }
 
 void S_StartSoundInternal(int entnum, int entchannel, sfx_t* sfx, const Vector3& origin, float fvol, float attenuation, int random_offset) {
@@ -182,9 +182,9 @@ void S_StartSoundInternal(int entnum, int entchannel, sfx_t* sfx, const Vector3&
     target->sfx = sfx;
     target->pos = 0;
     target->end = paintedtime + sc->length;
-    for (auto& check : eastl::span(channels).subspan(NUM_AMBIENTS, MAX_DYNAMIC_CHANNELS)) {
+    for (auto& check : std::span(channels).subspan(NUM_AMBIENTS, MAX_DYNAMIC_CHANNELS)) {
         if (&check != target && check.sfx == sfx && !check.pos) {
-            int skip = eastl::clamp(random_offset, 0, target->end - 1);
+            int skip = std::clamp(random_offset, 0, target->end - 1);
             target->pos += skip;
             target->end -= skip;
             break;
@@ -193,8 +193,8 @@ void S_StartSoundInternal(int entnum, int entchannel, sfx_t* sfx, const Vector3&
 }
 
 void S_StopSoundInternal(int entnum, int entchannel) {
-    auto active = eastl::span(channels).first(MAX_DYNAMIC_CHANNELS);
-    if (auto it = eastl::find_if(active.begin(), active.end(), [=](const channel_t& c) {
+    auto active = std::span(channels).first(MAX_DYNAMIC_CHANNELS);
+    if (auto it = std::find_if(active.begin(), active.end(), [=](const channel_t& c) {
         return c.entnum == entnum && c.entchannel == entchannel;
     }); it != active.end()) {
         *it = {};
@@ -271,7 +271,7 @@ void S_ClearBuffer() {
 }
 
 void S_UpdateInternal(const Vector3& origin, const Vector3& forward, const Vector3& right, const Vector3& up,
-                      float vol_val, const eastl::array<int, NUM_AMBIENTS>& ambient_vols,
+                      float vol_val, const std::array<int, NUM_AMBIENTS>& ambient_vols,
                       float host_frametime_val, float ambient_fade_val, bool snd_ambient_val) {
     listener_origin = origin;
     listener_forward = forward;
@@ -285,19 +285,19 @@ void S_UpdateInternal(const Vector3& origin, const Vector3& forward, const Vecto
         chan.sfx = ambient_sfx[i];
         int target = ambient_vols[i];
         int delta = static_cast<int>(host_frametime_val * ambient_fade_val);
-        chan.master_vol = (chan.master_vol < target) ? eastl::min(target, chan.master_vol + delta) : eastl::max(target, chan.master_vol - delta);
+        chan.master_vol = (chan.master_vol < target) ? std::min(target, chan.master_vol + delta) : std::max(target, chan.master_vol - delta);
         chan.leftvol = chan.rightvol = chan.master_vol;
     }
     const int static_start = NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS;
-    auto active_chans = eastl::span(channels).subspan(NUM_AMBIENTS, total_channels - NUM_AMBIENTS);
+    auto active_chans = std::span(channels).subspan(NUM_AMBIENTS, total_channels - NUM_AMBIENTS);
     for (size_t idx = 0; idx < active_chans.size(); ++idx) {
         auto& ch = active_chans[idx];
         if (!ch.sfx) continue;
         SND_Spatialize(&ch);
         if (!ch.leftvol && !ch.rightvol) continue;
         if (int channel_index = NUM_AMBIENTS + static_cast<int>(idx); channel_index >= static_start) {
-            auto static_span = eastl::span(channels).subspan(static_start, channel_index - static_start);
-            if (auto match = eastl::find_if(static_span.begin(), static_span.end(), [&ch](const channel_t& o) { return o.sfx == ch.sfx; }); match != static_span.end()) {
+            auto static_span = std::span(channels).subspan(static_start, channel_index - static_start);
+            if (auto match = std::find_if(static_span.begin(), static_span.end(), [&ch](const channel_t& o) { return o.sfx == ch.sfx; }); match != static_span.end()) {
                 match->leftvol += ch.leftvol;
                 match->rightvol += ch.rightvol;
                 ch.leftvol = ch.rightvol = 0;
@@ -305,7 +305,7 @@ void S_UpdateInternal(const Vector3& origin, const Vector3& forward, const Vecto
         }
     }
     if (fakedma && snd_show.value) {
-        Con_Printf("----(%i)----\n", static_cast<int>(eastl::count_if(channels.begin(), channels.begin() + total_channels, [](const channel_t& c) {
+        Con_Printf("----(%i)----\n", static_cast<int>(std::count_if(channels.begin(), channels.begin() + total_channels, [](const channel_t& c) {
             return c.sfx && (c.leftvol || c.rightvol);
         })));
     }
@@ -339,8 +339,8 @@ void S_PlayHelper(bool has_volume) {
     int step = has_volume ? 2 : 1;
     for (int i = 1; i < Cmd::Argc(); i += step) {
         auto arg = Cmd::Argv(i);
-        eastl::string name(arg.data(), arg.length());
-        if (arg.find('.') == eastl::string_view::npos) name += ".wav";
+        std::string name(arg.data(), arg.length());
+        if (arg.find('.') == std::string_view::npos) name += ".wav";
         sfx_t* sfx = S_PrecacheSound(name.c_str());
         float vol = 1.0f;
         if (has_volume && i + 1 < Cmd::Argc()) {
@@ -365,7 +365,7 @@ void S_SoundList() {
     Con_Printf("Total sound memory: %i\n", total);
 }
 
-void S_LocalSound(eastl::string_view sound) {
+void S_LocalSound(std::string_view sound) {
     if (nosound.value || !sound_started) return;
     sfx_t* sfx = S_FindName(sound);
     if (!sfx || !S_LoadSound(sfx)) {

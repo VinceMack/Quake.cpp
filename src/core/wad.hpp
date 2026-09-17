@@ -3,8 +3,8 @@
 
 #include "core/types.hpp"
 #include <cstdint>
-#include <EASTL/string_view.h>
-#include <EASTL/span.h>
+#include <string_view>
+#include <span>
 
 enum class WadCompression : uint8_t { None = 0, LZSS = 1 };
 
@@ -43,10 +43,10 @@ extern int wad_numlumps;
 extern lumpinfo_t* wad_lumps;
 extern byte* wad_base;
 
-void W_LoadWadFile(eastl::string_view filename);
-void W_CleanupName(eastl::string_view in, eastl::span<char, 16> out);
-[[nodiscard]] lumpinfo_t* W_GetLumpinfo(eastl::string_view name);
-[[nodiscard]] void* W_GetLumpName(eastl::string_view name);
+void W_LoadWadFile(std::string_view filename);
+void W_CleanupName(std::string_view in, std::span<char, 16> out);
+[[nodiscard]] lumpinfo_t* W_GetLumpinfo(std::string_view name);
+[[nodiscard]] void* W_GetLumpName(std::string_view name);
 
 void SwapPic(qpic_t* pic);
 

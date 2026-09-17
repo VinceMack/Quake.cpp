@@ -448,7 +448,7 @@ void R_EdgeDrawing()
 
 void R_RenderView_()
 {
-    eastl::array<byte, WARP_WIDTH * WARP_HEIGHT> warpbuffer{};
+    std::array<byte, WARP_WIDTH * WARP_HEIGHT> warpbuffer{};
     r_warpbuffer = warpbuffer.data();
     if (r_timegraph.value || r_speeds.value || r_dspeeds.value) {
         r_time1 = static_cast<float>(Sys_FloatTime());

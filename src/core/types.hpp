@@ -4,64 +4,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cassert>
-#include <utility>
 
-#include <EASTL/variant.h>
-#include <EASTL/span.h>
-
-//============================================================================
-// Expected Result Type (using EASTL variant)
-//============================================================================
-
-template <typename T, typename E>
-class Expected {
-public:
-    constexpr Expected(const T& val) : data_(val) {}
-    constexpr Expected(T&& val) : data_(std::move(val)) {}
-    constexpr Expected(const E& err) : data_(err) {}
-    constexpr Expected(E&& err) : data_(std::move(err)) {}
-
-    [[nodiscard]] constexpr bool has_value() const noexcept { return eastl::holds_alternative<T>(data_); }
-    [[nodiscard]] explicit constexpr operator bool() const noexcept { return has_value(); }
-
-    [[nodiscard]] constexpr const T& value() const& { assert(has_value()); return eastl::get<T>(data_); }
-    [[nodiscard]] constexpr T& value() & { assert(has_value()); return eastl::get<T>(data_); }
-    [[nodiscard]] constexpr const E& error() const& { assert(!has_value()); return eastl::get<E>(data_); }
-    [[nodiscard]] constexpr E& error() & { assert(!has_value()); return eastl::get<E>(data_); }
-
-    [[nodiscard]] constexpr const T& operator*() const& { return value(); }
-    [[nodiscard]] constexpr T& operator*() & { return value(); }
-    [[nodiscard]] constexpr const T* operator->() const { return &value(); }
-    [[nodiscard]] constexpr T* operator->() { return &value(); }
-
-    template <typename U>
-    [[nodiscard]] constexpr T value_or(U&& def) const& {
-        return has_value() ? eastl::get<T>(data_) : static_cast<T>(std::forward<U>(def));
-    }
-    template <typename U>
-    [[nodiscard]] constexpr T value_or(U&& def) && {
-        return has_value() ? std::move(eastl::get<T>(data_)) : static_cast<T>(std::forward<U>(def));
-    }
-
-private:
-    eastl::variant<T, E> data_;
-};
-
-template <typename E>
-class Expected<void, E> {
-public:
-    constexpr Expected() = default;
-    constexpr Expected(const E& err) : error_(err), has_value_(false) {}
-    constexpr Expected(E&& err) : error_(std::move(err)), has_value_(false) {}
-
-    [[nodiscard]] constexpr bool has_value() const noexcept { return has_value_; }
-    [[nodiscard]] explicit constexpr operator bool() const noexcept { return has_value_; }
-    [[nodiscard]] constexpr const E& error() const { assert(!has_value_); return error_; }
-
-private:
-    E error_{};
-    bool has_value_{true};
-};
 
 //============================================================================
 // Foundational Type Aliases

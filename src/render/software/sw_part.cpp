@@ -10,7 +10,7 @@
 
 #include <cmath>
 #include <cstdio>
-#include <EASTL/vector.h>
+#include <vector>
 
 using namespace Math;
 using namespace Common;
@@ -24,17 +24,17 @@ namespace Render {
 inline constexpr int MAX_PARTICLES = 2048;
 inline constexpr int ABSOLUTE_MIN_PARTICLES = 512;
 
-constexpr eastl::array<int, 8> ramp1 = { 0x6f, 0x6d, 0x6b, 0x69, 0x67, 0x65, 0x63, 0x61 };
-constexpr eastl::array<int, 8> ramp2 = { 0x6f, 0x6e, 0x6d, 0x6c, 0x6b, 0x6a, 0x68, 0x66 };
-constexpr eastl::array<int, 8> ramp3 = { 0x6d, 0x6b, 6, 5, 4, 3, 0, 0 };
+constexpr std::array<int, 8> ramp1 = { 0x6f, 0x6d, 0x6b, 0x69, 0x67, 0x65, 0x63, 0x61 };
+constexpr std::array<int, 8> ramp2 = { 0x6f, 0x6e, 0x6d, 0x6c, 0x6b, 0x6a, 0x68, 0x66 };
+constexpr std::array<int, 8> ramp3 = { 0x6d, 0x6b, 6, 5, 4, 3, 0, 0 };
 
 static particle_t* active_particles = nullptr;
 static particle_t* free_particles = nullptr;
-static eastl::vector<particle_t> particles;
+static std::vector<particle_t> particles;
 static int r_numparticles = 0;
 
-eastl::array<eastl::array<float, 3>, NUMVERTEXNORMALS> r_avertexnormals{};
-static eastl::array<Vector3, NUMVERTEXNORMALS> avelocities{};
+std::array<std::array<float, 3>, NUMVERTEXNORMALS> r_avertexnormals{};
+static std::array<Vector3, NUMVERTEXNORMALS> avelocities{};
 static float beamlength = 16.0f;
 
 Vector3 r_pright, r_pup, r_ppn;

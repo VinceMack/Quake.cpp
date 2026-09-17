@@ -2,7 +2,7 @@
 #pragma once
 
 #include <cstdint>
-#include <EASTL/string.h>
+#include <string>
 #include "sys_render.hpp"
 
 namespace Menu {
@@ -22,6 +22,6 @@ void M_DrawPic(int x, int y, qpic_t* pic);
 
 extern MenuState m_state, m_return_state;
 extern bool m_return_onerror;
-extern eastl::string m_return_reason;
+extern std::string m_return_reason;
 
 } // namespace Menu

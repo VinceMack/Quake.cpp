@@ -3,9 +3,9 @@
 
 #include <cstdint>
 #include <ostream>
-#include <EASTL/array.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
+#include <array>
+#include <string>
+#include <string_view>
 
 struct usercmd_t;
 
@@ -27,12 +27,12 @@ inline constexpr int MAXCMDLINE = 256;
 enum keydest_t { key_game, key_console, key_message, key_menu };
 
 extern keydest_t key_dest;
-extern eastl::array<eastl::array<char, MAXCMDLINE>, 32> key_lines;
+extern std::array<std::array<char, MAXCMDLINE>, 32> key_lines;
 extern int key_linepos, edit_line, key_count, key_lastpress;
-extern eastl::array<char, 32> chat_buffer;
+extern std::array<char, 32> chat_buffer;
 extern bool team_message;
-extern eastl::array<eastl::string, 256> keybindings;
-extern eastl::array<int, 256> key_repeats;
+extern std::array<std::string, 256> keybindings;
+extern std::array<int, 256> key_repeats;
 
 void Key_Event(int key, bool down);
 void Key_Init();

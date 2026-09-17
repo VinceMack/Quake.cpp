@@ -385,7 +385,7 @@ void R_RecursiveWorldNode(mnode_t* node, int clipflags)
 
 void R_RenderWorld()
 {
-    eastl::array<btofpoly_t, MAX_BTOFPOLYS> btofpolys{};
+    std::array<btofpoly_t, MAX_BTOFPOLYS> btofpolys{};
     pbtofpolys = btofpolys.data();
     currententity = &cl_entities[0];
     VectorCopy(r_origin, modelorg);

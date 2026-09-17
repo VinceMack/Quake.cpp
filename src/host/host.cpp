@@ -86,8 +86,8 @@ void Host_FindMaxClients() {
         if (cls.state == ca_dedicated) Sys_Error("Only one of -dedicated or -listen can be specified");
         svs.maxclients = (i != com_argc - 1) ? Q_atoi(com_argv[i + 1]) : 8;
     }
-    svs.maxclients = eastl::clamp(svs.maxclients, 1, MAX_SCOREBOARD);
-    svs.maxclientslimit = eastl::max(4, svs.maxclients);
+    svs.maxclients = std::clamp(svs.maxclients, 1, MAX_SCOREBOARD);
+    svs.maxclientslimit = std::max(4, svs.maxclients);
     svs.resize_clients(svs.maxclientslimit);
     Cvar::SetValue("deathmatch", (svs.maxclients > 1) ? 1.0 : 0.0);
 }
@@ -101,7 +101,7 @@ void Host_InitLocal() {
 
 void Host_WriteConfiguration() {
     if (host_initialized && !isDedicated) {
-        std::ofstream f((eastl::string(com_gamedir) + "/config.cfg").c_str());
+        std::ofstream f((std::string(com_gamedir) + "/config.cfg").c_str());
         if (f.is_open()) { Key_WriteBindings(f); Cvar::WriteVariables(f); }
         else Con_Printf("Couldn't write config.cfg.\n");
     }
@@ -149,7 +149,7 @@ qboolean Host_FilterTime(float time) {
     if (!cls.timedemo && realtime - oldrealtime < 1.0 / 72.0) return false;
     host_frametime = realtime - oldrealtime; oldrealtime = realtime;
     if (host_framerate.value > 0) host_frametime = host_framerate.value;
-    else host_frametime = eastl::clamp(host_frametime, 0.001, 0.1);
+    else host_frametime = std::clamp(host_frametime, 0.001, 0.1);
     return true;
 }
 
@@ -208,7 +208,7 @@ void Host_Frame(float time) {
     int m = static_cast<int>(timetotal * 1000 / timecount);
     timecount = 0;
     timetotal = 0;
-    int c = static_cast<int>(eastl::count_if(svs.clients, svs.clients + svs.maxclients, [](const client_t& cl) { return cl.active; }));
+    int c = static_cast<int>(std::count_if(svs.clients, svs.clients + svs.maxclients, [](const client_t& cl) { return cl.active; }));
     Con_Printf("serverprofile: %2i clients %2i msec\n", c, m);
 }
 
@@ -361,11 +361,11 @@ void Host_Ping_f() {
 void Host_Map_f() {
     if (Cmd::state.source != Cmd::Source::Command) return;
     cls.demonum = -1; CL_Disconnect(); Host_ShutdownServer(false); key_dest = key_game; Screen::GetScreenSystem().BeginLoadingPlaque();
-    eastl::string mapstring; for (int i = 0; i < Cmd::Argc(); i++) mapstring += eastl::string(Cmd::Argv(i)) + " ";
+    std::string mapstring; for (int i = 0; i < Cmd::Argc(); i++) mapstring += std::string(Cmd::Argv(i)) + " ";
     strcpy_s(cls.mapstring.data(), cls.mapstring.size(), (mapstring + "\n").c_str()); svs.serverflags = 0;
     char name[MAX_QPATH]; Q_strncpy(name, Cmd::Argv(1), sizeof(name) - 1); SV_SpawnServer(name);
     if (!sv.active || cls.state == ca_dedicated) return;
-    eastl::string spawnparms; for (int i = 2; i < Cmd::Argc(); i++) spawnparms += eastl::string(Cmd::Argv(i)) + " ";
+    std::string spawnparms; for (int i = 2; i < Cmd::Argc(); i++) spawnparms += std::string(Cmd::Argv(i)) + " ";
     strcpy_s(cls.spawnparms.data(), cls.spawnparms.size(), spawnparms.c_str()); Cmd::ExecuteString("connect local", Cmd::Source::Command);
 }
 
@@ -383,12 +383,12 @@ void Host_Restart_f() {
 void Host_Reconnect_f() { Screen::GetScreenSystem().BeginLoadingPlaque(); cls.signon = 0; }
 void Host_Connect_f() {
     cls.demonum = -1; if (cls.demoplayback) { CL_StopPlayback(); CL_Disconnect(); }
-    eastl::string_view args = Cmd::Args();
+    std::string_view args = Cmd::Args();
     while (!args.empty() && (args.front() == ' ' || args.front() == '\t')) args.remove_prefix(1);
     while (!args.empty() && (args.back() == ' ' || args.back() == '\t' || args.back() == '\r' || args.back() == '\n')) args.remove_suffix(1);
     char name[MAX_QPATH];
     if (!args.empty()) {
-        Q_strncpy(name, eastl::string(args.data(), args.length()).c_str(), sizeof(name) - 1);
+        Q_strncpy(name, std::string(args.data(), args.length()).c_str(), sizeof(name) - 1);
     } else {
         Q_strcpy(name, Cmd::Argv(1));
     }
@@ -397,12 +397,12 @@ void Host_Connect_f() {
 
 constexpr int SAVEGAME_VERSION = 5;
 
-eastl::string Host_SavegameComment() {
-    eastl::string text(SAVEGAME_COMMENT_LENGTH, '_');
-    eastl::string levelname = cl.levelname.data(); if (levelname.length() > 22) levelname = levelname.substr(0, 22);
+std::string Host_SavegameComment() {
+    std::string text(SAVEGAME_COMMENT_LENGTH, '_');
+    std::string levelname = cl.levelname.data(); if (levelname.length() > 22) levelname = levelname.substr(0, 22);
     text.replace(0, levelname.length(), levelname);
     char kills[20]; sprintf_s(kills, sizeof(kills), "kills:%3i/%3i", cl.stats[STAT_MONSTERS], cl.stats[STAT_TOTALMONSTERS]);
-    eastl::string kills_str = kills; if (kills_str.length() > (SAVEGAME_COMMENT_LENGTH - 22)) kills_str = kills_str.substr(0, SAVEGAME_COMMENT_LENGTH - 22);
+    std::string kills_str = kills; if (kills_str.length() > (SAVEGAME_COMMENT_LENGTH - 22)) kills_str = kills_str.substr(0, SAVEGAME_COMMENT_LENGTH - 22);
     text.replace(22, kills_str.length(), kills_str);
     for (char& c : text) { if (c == ' ') c = '_'; }
     return text;
@@ -412,7 +412,7 @@ void Host_Savegame_f() {
     if (Cmd::state.source != Cmd::Source::Command) return;
     if (!sv.active) { Con_Printf("Not playing a local game.\n"); return; }
     if (cl.intermission || svs.maxclients != 1) { Con_Printf(cl.intermission ? "Can't save in intermission.\n" : "Can't save multiplayer games.\n"); return; }
-    if (Cmd::Argc() != 2 || Cmd::Argv(1).find("..") != eastl::string_view::npos) { Con_Printf(Cmd::Argc() != 2 ? "save <savename> : save a game\n" : "Relative pathnames are not allowed.\n"); return; }
+    if (Cmd::Argc() != 2 || Cmd::Argv(1).find("..") != std::string_view::npos) { Con_Printf(Cmd::Argc() != 2 ? "save <savename> : save a game\n" : "Relative pathnames are not allowed.\n"); return; }
     for (int i = 0; i < svs.maxclients; i++) { if (svs.clients[i].active && svs.clients[i].edict->v.health <= 0) { Con_Printf("Can't savegame with a dead player\n"); return; } }
     char name[256]; sprintf_s(name, sizeof(name), "%s/%.*s", com_gamedir, static_cast<int>(Cmd::Argv(1).length()), Cmd::Argv(1).data()); COM_DefaultExtension(name, ".sav");
     Con_Printf("Saving game to %s...\n", name);
@@ -451,7 +451,7 @@ void Host_Loadgame_f() {
     }
     int entnum = -1;
     while (true) {
-        eastl::string entity_str; char r;
+        std::string entity_str; char r;
         while (f.get(r)) { if (r == '\0') break; entity_str.push_back(r); if (r == '}') break; }
         if (entity_str.empty()) break;
         const char* start = COM_Parse(entity_str.c_str()); if (!com_token[0]) break;
@@ -490,11 +490,11 @@ void Host_Version_f() { Con_Printf("Version %4.2f\nExe: " __TIME__ " " __DATE__ 
 void Host_Say(qboolean teamonly) {
     if (Cmd::state.source == Cmd::Source::Command && cls.state != ca_dedicated) { Cmd::ForwardToServer(); return; }
     if (Cmd::Argc() < 2) return;
-    client_t* save = host_client; eastl::string arg_str(Cmd::Args().data(), Cmd::Args().length());
+    client_t* save = host_client; std::string arg_str(Cmd::Args().data(), Cmd::Args().length());
     if (!arg_str.empty() && arg_str.front() == '"') { arg_str = arg_str.substr(1); if (!arg_str.empty() && arg_str.back() == '"') arg_str.pop_back(); }
-    eastl::string text_str = (Cmd::state.source == Cmd::Source::Command && cls.state == ca_dedicated)
-        ? (eastl::string(1, '\x01') + "<" + hostname.string.c_str() + "> ")
-        : (eastl::string(1, '\x01') + save->name.data() + ": ");
+    std::string text_str = (Cmd::state.source == Cmd::Source::Command && cls.state == ca_dedicated)
+        ? (std::string(1, '\x01') + "<" + hostname.string.c_str() + "> ")
+        : (std::string(1, '\x01') + save->name.data() + ": ");
     int j = 64 - 2 - static_cast<int>(text_str.length());
     if (j > 0 && arg_str.length() > static_cast<size_t>(j)) arg_str.resize(j);
     text_str += arg_str + "\n";
@@ -509,8 +509,8 @@ void Host_Say(qboolean teamonly) {
 void Host_Tell_f() {
     if (Cmd::state.source == Cmd::Source::Command) { Cmd::ForwardToServer(); return; }
     if (Cmd::Argc() < 3) return;
-    eastl::string text_str = eastl::string(host_client->name.data()) + ": ";
-    eastl::string arg_str(Cmd::Args().data(), Cmd::Args().length());
+    std::string text_str = std::string(host_client->name.data()) + ": ";
+    std::string arg_str(Cmd::Args().data(), Cmd::Args().length());
     if (!arg_str.empty() && arg_str.front() == '"') { arg_str = arg_str.substr(1); if (!arg_str.empty() && arg_str.back() == '"') arg_str.pop_back(); }
     int j = 64 - 2 - static_cast<int>(text_str.length());
     if (j > 0 && arg_str.length() > static_cast<size_t>(j)) arg_str.resize(j);
@@ -526,7 +526,7 @@ void Host_Tell_f() {
 void Host_Color_f() {
     if (Cmd::Argc() == 1) { Con_Printf("\"color\" is \"%i %i\"\ncolor <0-13> [0-13]\n", static_cast<int>(cl_color.value) >> 4, static_cast<int>(cl_color.value) & 0x0f); return; }
     int top = Q_atoi(Cmd::Argv(1)), bottom = (Cmd::Argc() == 2) ? top : Q_atoi(Cmd::Argv(2));
-    top = eastl::clamp(top & 15, 0, 13); bottom = eastl::clamp(bottom & 15, 0, 13);
+    top = std::clamp(top & 15, 0, 13); bottom = std::clamp(bottom & 15, 0, 13);
     int pcolor = top * 16 + bottom;
     if (Cmd::state.source == Cmd::Source::Command) {
         Cvar::SetValue("_cl_color", static_cast<float>(pcolor)); if (cls.state == ca_connected) Cmd::ForwardToServer(); return;
@@ -609,9 +609,9 @@ void Host_Kick_f() {
     if (i < svs.maxclients) {
         const char* who = (Cmd::state.source == Cmd::Source::Command) ? (cls.state == ca_dedicated ? "Console" : cl_name.string.c_str()) : save->name.data();
         if (host_client == save) return;
-        const char* message = nullptr; eastl::string args_holder;
+        const char* message = nullptr; std::string args_holder;
         if (Cmd::Argc() > 2) {
-            args_holder = eastl::string(Cmd::Args().data(), Cmd::Args().length());
+            args_holder = std::string(Cmd::Args().data(), Cmd::Args().length());
             const char* ptr = COM_Parse(args_holder.c_str()); if (byNumber) ptr = COM_Parse(ptr);
             while (*ptr == ' ') ptr++;
             if (*ptr != '\0') message = ptr;
@@ -624,7 +624,7 @@ void Host_Kick_f() {
 void Host_Give_f() {
     if (Cmd::state.source == Cmd::Source::Command) { Cmd::ForwardToServer(); return; }
     if (pr_global_struct->deathmatch && !host_client->privileged) return;
-    eastl::string_view t = Cmd::Argv(1); int v = Q_atoi(Cmd::Argv(2)); if (t.empty()) return;
+    std::string_view t = Cmd::Argv(1); int v = Q_atoi(Cmd::Argv(2)); if (t.empty()) return;
     auto GiveAmmo = [](const char* name, float v_val, float& std_val) {
         if (rogue) { if (eval_t* val = GetEdictFieldValue(sv_player, name)) val->_float = v_val; }
         std_val = v_val;
@@ -658,7 +658,7 @@ edict_t* FindViewthing() {
 
 void Host_Viewmodel_f() {
     edict_t* e = FindViewthing(); if (!e) return;
-    eastl::string arg1(Cmd::Argv(1).data(), Cmd::Argv(1).length()); model_t* m = Mod_ForName(arg1.c_str(), false);
+    std::string arg1(Cmd::Argv(1).data(), Cmd::Argv(1).length()); model_t* m = Mod_ForName(arg1.c_str(), false);
     if (!m) { Con_Printf("Can't load %s\n", arg1.c_str()); return; }
     e->v.frame = 0; cl.model_precache[static_cast<int>(e->v.modelindex)] = m;
 }
@@ -666,7 +666,7 @@ void Host_Viewmodel_f() {
 void Host_Viewframe_f() {
     edict_t* e = FindViewthing(); if (!e) return;
     model_t* m = cl.model_precache[static_cast<int>(e->v.modelindex)];
-    e->v.frame = static_cast<float>(eastl::min(Q_atoi(Cmd::Argv(1)), m->numframes - 1));
+    e->v.frame = static_cast<float>(std::min(Q_atoi(Cmd::Argv(1)), m->numframes - 1));
 }
 
 void PrintFrameName(model_t* m, int frame) {
@@ -676,23 +676,23 @@ void PrintFrameName(model_t* m, int frame) {
 void Host_Viewnext_f() {
     edict_t* e = FindViewthing(); if (!e) return;
     model_t* m = cl.model_precache[static_cast<int>(e->v.modelindex)];
-    e->v.frame = eastl::min<float>(e->v.frame + 1.0f, static_cast<float>(m->numframes - 1));
+    e->v.frame = std::min<float>(e->v.frame + 1.0f, static_cast<float>(m->numframes - 1));
     PrintFrameName(m, static_cast<int>(e->v.frame));
 }
 
 void Host_Viewprev_f() {
     edict_t* e = FindViewthing(); if (!e) return;
     model_t* m = cl.model_precache[static_cast<int>(e->v.modelindex)];
-    e->v.frame = eastl::max<float>(e->v.frame - 1.0f, 0.0f);
+    e->v.frame = std::max<float>(e->v.frame - 1.0f, 0.0f);
     PrintFrameName(m, static_cast<int>(e->v.frame));
 }
 
 void Host_Startdemos_f() {
     if (cls.state == ca_dedicated) { if (!sv.active) Cmd::BufferAddText("map start\n"); return; }
-    int c = eastl::min<int>(Cmd::Argc() - 1, MAX_DEMOS); Con_Printf("%i demo(s) in loop\n", c);
+    int c = std::min<int>(Cmd::Argc() - 1, MAX_DEMOS); Con_Printf("%i demo(s) in loop\n", c);
     for (int i = 0; i < MAX_DEMOS; i++) cls.demos[i][0] = 0;
     for (int i = 1; i <= c; i++) {
-        eastl::string_view arg = Cmd::Argv(i);
+        std::string_view arg = Cmd::Argv(i);
         sprintf_s(cls.demos[i - 1].data(), cls.demos[i - 1].size(), "%.*s", static_cast<int>(arg.length()), arg.data());
     }
     if (!sv.active && cls.state != ca_connected && !cls.demoplayback) { cls.demonum = 0; CL_NextDemo(); } else cls.demonum = -1;

@@ -263,7 +263,7 @@ void D_DrawSprite()
     int i, nump;
     float ymin, ymax;
     emitpoint_t* pverts;
-    eastl::array<sspan_t, MAXHEIGHT + 1> spans{};
+    std::array<sspan_t, MAXHEIGHT + 1> spans{};
     sprite_spans = spans.data();
     ymin = 999999.9f;
     ymax = -999999.9f;

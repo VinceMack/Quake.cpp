@@ -2,8 +2,8 @@
 #pragma once
 
 #include <cstdint>
-#include <EASTL/array.h>
-#include <EASTL/string_view.h>
+#include <array>
+#include <string_view>
 #include "core/types.hpp"
 
 using func_t = int;
@@ -132,7 +132,7 @@ struct dfunction_t {
     int s_name = 0;
     int s_file = 0;
     int numparms = 0;
-    eastl::array<uint8_t, MAX_PARMS> parm_size{};
+    std::array<uint8_t, MAX_PARMS> parm_size{};
 };
 
 constexpr int PROG_VERSION = 6;
@@ -183,13 +183,13 @@ extern dstatement_t* pr_statements;
 extern float* pr_globals;
 extern int pr_edict_size;
 extern unsigned short pr_crc;
-extern eastl::array<int, 8> type_size;
+extern std::array<int, 8> type_size;
 
 void PR_Init();
 void PR_LoadProgs();
 
 string_t PR_SetString(const char* str);
-inline string_t PR_SetString(eastl::string_view str) { return PR_SetString(str.data()); }
+inline string_t PR_SetString(std::string_view str) { return PR_SetString(str.data()); }
 [[nodiscard]] char* PR_GetString(string_t handle);
 string_t PR_CreateString(int size, char** out_ptr);
 

@@ -40,7 +40,7 @@ ServerSubsystem& GetServerSubsystem() noexcept
     return subsystem;
 }
 
-static eastl::array<eastl::array<char, 5>, MAX_MODELS> localmodels{};
+static std::array<std::array<char, 5>, MAX_MODELS> localmodels{};
 
 void SV_Init()
 {
@@ -101,7 +101,7 @@ void SV_CreateBaseline()
 
 void SV_SendReconnect()
 {
-    eastl::array<char, 128> data{};
+    std::array<char, 128> data{};
     sizebuf_t msg{};
 
     msg.data = reinterpret_cast<byte*>(data.data());

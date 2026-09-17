@@ -5,9 +5,8 @@
 #include "render/draw2d.hpp"
 #include "sys_render.hpp"
 
-#include <EASTL/array.h>
-#include <EASTL/string_view.h>
-#include <EASTL/sort.h>
+#include <array>
+#include <string_view>
 #include <algorithm>
 #include <cstring>
 #include <cstdio>
@@ -43,20 +42,20 @@ namespace Sbar {
 int sb_updates; // if >= vid.numpages, no update needed
 
 inline constexpr int STAT_MINUS = 10; // num frame for '-' stats digit
-eastl::array<eastl::array<qpic_t*, 11>, 2> sb_nums{};
+std::array<std::array<qpic_t*, 11>, 2> sb_nums{};
 qpic_t* sb_colon = nullptr;
 qpic_t* sb_slash = nullptr;
 qpic_t* sb_ibar = nullptr;
 qpic_t* sb_sbar = nullptr;
 qpic_t* sb_scorebar = nullptr;
 
-eastl::array<eastl::array<qpic_t*, 8>, 7> sb_weapons{}; // 0 is active, 1 is owned, 2-5 are flashes
-eastl::array<qpic_t*, 4> sb_ammo{};
-eastl::array<qpic_t*, 4> sb_sigil{};
-eastl::array<qpic_t*, 3> sb_armor{};
-eastl::array<qpic_t*, 32> sb_items{};
+std::array<std::array<qpic_t*, 8>, 7> sb_weapons{}; // 0 is active, 1 is owned, 2-5 are flashes
+std::array<qpic_t*, 4> sb_ammo{};
+std::array<qpic_t*, 4> sb_sigil{};
+std::array<qpic_t*, 3> sb_armor{};
+std::array<qpic_t*, 32> sb_items{};
 
-eastl::array<eastl::array<qpic_t*, 2>, 7> sb_faces{}; // 0 is gibbed, 1 is dead, 2-6 are alive
+std::array<std::array<qpic_t*, 2>, 7> sb_faces{}; // 0 is gibbed, 1 is dead, 2-6 are alive
 // 0 is static, 1 is temporary animation
 qpic_t* sb_face_invis = nullptr;
 qpic_t* sb_face_quad = nullptr;
@@ -65,19 +64,19 @@ qpic_t* sb_face_invis_invuln = nullptr;
 
 bool sb_showscores = false;
 
-eastl::array<qpic_t*, 2> rsb_invbar{};
-eastl::array<qpic_t*, 5> rsb_weapons{};
-eastl::array<qpic_t*, 2> rsb_items{};
-eastl::array<qpic_t*, 3> rsb_ammo{};
+std::array<qpic_t*, 2> rsb_invbar{};
+std::array<qpic_t*, 5> rsb_weapons{};
+std::array<qpic_t*, 2> rsb_items{};
+std::array<qpic_t*, 3> rsb_ammo{};
 qpic_t* rsb_teambord = nullptr; // PGM 01/19/97 - team color border
 
 //MED 01/04/97 added two more weapons + 3 alternates for grenade launcher
-eastl::array<eastl::array<qpic_t*, 5>, 7> hsb_weapons{}; // 0 is active, 1 is owned, 2-5 are flashes
+std::array<std::array<qpic_t*, 5>, 7> hsb_weapons{}; // 0 is active, 1 is owned, 2-5 are flashes
 //MED 01/04/97 added array to simplify weapon parsing
-constexpr eastl::array<int, 4> hipweapons = { HIT_LASER_CANNON_BIT, HIT_MJOLNIR_BIT, 4,
+constexpr std::array<int, 4> hipweapons = { HIT_LASER_CANNON_BIT, HIT_MJOLNIR_BIT, 4,
     HIT_PROXIMITY_GUN_BIT };
 //MED 01/04/97 added hipnotic items array
-eastl::array<qpic_t*, 2> hsb_items{};
+std::array<qpic_t*, 2> hsb_items{};
 
 void Sbar_MiniDeathmatchOverlay();
 void Sbar_DeathmatchOverlay();
@@ -245,7 +244,7 @@ void Sbar_DrawCharacter(int x, int y, int num)
     }
 }
 
-void Sbar_DrawString(int x, int y, eastl::string_view str)
+void Sbar_DrawString(int x, int y, std::string_view str)
 {
     if (cl.gametype == GAME_DEATHMATCH) {
         Draw_String(x , y + vid.height - SBAR_HEIGHT,
@@ -287,7 +286,7 @@ void Sbar_DrawNum(int x, int y, int num, int digits, int color)
         ptr++;
     }
 }
-eastl::array<int, MAX_SCOREBOARD> fragsort{};
+std::array<int, MAX_SCOREBOARD> fragsort{};
 int scoreboardlines = 0;
 
 void Sbar_SortFrags()
@@ -300,7 +299,7 @@ void Sbar_SortFrags()
             scoreboardlines++;
         }
     }
-    eastl::sort(fragsort.begin(), fragsort.begin() + scoreboardlines, [](int a, int b) {
+    std::sort(fragsort.begin(), fragsort.begin() + scoreboardlines, [](int a, int b) {
         return cl.scores[a].frags > cl.scores[b].frags;
     });
 }

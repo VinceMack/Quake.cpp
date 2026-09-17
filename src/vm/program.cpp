@@ -26,7 +26,7 @@ float* pr_globals = nullptr;
 int pr_edict_size = 0;
 unsigned short pr_crc = 0;
 
-eastl::array<int, 8> type_size = {
+std::array<int, 8> type_size = {
     1, static_cast<int>(sizeof(string_t) / 4), 1, 3, 1, 1, static_cast<int>(sizeof(func_t) / 4), static_cast<int>(sizeof(void*) / 4)
 };
 

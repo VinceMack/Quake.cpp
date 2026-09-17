@@ -1,4 +1,4 @@
-// memory.cpp -- Zone heap, Hunk allocator, Cache asset system, and EASTL allocators
+// memory.cpp -- Zone heap, Hunk allocator, and Cache asset system
 #include "quakedef.hpp"
 #include "core/memory.hpp"
 #include "core/string_utils.hpp"
@@ -9,41 +9,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
-#include <new>
 #include <cstdarg>
 #include <cstdio>
-
-//=============================================================================
-// EASTL Default Memory Allocators
-//=============================================================================
-
-static void* aligned_alloc_helper(size_t size, size_t alignment) {
-    size_t adj = (alignment > sizeof(void*)) ? alignment : sizeof(void*);
-    void* orig = std::malloc(size + adj + sizeof(void*));
-    if (!orig) return nullptr;
-    uintptr_t pAligned = (reinterpret_cast<uintptr_t>(orig) + sizeof(void*) + adj - 1) & ~(adj - 1);
-    reinterpret_cast<void**>(pAligned)[-1] = orig;
-    return reinterpret_cast<void*>(pAligned);
-}
-
-static void aligned_free_helper(void* ptr) noexcept {
-    if (ptr) std::free(reinterpret_cast<void**>(ptr)[-1]);
-}
-
-void* operator new[](size_t size) { void* p = aligned_alloc_helper(size, sizeof(void*)); assert(p); return p; }
-void* operator new[](size_t size, const char*, int, unsigned, const char*, int) { void* p = aligned_alloc_helper(size, sizeof(void*)); assert(p); return p; }
-void* operator new[](size_t size, size_t alignment, size_t, const char*, int, unsigned, const char*, int) { void* p = aligned_alloc_helper(size, alignment); assert(p); return p; }
-void* operator new[](size_t size, std::align_val_t alignment) { void* p = aligned_alloc_helper(size, static_cast<size_t>(alignment)); assert(p); return p; }
-void operator delete[](void* ptr) noexcept { aligned_free_helper(ptr); }
-void operator delete[](void* ptr, size_t) noexcept { aligned_free_helper(ptr); }
-void operator delete[](void* ptr, std::align_val_t) noexcept { aligned_free_helper(ptr); }
-void operator delete[](void* ptr, size_t, std::align_val_t) noexcept { aligned_free_helper(ptr); }
-
-namespace EA::StdC {
-int Vsnprintf(char* pDestination, size_t n, const char* pFormat, va_list arguments) {
-    return std::vsnprintf(pDestination, n, pFormat, arguments);
-}
-}
 
 //=============================================================================
 // Zone Memory Allocation

@@ -22,26 +22,7 @@ set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_PIPEWIRE OFF CACHE BOOL "" FORCE)
 
-# Fetch EABase (required dependency for EASTL)
-FetchContent_Declare(
-    EABase
-    GIT_REPOSITORY https://github.com/electronicarts/EABase.git
-    GIT_TAG        master
-    GIT_SUBMODULES ""
-)
-
-# Fetch EASTL
-FetchContent_Declare(
-    EASTL
-    GIT_REPOSITORY https://github.com/electronicarts/EASTL.git
-    GIT_TAG        master
-    GIT_SUBMODULES ""
-)
-# Disable unnecessary EASTL features for faster build
-set(EASTL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(EASTL_BUILD_BENCHMARK OFF CACHE BOOL "" FORCE)
-
-FetchContent_MakeAvailable(SDL2 EABase EASTL)
+FetchContent_MakeAvailable(SDL2)
 
 # Gather source files
 set(ENGINE_SRCS
@@ -111,7 +92,7 @@ set(ENGINE_SRCS
 # share one build of every subsystem.
 add_library(quake_engine STATIC ${ENGINE_SRCS})
 target_include_directories(quake_engine PUBLIC src)
-target_link_libraries(quake_engine PUBLIC SDL2-static EASTL)
+target_link_libraries(quake_engine PUBLIC SDL2-static)
 if(WIN32)
     target_link_libraries(quake_engine PUBLIC ws2_32 winmm)
 endif()

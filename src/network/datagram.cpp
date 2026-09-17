@@ -110,7 +110,7 @@ static void Test_Poll() {
 
 static void Test_f() {
     if (testInProgress) return;
-    eastl::string_view host = Cmd::Argv(1); int max = MAX_SCOREBOARD; struct qsockaddr sendaddr;
+    std::string_view host = Cmd::Argv(1); int max = MAX_SCOREBOARD; struct qsockaddr sendaddr;
 
     if (!host.empty() && hostCacheCount) {
         for (int n = 0; n < hostCacheCount; n++) {
@@ -124,7 +124,7 @@ static void Test_f() {
 
     for (net_landriverlevel = 0; net_landriverlevel < net_numlandrivers; net_landriverlevel++) {
         if (!LANFunc(net_landriverlevel).IsInitialized()) continue;
-        if (LANFunc(net_landriverlevel).GetAddrFromName(eastl::string(host.data(), host.length()).c_str(), &sendaddr) != -1) break;
+        if (LANFunc(net_landriverlevel).GetAddrFromName(std::string(host.data(), host.length()).c_str(), &sendaddr) != -1) break;
     }
     if (net_landriverlevel == net_numlandrivers) return;
 
@@ -166,7 +166,7 @@ Done:
 
 static void Test2_f() {
     if (test2InProgress) return;
-    eastl::string_view host = Cmd::Argv(1); struct qsockaddr sendaddr;
+    std::string_view host = Cmd::Argv(1); struct qsockaddr sendaddr;
 
     if (!host.empty() && hostCacheCount) {
         for (int n = 0; n < hostCacheCount; n++) {
@@ -180,7 +180,7 @@ static void Test2_f() {
 
     for (net_landriverlevel = 0; net_landriverlevel < net_numlandrivers; net_landriverlevel++) {
         if (!LANFunc(net_landriverlevel).IsInitialized()) continue;
-        if (LANFunc(net_landriverlevel).GetAddrFromName(eastl::string(host.data(), host.length()).c_str(), &sendaddr) != -1) break;
+        if (LANFunc(net_landriverlevel).GetAddrFromName(std::string(host.data(), host.length()).c_str(), &sendaddr) != -1) break;
     }
     if (net_landriverlevel == net_numlandrivers) return;
 

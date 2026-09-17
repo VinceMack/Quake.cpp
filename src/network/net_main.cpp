@@ -5,6 +5,8 @@
 #include "network/udp_driver.hpp"
 #include "network/datagram.hpp"
 
+#include <memory>
+
 using namespace Common;
 using namespace Console;
 using namespace Cvar;
@@ -14,9 +16,9 @@ using namespace Client;
 
 namespace Net {
 
-eastl::vector<eastl::unique_ptr<NetDriver>> net_drivers;
+std::vector<std::unique_ptr<NetDriver>> net_drivers;
 int net_numdrivers = 0;
-eastl::vector<eastl::unique_ptr<NetLanDriver>> net_landrivers;
+std::vector<std::unique_ptr<NetLanDriver>> net_landrivers;
 int net_numlandrivers = 0;
 
 qsocket_t* net_activeSockets = nullptr;
@@ -38,7 +40,7 @@ int packetsSent = 0, packetsReSent = 0, packetsReceived = 0;
 int receivedDuplicateCount = 0, shortPacketCount = 0, droppedDatagrams = 0;
 
 int hostCacheCount = 0;
-eastl::array<hostcache_t, HOSTCACHESIZE> hostcache;
+std::array<hostcache_t, HOSTCACHESIZE> hostcache;
 int net_driverlevel = 0;
 double net_time = 0.0;
 
@@ -46,7 +48,7 @@ qboolean slistInProgress = false, slistSilent = false, slistLocal = true;
 static qboolean listening = false;
 static double slistStartTime = 0.0;
 static int slistLastShown = 0;
-static eastl::vector<eastl::unique_ptr<qsocket_t>> socket_pool;
+static std::vector<std::unique_ptr<qsocket_t>> socket_pool;
 
 cvar_t net_messagetimeout = { "net_messagetimeout", "300", {}, {}, {}, {} };
 cvar_t hostname = { "hostname", "UNNAMED", {}, {}, {}, {} };
@@ -380,12 +382,12 @@ int NET_SendToAll(sizebuf_t* data, int blocktime) {
 
 void NET_Init() {
     net_drivers.clear();
-    net_drivers.push_back(eastl::make_unique<LoopbackDriver>());
-    net_drivers.push_back(eastl::make_unique<DatagramDriver>());
+    net_drivers.push_back(std::make_unique<LoopbackDriver>());
+    net_drivers.push_back(std::make_unique<DatagramDriver>());
     net_numdrivers = 2;
 
     net_landrivers.clear();
-    net_landrivers.push_back(eastl::make_unique<UDPDriver>());
+    net_landrivers.push_back(std::make_unique<UDPDriver>());
     net_numlandrivers = 1;
 
     int i = COM_CheckParm("-port");
@@ -405,7 +407,7 @@ void NET_Init() {
     socket_pool.reserve(net_numsockets);
     net_freeSockets = net_activeSockets = nullptr;
     for (i = 0; i < net_numsockets; i++) {
-        socket_pool.push_back(eastl::make_unique<qsocket_t>());
+        socket_pool.push_back(std::make_unique<qsocket_t>());
         qsocket_t* s = socket_pool.back().get();
         s->next = net_freeSockets;
         net_freeSockets = s;

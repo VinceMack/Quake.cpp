@@ -4,10 +4,10 @@
 #include "sys_render.hpp"
 #include "sys_audio.hpp"
 
-#include <EASTL/vector.h>
-#include <EASTL/memory.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
+#include <vector>
+#include <memory>
+#include <string>
+#include <string_view>
 #include <algorithm>
 #include <cstring>
 #include <cstdio>
@@ -37,11 +37,11 @@ qpic_t* draw_disc;
 qpic_t* draw_backtile;
 
 struct CachePic {
-    eastl::string name;
+    std::string name;
     cache_user_t cache{};
 };
 
-static eastl::vector<eastl::unique_ptr<CachePic>> menu_cachepics;
+static std::vector<std::unique_ptr<CachePic>> menu_cachepics;
 
 static qpic_t* LoadCachePic(CachePic& pic)
 {
@@ -53,17 +53,17 @@ static qpic_t* LoadCachePic(CachePic& pic)
     return data;
 }
 
-qpic_t* Draw_CachePic(eastl::string_view path)
+qpic_t* Draw_CachePic(std::string_view path)
 {
     for (const auto& pic : menu_cachepics) {
-        if (eastl::string_view(pic->name.data(), pic->name.length()) == path) {
+        if (std::string_view(pic->name.data(), pic->name.length()) == path) {
             return LoadCachePic(*pic);
         }
     }
-    auto new_pic = eastl::make_unique<CachePic>();
+    auto new_pic = std::make_unique<CachePic>();
     new_pic->name.assign(path.data(), path.length());
     CachePic& pic = *new_pic;
-    menu_cachepics.push_back(eastl::move(new_pic));
+    menu_cachepics.push_back(std::move(new_pic));
     return LoadCachePic(pic);
 }
 
@@ -103,7 +103,7 @@ void Draw_Character(int x, int y, int num)
     }
 }
 
-void Draw_String(int x, int y, eastl::string_view str)
+void Draw_String(int x, int y, std::string_view str)
 {
     for (const char c : str) {
         Draw_Character(x, y, c);
@@ -168,7 +168,7 @@ void Draw_ConsoleBackground(int lines)
     byte* dest = conback->data + 320 - 43 + 320 * 186;
     char ver[100];
     std::snprintf(ver, sizeof(ver), "%4.2f", VERSION);
-    const eastl::string_view ver_view(ver);
+    const std::string_view ver_view(ver);
     for (size_t x = 0; x < ver_view.length(); x++) {
         Draw_CharToConback(ver_view[x], dest + (x << 3));
     }

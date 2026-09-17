@@ -27,7 +27,7 @@ template <typename T>
 }
 
 struct WavParser {
-    eastl::span<const byte> data;
+    std::span<const byte> data;
     size_t iff_offset{0}, chunk_offset{0}, chunk_len{0};
 
     uint16_t ReadU16(size_t& off) const {
@@ -48,14 +48,14 @@ struct WavParser {
         return v;
     }
 
-    bool FindChunk(eastl::string_view tag, bool restart = true) {
+    bool FindChunk(std::string_view tag, bool restart = true) {
         size_t search_off = restart ? iff_offset : chunk_offset + 8 + ((chunk_len + 1) & ~1);
         while (search_off + 8 <= data.size()) {
             size_t off = search_off + 4;
             chunk_len = ReadU32(off);
             chunk_offset = search_off;
             search_off += 8 + ((chunk_len + 1) & ~1);
-            if (eastl::string_view(reinterpret_cast<const char*>(&data[chunk_offset]), 4) == tag) {
+            if (std::string_view(reinterpret_cast<const char*>(&data[chunk_offset]), 4) == tag) {
                 return true;
             }
         }
@@ -66,12 +66,12 @@ struct WavParser {
 
 } // anonymous namespace
 
-wavinfo_t GetWavinfo(eastl::string_view name, eastl::span<const byte> wav_data) {
+wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data) {
     wavinfo_t info{};
     if (wav_data.empty()) return info;
     WavParser parser{wav_data};
     if (!parser.FindChunk("RIFF") || parser.chunk_offset + 12 > wav_data.size() ||
-        eastl::string_view(reinterpret_cast<const char*>(&wav_data[parser.chunk_offset + 8]), 4) != "WAVE") {
+        std::string_view(reinterpret_cast<const char*>(&wav_data[parser.chunk_offset + 8]), 4) != "WAVE") {
         Con_Printf("Missing or malformed RIFF/WAVE chunk\n");
         return info;
     }
@@ -93,7 +93,7 @@ wavinfo_t GetWavinfo(eastl::string_view name, eastl::span<const byte> wav_data) 
         size_t cue_off = parser.chunk_offset + 40;
         info.loopstart = parser.ReadU32(cue_off);
         if (parser.FindChunk("LIST", false) && parser.chunk_offset + 40 <= wav_data.size()) {
-            if (eastl::string_view(reinterpret_cast<const char*>(&wav_data[parser.chunk_offset + 36]), 4) == "mark") {
+            if (std::string_view(reinterpret_cast<const char*>(&wav_data[parser.chunk_offset + 36]), 4) == "mark") {
                 size_t list_off = parser.chunk_offset + 32;
                 info.samples = info.loopstart + parser.ReadU32(list_off);
             }
@@ -159,15 +159,15 @@ void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data) {
 
 sfxcache_t* S_LoadSound(sfx_t* s) {
     if (auto* sc = static_cast<sfxcache_t*>(Cache_Check(&s->cache))) return sc;
-    eastl::array<char, MAX_QPATH + 16> namebuffer;
+    std::array<char, MAX_QPATH + 16> namebuffer;
     std::snprintf(namebuffer.data(), namebuffer.size(), "sound/%s", s->name);
-    eastl::array<byte, 1024> stackbuf;
+    std::array<byte, 1024> stackbuf;
     byte* data = COM_LoadStackFile(namebuffer.data(), stackbuf.data(), sizeof(stackbuf));
     if (!data) {
         Con_Printf("Couldn't load %s\n", namebuffer.data());
         return nullptr;
     }
-    wavinfo_t info = GetWavinfo(s->name, eastl::span<const byte>(data, com_filesize));
+    wavinfo_t info = GetWavinfo(s->name, std::span<const byte>(data, com_filesize));
     if (info.channels != 1) {
         Con_Printf("%s is a stereo sample\n", s->name);
         return nullptr;

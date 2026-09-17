@@ -35,22 +35,22 @@ void ConsoleSystem::ToggleConsole() {
         if (cls.state == ca_connected) { key_dest = key_game; key_lines[edit_line][1] = 0; key_linepos = 1; }
         else M_Menu_Main_f();
     } else key_dest = key_console;
-    Screen::GetScreenSystem().EndLoadingPlaque(); eastl::fill(times_.begin(), times_.end(), 0.0f);
+    Screen::GetScreenSystem().EndLoadingPlaque(); std::fill(times_.begin(), times_.end(), 0.0f);
 }
 
-void ConsoleSystem::Clear() { eastl::fill(text_.begin(), text_.end(), ' '); }
-void ConsoleSystem::ClearNotify() { eastl::fill(times_.begin(), times_.end(), 0.0f); }
+void ConsoleSystem::Clear() { std::fill(text_.begin(), text_.end(), ' '); }
+void ConsoleSystem::ClearNotify() { std::fill(times_.begin(), times_.end(), 0.0f); }
 
 static void Con_MessageMode_f() { key_dest = key_message; team_message = false; }
 static void Con_MessageMode2_f() { key_dest = key_message; team_message = true; }
 
 void ConsoleSystem::CheckResize() {
     int width = (vid.width >> 3) - 2; if (width == linewidth_) return;
-    if (width < 1) { linewidth_ = 38; totallines_ = CON_TEXTSIZE / linewidth_; eastl::fill(text_.begin(), text_.end(), ' '); }
+    if (width < 1) { linewidth_ = 38; totallines_ = CON_TEXTSIZE / linewidth_; std::fill(text_.begin(), text_.end(), ' '); }
     else {
         int oldwidth = linewidth_, oldtotallines = totallines_; linewidth_ = width; totallines_ = CON_TEXTSIZE / linewidth_;
-        int numlines = eastl::min(oldtotallines, totallines_), numchars = eastl::min(oldwidth, linewidth_);
-        eastl::vector<char> tbuf = text_; eastl::fill(text_.begin(), text_.end(), ' ');
+        int numlines = std::min(oldtotallines, totallines_), numchars = std::min(oldwidth, linewidth_);
+        std::vector<char> tbuf = text_; std::fill(text_.begin(), text_.end(), ' ');
         for (int i = 0; i < numlines; i++) {
             for (int j = 0; j < numchars; j++) text_[(totallines_ - 1 - i) * linewidth_ + j] = tbuf[((current_ - i + oldtotallines) % oldtotallines) * oldwidth + j];
         }
@@ -61,8 +61,8 @@ void ConsoleSystem::CheckResize() {
 
 void ConsoleSystem::Init() {
     debuglog_ = COM_CheckParm("-condebug") != 0;
-    if (debuglog_) { std::error_code ec; std::filesystem::remove((eastl::string(com_gamedir) + "/qconsole.log").c_str(), ec); }
-    eastl::fill(text_.begin(), text_.end(), ' '); linewidth_ = -1; CheckResize();
+    if (debuglog_) { std::error_code ec; std::filesystem::remove((std::string(com_gamedir) + "/qconsole.log").c_str(), ec); }
+    std::fill(text_.begin(), text_.end(), ' '); linewidth_ = -1; CheckResize();
     Printf("Console initialized.\n"); Cvar::Register(&con_notifytime);
     constexpr CmdPair cmds[] = {
         {"toggleconsole", ConsoleSystem::ToggleConsole_f}, {"messagemode", Con_MessageMode_f},
@@ -76,10 +76,10 @@ void ConsoleSystem::Linefeed() {
     if (!initialized_) return;
     x_ = 0;
     current_++;
-    eastl::fill_n(text_.begin() + (current_ % totallines_) * linewidth_, linewidth_, ' ');
+    std::fill_n(text_.begin() + (current_ % totallines_) * linewidth_, linewidth_, ' ');
 }
 
-void ConsoleSystem::Print(eastl::string_view txt) {
+void ConsoleSystem::Print(std::string_view txt) {
     if (!initialized_) return;
     backscroll_ = 0;
     int mask = 0; size_t index = 0;
@@ -99,14 +99,14 @@ void ConsoleSystem::Print(eastl::string_view txt) {
     }
 }
 
-void ConsoleSystem::DebugLog(eastl::string_view file, eastl::string_view text) {
+void ConsoleSystem::DebugLog(std::string_view file, std::string_view text) {
     std::ofstream log_file(file.data(), std::ios::app | std::ios::binary); if (log_file) log_file.write(text.data(), text.size());
 }
 
 void ConsoleSystem::Printf(const char* fmt, ...) {
     va_list argptr; char msg[MAXPRINTMSG]; static bool inupdate = false;
     va_start(argptr, fmt); vsprintf_s(msg, sizeof(msg), fmt, argptr); va_end(argptr);
-    Sys_Printf("%s", msg); if (debuglog_) DebugLog((eastl::string(com_gamedir) + "/qconsole.log").c_str(), msg);
+    Sys_Printf("%s", msg); if (debuglog_) DebugLog((std::string(com_gamedir) + "/qconsole.log").c_str(), msg);
     if (!initialized_ || cls.state == ca_dedicated) return;
     Print(msg);
     if (cls.signon != SIGNONS && !Screen::GetScreenSystem().GetDisabledForLoading() && !inupdate) {
@@ -122,7 +122,7 @@ void ConsoleSystem::DPrintf(const char* fmt, ...) {
 void ConsoleSystem::DrawInput() {
     if (key_dest != key_console && !forcedup_) return;
     char* text = key_lines[edit_line].data(); text[key_linepos] = static_cast<char>(10 + ((int)(realtime * cursorspeed_) & 1));
-    eastl::fill_n(text + key_linepos + 1, eastl::max(0, linewidth_ - (key_linepos + 1)), ' ');
+    std::fill_n(text + key_linepos + 1, std::max(0, linewidth_ - (key_linepos + 1)), ' ');
     char* text_ptr = (key_linepos >= linewidth_) ? (text + 1 + key_linepos - linewidth_) : text;
     for (int i = 0; i < linewidth_; i++) Draw_Character((i + 1) << 3, vislines_ - 16, text_ptr[i]);
     key_lines[edit_line][key_linepos] = 0;
@@ -152,7 +152,7 @@ void ConsoleSystem::DrawConsole(int lines, bool drawinput) {
     Draw_ConsoleBackground(lines); vislines_ = lines;
     int rows = (lines - 16) >> 3, y = lines - 16 - (rows << 3);
     for (int i = current_ - rows + 1; i <= current_; i++, y += 8) {
-        int j = eastl::max(0, i - backscroll_); char* text_ptr = text_.data() + (j % totallines_) * linewidth_;
+        int j = std::max(0, i - backscroll_); char* text_ptr = text_.data() + (j % totallines_) * linewidth_;
         for (int x = 0; x < linewidth_; x++) Draw_Character((x + 1) << 3, y, text_ptr[x]);
     }
     if (drawinput) DrawInput();

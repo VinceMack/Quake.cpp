@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <fstream>
 #include <limits>
-#include <EASTL/sort.h>
 
 using namespace Client;
 using namespace Common;
@@ -40,7 +39,7 @@ struct CmdPair { const char* name; void (*fn)(); };
 
 MenuState m_state = MenuState::None, m_return_state = MenuState::None;
 bool m_return_onerror = false;
-eastl::string m_return_reason;
+std::string m_return_reason;
 bool m_entersound = false, m_recursiveDraw = false;
 
 int m_multiplayer_cursor = 0, m_save_demonum = 0;
@@ -50,7 +49,7 @@ int options_cursor = 0, keys_cursor = 0;
 bool bind_grab = false; int help_page = 0;
 
 int lanConfig_cursor = -1, lanConfig_port = 0;
-eastl::string lanConfig_portname, lanConfig_joinname, setup_hostname, setup_myname;
+std::string lanConfig_portname, lanConfig_joinname, setup_hostname, setup_myname;
 
 int startepisode = 0, startlevel = 0, maxplayers = 0, gameoptions_cursor = 0;
 bool m_serverInfoMessage = false; double m_serverInfoMessageTime = 0.0;
@@ -58,9 +57,9 @@ bool searchComplete = false; double searchCompleteTime = 0.0;
 int slist_cursor = 0; bool slist_sorted = false;
 
 constexpr int MAX_SAVEGAMES = 12;
-eastl::array<eastl::string, MAX_SAVEGAMES> m_filenames;
-eastl::array<bool, MAX_SAVEGAMES> loadable;
-eastl::array<byte, 256> identityTable{}, translationTable{};
+std::array<std::string, MAX_SAVEGAMES> m_filenames;
+std::array<bool, MAX_SAVEGAMES> loadable;
+std::array<byte, 256> identityTable{}, translationTable{};
 
 inline bool StartingGame() { return m_multiplayer_cursor == 1; }
 inline bool JoiningGame()  { return m_multiplayer_cursor == 0; }
@@ -68,17 +67,17 @@ inline bool JoiningGame()  { return m_multiplayer_cursor == 0; }
 void M_ConfigureNetSubsystem();
 
 inline void M_DrawCharacter(int cx, int line, int num) { Draw_Character(cx + ((vid.width - 320) >> 1), line, num); }
-void M_Print(int cx, int cy, eastl::string_view str) { for (char c : str) { M_DrawCharacter(cx, cy, static_cast<unsigned char>(c) + 128); cx += 8; } }
-void M_PrintWhite(int cx, int cy, eastl::string_view str) { for (char c : str) { M_DrawCharacter(cx, cy, static_cast<unsigned char>(c)); cx += 8; } }
+void M_Print(int cx, int cy, std::string_view str) { for (char c : str) { M_DrawCharacter(cx, cy, static_cast<unsigned char>(c) + 128); cx += 8; } }
+void M_PrintWhite(int cx, int cy, std::string_view str) { for (char c : str) { M_DrawCharacter(cx, cy, static_cast<unsigned char>(c)); cx += 8; } }
 inline void M_DrawTransPic(int x, int y, qpic_t* pic) { Draw_TransPic(x + ((vid.width - 320) >> 1), y, pic); }
 void M_DrawPic(int x, int y, qpic_t* pic) { Draw_Pic(x + ((vid.width - 320) >> 1), y, pic); }
 
 void M_BuildTranslationTable(int top, int bottom) {
     for (int j = 0; j < 256; j++) identityTable[j] = static_cast<byte>(j);
     translationTable = identityTable;
-    if (top < 128) eastl::copy_n(identityTable.begin() + top, 16, translationTable.begin() + TOP_RANGE);
+    if (top < 128) std::copy_n(identityTable.begin() + top, 16, translationTable.begin() + TOP_RANGE);
     else for (int j = 0; j < 16; j++) translationTable[TOP_RANGE + j] = identityTable[top + 15 - j];
-    if (bottom < 128) eastl::copy_n(identityTable.begin() + bottom, 16, translationTable.begin() + BOTTOM_RANGE);
+    if (bottom < 128) std::copy_n(identityTable.begin() + bottom, 16, translationTable.begin() + BOTTOM_RANGE);
     else for (int j = 0; j < 16; j++) translationTable[BOTTOM_RANGE + j] = identityTable[bottom + 15 - j];
 }
 
@@ -171,7 +170,7 @@ void M_ScanSaves() {
         int version = 0; if (!(f >> version)) continue;
         f.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         std::string temp_comment; if (!std::getline(f, temp_comment)) continue;
-        eastl::string comment = temp_comment.c_str();
+        std::string comment = temp_comment.c_str();
         if (!comment.empty() && comment.back() == '\r') comment.pop_back();
         for (char& c : comment) { if (c == '_') c = ' '; }
         if (comment.length() > SAVEGAME_COMMENT_LENGTH) comment = comment.substr(0, SAVEGAME_COMMENT_LENGTH);
@@ -222,7 +221,7 @@ void M_MultiPlayer_Key(int key) {
     }
 }
 
-constexpr auto setup_cursor_table = eastl::array{ 40, 56, 80, 104, 140 };
+constexpr auto setup_cursor_table = std::array{ 40, 56, 80, 104, 140 };
 
 void M_Menu_Setup_f() {
     key_dest = key_menu; m_state = MenuState::Setup; m_entersound = true;
@@ -280,11 +279,11 @@ void M_Menu_Options_f() { key_dest = key_menu; m_state = MenuState::Options; m_e
 void M_AdjustSliders(int dir) {
     S_LocalSound("misc/menu3.wav");
     switch (options_cursor) {
-    case 3: Cvar::SetValue("viewsize", eastl::clamp<float>(Screen::GetScreenSystem().GetViewsize().value + dir * 10, 30.0f, 120.0f)); break;
-    case 4: Cvar::SetValue("gamma", eastl::clamp<float>(v_gamma.value - static_cast<float>(dir * 0.05), 0.5f, 1.0f)); break;
-    case 5: Cvar::SetValue("sensitivity", eastl::clamp<float>(sensitivity.value + static_cast<float>(dir * 0.5), 1.0f, 11.0f)); break;
-    case 6: Cvar::SetValue("bgmvolume", eastl::clamp<float>(bgmvolume.value + static_cast<float>(dir * 0.1), 0.0f, 1.0f)); break;
-    case 7: Cvar::SetValue("volume", eastl::clamp<float>(volume.value + static_cast<float>(dir * 0.1), 0.0f, 1.0f)); break;
+    case 3: Cvar::SetValue("viewsize", std::clamp<float>(Screen::GetScreenSystem().GetViewsize().value + dir * 10, 30.0f, 120.0f)); break;
+    case 4: Cvar::SetValue("gamma", std::clamp<float>(v_gamma.value - static_cast<float>(dir * 0.05), 0.5f, 1.0f)); break;
+    case 5: Cvar::SetValue("sensitivity", std::clamp<float>(sensitivity.value + static_cast<float>(dir * 0.5), 1.0f, 11.0f)); break;
+    case 6: Cvar::SetValue("bgmvolume", std::clamp<float>(bgmvolume.value + static_cast<float>(dir * 0.1), 0.0f, 1.0f)); break;
+    case 7: Cvar::SetValue("volume", std::clamp<float>(volume.value + static_cast<float>(dir * 0.1), 0.0f, 1.0f)); break;
     case 8: Cvar::SetValue("cl_forwardspeed", (cl_forwardspeed.value > 200) ? 200.0f : 400.0f); Cvar::SetValue("cl_backspeed", (cl_forwardspeed.value > 200) ? 200.0f : 400.0f); break;
     case 9: Cvar::SetValue("m_pitch", -m_pitch.value); break;
     case 10: Cvar::SetValue("lookspring", static_cast<float>(!lookspring.value)); break;
@@ -293,7 +292,7 @@ void M_AdjustSliders(int dir) {
 }
 
 inline void M_DrawSlider(int x, int y, float range) {
-    range = eastl::clamp(range, 0.0f, 1.0f); M_DrawCharacter(x - 8, y, 128);
+    range = std::clamp(range, 0.0f, 1.0f); M_DrawCharacter(x - 8, y, 128);
     for (int i = 0; i < SLIDER_RANGE; i++) M_DrawCharacter(x + i * 8, y, 129);
     M_DrawCharacter(x + SLIDER_RANGE * 8, y, 130); M_DrawCharacter(x + static_cast<int>((SLIDER_RANGE - 1) * 8 * range), y, 131);
 }
@@ -331,8 +330,8 @@ void M_Options_Key(int k) {
     if (k == K_RIGHTARROW) M_AdjustSliders(1);
 }
 
-struct BindName { eastl::string_view command; eastl::string_view description; };
-constexpr auto bindnames = eastl::array<BindName, 18>{{
+struct BindName { std::string_view command; std::string_view description; };
+constexpr auto bindnames = std::array<BindName, 18>{{
     { "+attack", "attack" }, { "impulse 10", "change weapon" }, { "+jump", "jump / swim up" },
     { "+forward", "walk forward" }, { "+back", "backpedal" }, { "+left", "turn left" },
     { "+right", "turn right" }, { "+speed", "run" }, { "+moveleft", "step left" },
@@ -343,21 +342,21 @@ constexpr auto bindnames = eastl::array<BindName, 18>{{
 
 void M_Menu_Keys_f() { key_dest = key_menu; m_state = MenuState::Keys; m_entersound = true; }
 
-void M_FindKeysForCommand(eastl::string_view command, eastl::array<int, 2>& twokeys) {
+void M_FindKeysForCommand(std::string_view command, std::array<int, 2>& twokeys) {
     twokeys[0] = twokeys[1] = -1; int count = 0;
     for (int j = 0; j < 256; j++) {
         if (!keybindings[j].empty() && keybindings[j] == command) { twokeys[count++] = j; if (count == 2) break; }
     }
 }
 
-void M_UnbindCommand(eastl::string_view command) {
+void M_UnbindCommand(std::string_view command) {
     for (int j = 0; j < 256; j++) { if (!keybindings[j].empty() && keybindings[j] == command) Key_SetBinding(j, ""); }
 }
 
 void M_Keys_Draw() {
     qpic_t* p = Draw_CachePic("gfx/ttl_cstm.lmp"); M_DrawPic((320 - p->width) / 2, 4, p);
     M_Print(bind_grab ? 12 : 18, 32, bind_grab ? "Press a key or button for this action" : "Enter to change, backspace to clear");
-    eastl::array<int, 2> keys;
+    std::array<int, 2> keys;
     for (size_t i = 0; i < bindnames.size(); i++) {
         int y = 48 + 8 * static_cast<int>(i); M_Print(16, y, bindnames[i].description);
         M_FindKeysForCommand(bindnames[i].command, keys);
@@ -371,7 +370,7 @@ void M_Keys_Draw() {
 }
 
 void M_Keys_Key(int k) {
-    eastl::array<int, 2> keys;
+    std::array<int, 2> keys;
     if (bind_grab) {
         S_LocalSound("misc/menu1.wav");
         if (k != K_ESCAPE && k != '`') Cmd::BufferInsertText(va("bind \"%s\" \"%.70s\"\n", Key_KeynumToString(k), bindnames[keys_cursor].command.data()));
@@ -397,14 +396,14 @@ void M_Help_Key(int key) {
 
 void M_Menu_Quit_f() { key_dest = key_console; Host_Quit_f(); }
 
-constexpr auto lanConfig_cursor_table = eastl::array{ 72, 92, 124 };
+constexpr auto lanConfig_cursor_table = std::array{ 72, 92, 124 };
 constexpr int NUM_LANCONFIG_CMDS = 3;
 
 void M_Menu_LanConfig_f() {
     key_dest = key_menu; m_state = MenuState::LanConfig; m_entersound = true;
     if (lanConfig_cursor == -1) lanConfig_cursor = JoiningGame() ? 2 : 1;
     if (StartingGame() && lanConfig_cursor == 2) lanConfig_cursor = 1;
-    lanConfig_port = DEFAULTnet_hostport; lanConfig_portname = eastl::to_string(lanConfig_port);
+    lanConfig_port = DEFAULTnet_hostport; lanConfig_portname = std::to_string(lanConfig_port);
     m_return_onerror = false; m_return_reason.clear();
 }
 
@@ -448,11 +447,11 @@ void M_LanConfig_Key(int key) {
     }
     if (StartingGame() && lanConfig_cursor == 2) lanConfig_cursor = (key == K_UPARROW) ? 1 : 0;
     int l = Q_atoi(lanConfig_portname.c_str()); if (l <= 65535) lanConfig_port = l;
-    lanConfig_portname = eastl::to_string(lanConfig_port).c_str();
+    lanConfig_portname = std::to_string(lanConfig_port).c_str();
 }
 
 struct level_t { const char* name; const char* description; };
-constexpr auto levels = eastl::array<level_t, 38>{{
+constexpr auto levels = std::array<level_t, 38>{{
     { "start", "Entrance" }, { "e1m1", "Slipgate Complex" }, { "e1m2", "Castle of the Damned" }, { "e1m3", "The Necropolis" },
     { "e1m4", "The Grisly Grotto" }, { "e1m5", "Gloom Keep" }, { "e1m6", "The Door To Chthon" }, { "e1m7", "The House of Chthon" },
     { "e1m8", "Ziggurat Vertigo" }, { "e2m1", "The Installation" }, { "e2m2", "Ogre Citadel" }, { "e2m3", "Crypt of Decay" },
@@ -465,7 +464,7 @@ constexpr auto levels = eastl::array<level_t, 38>{{
     { "dm5", "The Cistern" }, { "dm6", "The Dark Zone" }
 }};
 
-constexpr auto hipnoticlevels = eastl::array<level_t, 18>{{
+constexpr auto hipnoticlevels = std::array<level_t, 18>{{
     { "start", "Command HQ" }, { "hip1m1", "The Pumping Station" }, { "hip1m2", "Storage Facility" }, { "hip1m3", "The Lost Mine" },
     { "hip1m4", "Research Facility" }, { "hip1m5", "Military Complex" }, { "hip2m1", "Ancient Realms" }, { "hip2m2", "The Black Cathedral" },
     { "hip2m3", "The Catacombs" }, { "hip2m4", "The Crypt" }, { "hip2m5", "Mortum's Keep" }, { "hip2m6", "The Gremlin's Domain" },
@@ -473,7 +472,7 @@ constexpr auto hipnoticlevels = eastl::array<level_t, 18>{{
     { "hipend", "Armagon's Lair" }, { "hipdm1", "The Edge of Oblivion" }
 }};
 
-constexpr auto roguelevels = eastl::array<level_t, 17>{{
+constexpr auto roguelevels = std::array<level_t, 17>{{
     { "start", "Split Decision" }, { "r1m1", "Deviant's Domain" }, { "r1m2", "Dread Portal" }, { "r1m3", "Judgement Call" },
     { "r1m4", "Cave of Death" }, { "r1m5", "Towers of Wrath" }, { "r1m6", "Temple of Pain" }, { "r1m7", "Tomb of the Overlord" },
     { "r2m1", "Tempus Fugit" }, { "r2m2", "Elemental Fury I" }, { "r2m3", "Elemental Fury II" }, { "r2m4", "Curse of Osiris" },
@@ -482,21 +481,21 @@ constexpr auto roguelevels = eastl::array<level_t, 17>{{
 }};
 
 struct episode_t { const char* description; int firstLevel; int levels; };
-constexpr auto episodes = eastl::array<episode_t, 7>{{
+constexpr auto episodes = std::array<episode_t, 7>{{
     { "Welcome to Quake", 0, 1 }, { "Doomed Dimension", 1, 8 }, { "Realm of Black Magic", 9, 7 }, { "Netherworld", 16, 7 },
     { "The Elder World", 23, 8 }, { "Final Level", 31, 1 }, { "Deathmatch Arena", 32, 6 }
 }};
 
-constexpr auto hipnoticepisodes = eastl::array<episode_t, 6>{{
+constexpr auto hipnoticepisodes = std::array<episode_t, 6>{{
     { "Scourge of Armagon", 0, 1 }, { "Fortress of the Dead", 1, 5 }, { "Dominion of Darkness", 6, 6 }, { "The Rift", 12, 4 },
     { "Final Level", 16, 1 }, { "Deathmatch Arena", 17, 1 }
 }};
 
-constexpr auto rogueepisodes = eastl::array<episode_t, 4>{{
+constexpr auto rogueepisodes = std::array<episode_t, 4>{{
     { "Introduction", 0, 1 }, { "Hell's Fortress", 1, 7 }, { "Corridors of Time", 8, 8 }, { "Deathmatch Arena", 16, 1 }
 }};
 
-constexpr auto gameoptions_cursor_table = eastl::array{ 40, 56, 64, 72, 80, 88, 96, 112, 120 };
+constexpr auto gameoptions_cursor_table = std::array{ 40, 56, 64, 72, 80, 88, 96, 112, 120 };
 constexpr int NUM_GAMEOPTIONS = 9;
 
 void M_Menu_GameOptions_f() {
@@ -513,7 +512,7 @@ void M_GameOptions_Draw() {
     M_Print(0, 72, "        Teamplay");
     const char* team_msg = "Off";
     if (rogue) {
-        constexpr auto rmsgs = eastl::array{ "Off", "No Friendly Fire", "Friendly Fire", "Tag", "Capture the Flag", "One Flag CTF", "Three Team CTF" };
+        constexpr auto rmsgs = std::array{ "Off", "No Friendly Fire", "Friendly Fire", "Tag", "Capture the Flag", "One Flag CTF", "Three Team CTF" };
         int idx = static_cast<int>(teamplay.value); if (idx >= 1 && idx <= 6) team_msg = rmsgs[idx];
     } else {
         if ((int)teamplay.value == 1) team_msg = "No Friendly Fire";
@@ -521,8 +520,8 @@ void M_GameOptions_Draw() {
     }
     M_Print(160, 72, team_msg);
     M_Print(0, 80, "            Skill");
-    constexpr auto skills = eastl::array{ "Easy difficulty", "Normal difficulty", "Hard difficulty", "Nightmare difficulty" };
-    M_Print(160, 80, skills[eastl::clamp<int>(static_cast<int>(skill.value), 0, 3)]);
+    constexpr auto skills = std::array{ "Easy difficulty", "Normal difficulty", "Hard difficulty", "Nightmare difficulty" };
+    M_Print(160, 80, skills[std::clamp<int>(static_cast<int>(skill.value), 0, 3)]);
     M_Print(0, 88, "       Frag Limit"); M_Print(160, 88, (fraglimit.value == 0) ? "none" : va("%i frags", (int)fraglimit.value));
     M_Print(0, 96, "       Time Limit"); M_Print(160, 96, (timelimit.value == 0) ? "none" : va("%i minutes", (int)timelimit.value));
     M_Print(0, 112, "         Episode");
@@ -599,7 +598,7 @@ void M_Search_Key() {}
 void M_Menu_ServerList_f() { key_dest = key_menu; m_state = MenuState::SList; m_entersound = true; slist_cursor = 0; m_return_onerror = false; m_return_reason.clear(); slist_sorted = false; }
 void M_ServerList_Draw() {
     if (!slist_sorted && hostCacheCount > 1) {
-        eastl::sort(hostcache.begin(), hostcache.begin() + hostCacheCount, [](const hostcache_t& a, const hostcache_t& b) { return strcmp(a.name, b.name) < 0; });
+        std::sort(hostcache.begin(), hostcache.begin() + hostCacheCount, [](const hostcache_t& a, const hostcache_t& b) { return strcmp(a.name, b.name) < 0; });
         slist_sorted = true;
     }
     qpic_t* p = Draw_CachePic("gfx/p_multi.lmp"); M_DrawPic((320 - p->width) / 2, 4, p);

@@ -2,11 +2,11 @@
 #pragma once
 
 #include "audio/audio_types.hpp"
-#include <EASTL/span.h>
+#include <span>
 
 namespace Audio {
 
-[[nodiscard]] wavinfo_t GetWavinfo(eastl::string_view name, eastl::span<const byte> wav_data);
+[[nodiscard]] wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data);
 void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data);
 [[nodiscard]] sfxcache_t* S_LoadSound(sfx_t* s);
 

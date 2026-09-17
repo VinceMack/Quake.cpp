@@ -28,8 +28,8 @@ int Q_strcasecmp(const char* s1, const char* s2) {
     return static_cast<int>(static_cast<unsigned char>(*s1)) - static_cast<int>(static_cast<unsigned char>(*s2));
 }
 
-int Q_strcasecmp(eastl::string_view s1, eastl::string_view s2) {
-    size_t min_len = eastl::min(s1.size(), s2.size());
+int Q_strcasecmp(std::string_view s1, std::string_view s2) {
+    size_t min_len = std::min(s1.size(), s2.size());
     for (size_t i = 0; i < min_len; ++i) {
         char c1 = static_cast<char>(std::tolower(static_cast<unsigned char>(s1[i])));
         char c2 = static_cast<char>(std::tolower(static_cast<unsigned char>(s2[i])));
@@ -41,7 +41,7 @@ int Q_strcasecmp(eastl::string_view s1, eastl::string_view s2) {
     return 0;
 }
 
-int Q_atoi(eastl::string_view str) {
+int Q_atoi(std::string_view str) {
     if (str.empty()) return 0;
     size_t pos = 0; int sign = 1;
     if (str[pos] == '-') { sign = -1; pos++; }
@@ -65,7 +65,7 @@ int Q_atoi(eastl::string_view str) {
     return val * sign;
 }
 
-float Q_atof(eastl::string_view str) {
+float Q_atof(std::string_view str) {
     if (str.empty()) return 0.0f;
     size_t pos = 0; int sign = 1;
     if (str[pos] == '-') { sign = -1; pos++; }

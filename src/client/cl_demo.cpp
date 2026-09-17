@@ -117,7 +117,7 @@ void CL_Record_f() {
         Con_Printf("record <demoname> [<map> [cd track]]\n");
         return;
     }
-    if (Cmd::Argv(1).find("..") != eastl::string_view::npos) {
+    if (Cmd::Argv(1).find("..") != std::string_view::npos) {
         Con_Printf("Relative pathnames are not allowed.\n");
         return;
     }
@@ -127,9 +127,9 @@ void CL_Record_f() {
     }
     int track = (c == 4) ? Q_atoi(Cmd::Argv(3)) : -1;
     if (c == 4) Con_Printf("Forcing CD track to %i\n", cls.forcetrack);
-    if (c > 2) Cmd::ExecuteString(("map " + eastl::string(Cmd::Argv(2))).c_str(), Cmd::Source::Command);
+    if (c > 2) Cmd::ExecuteString(("map " + std::string(Cmd::Argv(2))).c_str(), Cmd::Source::Command);
     char name_buffer[MAX_OSPATH];
-    strcpy_s(name_buffer, sizeof(name_buffer), (eastl::string(com_gamedir) + "/" + eastl::string(Cmd::Argv(1))).c_str());
+    strcpy_s(name_buffer, sizeof(name_buffer), (std::string(com_gamedir) + "/" + std::string(Cmd::Argv(1))).c_str());
     COM_DefaultExtension(name_buffer, ".dem");
     Con_Printf("recording to %s.\n", name_buffer);
     fopen_s(&cls.demofile, name_buffer, "wb");
@@ -150,7 +150,7 @@ void CL_PlayDemo_f() {
     }
     CL_Disconnect();
     char name[256];
-    strcpy_s(name, sizeof(name), eastl::string(Cmd::Argv(1)).c_str());
+    strcpy_s(name, sizeof(name), std::string(Cmd::Argv(1)).c_str());
     COM_DefaultExtension(name, ".dem");
     Con_Printf("Playing demo from %s.\n", name);
     COM_FOpenFile(name, &cls.demofile);

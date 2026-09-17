@@ -2,9 +2,9 @@
 #pragma once
 
 #include <cstdint>
-#include <EASTL/array.h>
-#include <EASTL/vector.h>
-#include <EASTL/string_view.h>
+#include <array>
+#include <vector>
+#include <string_view>
 #include "sys_core.hpp"
 #include "world/bsp_format.hpp"
 
@@ -237,26 +237,26 @@ struct model_s {
     char* entities = nullptr;
     cache_user_t cache{};
 
-    eastl::vector<dmodel_t> submodels_owner;
-    eastl::vector<mplane_t> planes_owner;
-    eastl::vector<mleaf_t> leafs_owner;
-    eastl::vector<mvertex_t> vertexes_owner;
-    eastl::vector<medge_t> edges_owner;
-    eastl::vector<mnode_t> nodes_owner;
-    eastl::vector<mtexinfo_t> texinfo_owner;
-    eastl::vector<msurface_t> surfaces_owner;
-    eastl::vector<int> surfedges_owner;
-    eastl::vector<dclipnode_t> clipnodes_owner;
-    eastl::vector<dclipnode_t> hull0_clipnodes_owner;
-    eastl::vector<msurface_t*> marksurfaces_owner;
-    eastl::vector<texture_t*> textures_owner;
+    std::vector<dmodel_t> submodels_owner;
+    std::vector<mplane_t> planes_owner;
+    std::vector<mleaf_t> leafs_owner;
+    std::vector<mvertex_t> vertexes_owner;
+    std::vector<medge_t> edges_owner;
+    std::vector<mnode_t> nodes_owner;
+    std::vector<mtexinfo_t> texinfo_owner;
+    std::vector<msurface_t> surfaces_owner;
+    std::vector<int> surfedges_owner;
+    std::vector<dclipnode_t> clipnodes_owner;
+    std::vector<dclipnode_t> hull0_clipnodes_owner;
+    std::vector<msurface_t*> marksurfaces_owner;
+    std::vector<texture_t*> textures_owner;
 
-    eastl::vector<byte> visdata_owner;
-    eastl::vector<byte> lightdata_owner;
-    eastl::vector<char> entities_owner;
+    std::vector<byte> visdata_owner;
+    std::vector<byte> lightdata_owner;
+    std::vector<char> entities_owner;
 
-    eastl::vector<eastl::vector<byte>> texture_allocations;
-    eastl::vector<eastl::vector<byte>> sprite_allocations;
+    std::vector<std::vector<byte>> texture_allocations;
+    std::vector<std::vector<byte>> sprite_allocations;
 };
 using model_t = model_s;
 

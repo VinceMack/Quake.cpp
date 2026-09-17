@@ -33,10 +33,10 @@ float dp_time1 = 0.0f, dp_time2 = 0.0f, db_time1 = 0.0f, db_time2 = 0.0f, rw_tim
 float se_time1 = 0.0f, se_time2 = 0.0f, de_time1 = 0.0f, de_time2 = 0.0f, dv_time1 = 0.0f, dv_time2 = 0.0f;
 float r_time1 = 0.0f;
 
-eastl::array<int*, 4> pfrustum_indexes{};
-eastl::array<int, 4 * 6> r_frustum_indexes{};
-eastl::array<clipplane_t, 4> view_clipplanes{};
-eastl::array<mplane_t, 4> screenedge{};
+std::array<int*, 4> pfrustum_indexes{};
+std::array<int, 4 * 6> r_frustum_indexes{};
+std::array<clipplane_t, 4> view_clipplanes{};
+std::array<mplane_t, 4> screenedge{};
 
 float screenAspect = 0.0f, verticalFieldOfView = 0.0f, xOrigin = 0.0f, yOrigin = 0.0f;
 float aliasxscale = 0.0f, aliasyscale = 0.0f, aliasxcenter = 0.0f, aliasycenter = 0.0f;
@@ -133,7 +133,7 @@ constexpr int MAX_TIMINGS = 100;
 void R_TimeGraph()
 {
     static int timex = 0;
-    static eastl::array<byte, MAX_TIMINGS> r_timings{};
+    static std::array<byte, MAX_TIMINGS> r_timings{};
     float r_time2 = static_cast<float>(Sys_FloatTime());
     int a = static_cast<int>((r_time2 - r_time1) / 0.01f);
     r_timings[timex] = static_cast<byte>(a);

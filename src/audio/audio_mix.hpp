@@ -7,8 +7,8 @@ namespace Audio {
 
 inline constexpr int PAINTBUFFER_SIZE = 512;
 
-extern eastl::array<portable_samplepair_t, PAINTBUFFER_SIZE> paintbuffer;
-extern eastl::array<eastl::array<int, 256>, 32> snd_scaletable;
+extern std::array<portable_samplepair_t, PAINTBUFFER_SIZE> paintbuffer;
+extern std::array<std::array<int, 256>, 32> snd_scaletable;
 
 void SND_InitScaletable();
 void SND_PaintChannelFrom8(channel_t* ch, sfxcache_t* sc, int count, int offset);

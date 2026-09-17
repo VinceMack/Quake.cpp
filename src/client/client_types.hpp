@@ -4,11 +4,11 @@
 #include <cstdio>
 #include <cstdint>
 #include <ostream>
-#include <EASTL/array.h>
-#include <EASTL/vector.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/span.h>
+#include <array>
+#include <vector>
+#include <string>
+#include <string_view>
+#include <span>
 
 #include "core/types.hpp"
 #include "core/math.hpp"
@@ -23,11 +23,11 @@ using Audio::sfx_t;
 namespace Client {
 
 template <typename T, std::size_t N>
-struct compat_array : public eastl::array<T, N> {
+struct compat_array : public std::array<T, N> {
     [[nodiscard]] constexpr operator T*() noexcept { return this->data(); }
     [[nodiscard]] constexpr operator const T*() const noexcept { return this->data(); }
-    [[nodiscard]] constexpr operator eastl::string_view() const noexcept {
-        return eastl::string_view(reinterpret_cast<const char*>(this->data()));
+    [[nodiscard]] constexpr operator std::string_view() const noexcept {
+        return std::string_view(reinterpret_cast<const char*>(this->data()));
     }
 };
 
@@ -46,7 +46,7 @@ struct scoreboard_t {
 };
 
 struct cshift_t {
-    eastl::array<int, 3> destcolor{};
+    std::array<int, 3> destcolor{};
     int percent{0};
 };
 
@@ -87,12 +87,12 @@ namespace Client {
 struct client_state_t {
     int movemessages{0};
     usercmd_t cmd{};
-    eastl::array<int, MAX_CL_STATS> stats{};
+    std::array<int, MAX_CL_STATS> stats{};
     int items{0};
-    eastl::array<float, 32> item_gettime{};
+    std::array<float, 32> item_gettime{};
     float faceanimtime{0.0f};
-    eastl::array<cshift_t, NUM_CSHIFTS> cshifts{}, prev_cshifts{};
-    eastl::array<Vector3, 2> mviewangles{}, mvelocity{};
+    std::array<cshift_t, NUM_CSHIFTS> cshifts{}, prev_cshifts{};
+    std::array<Vector3, 2> mviewangles{}, mvelocity{};
     Vector3 viewangles{}, velocity{}, punchangle{};
     float idealpitch{0.0f}, pitchvel{0.0f};
     bool nodrift{false};
@@ -101,11 +101,11 @@ struct client_state_t {
     float viewheight{0.0f}, crouch{0.0f};
     bool paused{false}, onground{false}, inwater{false};
     int intermission{0}, completed_time{0};
-    eastl::array<double, 2> mtime{};
+    std::array<double, 2> mtime{};
     double time{0.0}, oldtime{0.0};
     float last_received_message{0.0f};
-    eastl::array<model_t*, MAX_MODELS> model_precache{};
-    eastl::array<sfx_t*, MAX_SOUNDS> sound_precache{};
+    std::array<model_t*, MAX_MODELS> model_precache{};
+    std::array<sfx_t*, MAX_SOUNDS> sound_precache{};
     compat_array<char, 40> levelname{};
     int viewentity{0}, maxclients{0}, gametype{0};
     model_t* worldmodel{nullptr};
@@ -117,7 +117,7 @@ struct client_state_t {
 };
 
 struct kbutton_t {
-    eastl::array<int, 2> down{};
+    std::array<int, 2> down{};
     int state{0};
 };
 

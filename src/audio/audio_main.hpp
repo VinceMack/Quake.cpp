@@ -3,19 +3,20 @@
 
 #include "audio/audio_types.hpp"
 #include "core/cvar.hpp"
-#include <EASTL/fixed_vector.h>
+#include <vector>
 
 namespace Audio {
 
 extern SPSCQueue<AudioCommand, 256> command_queue;
 extern float local_volume;
-extern eastl::array<channel_t, MAX_CHANNELS> channels;
+extern std::array<channel_t, MAX_CHANNELS> channels;
 extern std::atomic<int> total_channels;
 extern bool snd_ambient, sound_started, fakedma, snd_initialized;
 extern Vector3 listener_origin, listener_forward, listener_right, listener_up;
 extern int paintedtime;
-extern eastl::fixed_vector<sfx_t, MAX_SFX, false> known_sfx;
-extern eastl::array<sfx_t*, NUM_AMBIENTS> ambient_sfx;
+// Never grows past MAX_SFX, so pointers into it stay valid (see S_FindName).
+extern std::vector<sfx_t> known_sfx;
+extern std::array<sfx_t*, NUM_AMBIENTS> ambient_sfx;
 
 extern int snd_blocked;
 extern vec_t sound_nominal_clip_dist;
@@ -33,12 +34,12 @@ void S_StopAllSounds(bool clear);
 void S_ClearBuffer();
 void S_Update(const Vector3& origin, const Vector3& v_forward, const Vector3& v_right, const Vector3& v_up);
 
-[[nodiscard]] sfx_t* S_PrecacheSound(eastl::string_view sample);
-void S_TouchSound(eastl::string_view sample);
+[[nodiscard]] sfx_t* S_PrecacheSound(std::string_view sample);
+void S_TouchSound(std::string_view sample);
 inline void S_BeginPrecaching() {}
 inline void S_EndPrecaching() {}
-void S_LocalSound(eastl::string_view s);
-[[nodiscard]] sfx_t* S_FindName(eastl::string_view name);
+void S_LocalSound(std::string_view s);
+[[nodiscard]] sfx_t* S_FindName(std::string_view name);
 
 [[nodiscard]] channel_t* SND_PickChannel(int entnum, int entchannel);
 void SND_Spatialize(channel_t* ch);
@@ -51,7 +52,7 @@ void S_StaticSoundInternal(sfx_t* sfx, const Vector3& origin, float vol, float a
 void S_StopSoundInternal(int entnum, int entchannel);
 void S_StopAllSoundsInternal(bool clear);
 void S_UpdateInternal(const Vector3& origin, const Vector3& forward, const Vector3& right, const Vector3& up,
-                      float vol_val, const eastl::array<int, NUM_AMBIENTS>& ambient_vols,
+                      float vol_val, const std::array<int, NUM_AMBIENTS>& ambient_vols,
                       float host_frametime_val, float ambient_fade_val, bool snd_ambient_val);
 
 void S_Play();

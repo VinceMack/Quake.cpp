@@ -12,8 +12,8 @@
 #include "ui/console.hpp"
 #include "quakedef.hpp"
 
-#include <EASTL/array.h>
-#include <EASTL/vector.h>
+#include <array>
+#include <vector>
 #include <SDL.h>
 
 namespace Common {
@@ -38,7 +38,7 @@ constexpr size_t NUM_SAFE_ARGVS = 3;
 static char* largv[MAX_NUM_ARGVS + NUM_SAFE_ARGVS + 1];
 static const char* argvdummy = " ";
 
-static constexpr eastl::array<const char*, NUM_SAFE_ARGVS> safeargvs = { "-nolan", "-nosound", "-nomouse" };
+static constexpr std::array<const char*, NUM_SAFE_ARGVS> safeargvs = { "-nolan", "-nosound", "-nomouse" };
 
 bool proghack = false;
 bool msg_suppress_1 = false;
@@ -53,30 +53,30 @@ char com_cmdline[CMDLINE_LENGTH];
 
 bool standard_quake = true, rogue = false, hipnotic = false;
 
-eastl::string_view COM_FileExtension(eastl::string_view in) {
+std::string_view COM_FileExtension(std::string_view in) {
     auto dot_pos = in.find('.');
-    return (dot_pos == eastl::string_view::npos) ? "" : in.substr(dot_pos + 1, 7);
+    return (dot_pos == std::string_view::npos) ? "" : in.substr(dot_pos + 1, 7);
 }
 
 void COM_FileBase(const char* in, char* out) {
-    eastl::string_view path(in);
+    std::string_view path(in);
     auto dot_pos = path.find_last_of('.');
-    if (dot_pos == eastl::string_view::npos) { strcpy_s(out, 32, "?model?"); return; }
+    if (dot_pos == std::string_view::npos) { strcpy_s(out, 32, "?model?"); return; }
     auto filename = path.substr(0, dot_pos);
     auto last_slash = filename.find_last_of("/\\");
-    eastl::string_view base = (last_slash == eastl::string_view::npos) ? filename : filename.substr(last_slash + 1);
+    std::string_view base = (last_slash == std::string_view::npos) ? filename : filename.substr(last_slash + 1);
     if (base.empty()) { strcpy_s(out, 32, "?model?"); }
     else {
-        size_t len = eastl::min(base.size(), size_t{31});
+        size_t len = std::min(base.size(), size_t{31});
         std::memcpy(out, base.data(), len); out[len] = '\0';
     }
 }
 
 void COM_DefaultExtension(char* path, const char* extension) {
-    eastl::string_view p(path);
+    std::string_view p(path);
     auto last_slash = p.find_last_of("/\\");
-    eastl::string_view fn = (last_slash == eastl::string_view::npos) ? p : p.substr(last_slash + 1);
-    if (fn.find('.') == eastl::string_view::npos) strcat_s(path, 256, extension);
+    std::string_view fn = (last_slash == std::string_view::npos) ? p : p.substr(last_slash + 1);
+    if (fn.find('.') == std::string_view::npos) strcat_s(path, 256, extension);
 }
 
 const char* COM_Parse(const char* data) {
@@ -123,7 +123,7 @@ int COM_CheckParm(const char* parm) {
 void COM_InitArgv(int argc, char** argv) {
     int n = 0;
     for (int j = 0; j < MAX_NUM_ARGVS && j < argc; ++j) {
-        for (char c : eastl::string_view(argv[j])) {
+        for (char c : std::string_view(argv[j])) {
             if (n >= static_cast<int>(CMDLINE_LENGTH - 1)) break;
             com_cmdline[n++] = c;
         }
@@ -134,7 +134,7 @@ void COM_InitArgv(int argc, char** argv) {
     bool safe = false;
     for (com_argc = 0; (com_argc < MAX_NUM_ARGVS) && (com_argc < argc); com_argc++) {
         largv[com_argc] = argv[com_argc];
-        if (eastl::string_view(argv[com_argc]) == "-safe") safe = true;
+        if (std::string_view(argv[com_argc]) == "-safe") safe = true;
     }
     if (safe) {
         for (size_t i = 0; i < NUM_SAFE_ARGVS; i++) largv[com_argc++] = const_cast<char*>(safeargvs[i]);
@@ -177,8 +177,8 @@ struct dpackheader_t { char id[4]; int dirofs; int dirlen; };
 constexpr int MAX_FILES_IN_PACK = 2048;
 char com_gamedir[MAX_OSPATH];
 
-struct SearchPath { eastl::string filename; pack_t* pack = nullptr; };
-static eastl::vector<SearchPath> com_searchpaths;
+struct SearchPath { std::string filename; pack_t* pack = nullptr; };
+static std::vector<SearchPath> com_searchpaths;
 
 void COM_Path_f(void) {
     Console::Con_Printf("Current search path:\n");
@@ -333,7 +333,7 @@ void COM_InitFilesystem(void) {
 
 namespace {
 constexpr auto make_crc_table() {
-    eastl::array<std::uint16_t, 256> table{};
+    std::array<std::uint16_t, 256> table{};
     for (uint32_t i = 0; i < 256; ++i) {
         std::uint16_t value = 0;
         std::uint16_t temp = static_cast<std::uint16_t>(i << 8);

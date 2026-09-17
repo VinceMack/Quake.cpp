@@ -122,7 +122,7 @@ void CL_SignonReply() {
     case 2:
         WriteCmd(va("name \"%s\"\n", cl_name.string.c_str()));
         WriteCmd(va("color %i %i\n", static_cast<int>(cl_color.value) >> 4, static_cast<int>(cl_color.value) & 15));
-        WriteCmd(("spawn " + eastl::string(cls.spawnparms.data())).c_str());
+        WriteCmd(("spawn " + std::string(cls.spawnparms.data())).c_str());
         break;
     case 3:
         WriteCmd("begin");
@@ -136,7 +136,7 @@ void CL_SignonReply() {
 
 void CL_PrintEntities_f() {
     int i = 0;
-    for (const auto& ent : eastl::span(cl_entities.data(), cl.num_entities)) {
+    for (const auto& ent : std::span(cl_entities.data(), cl.num_entities)) {
         Con_Printf("%3i:", i++);
         if (!ent.model) { Con_Printf("EMPTY\n"); continue; }
         Con_Printf("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n",
@@ -182,7 +182,7 @@ void CL_RelinkEntities() {
     const float bobjrotate = anglemod(static_cast<float>(100.0 * cl.time));
     int i = 1;
 
-    for (auto& ent : eastl::span(cl_entities.data() + 1, cl.num_entities - 1)) {
+    for (auto& ent : std::span(cl_entities.data() + 1, cl.num_entities - 1)) {
         if (!ent.model) {
             if (ent.forcelink) R_RemoveEfrags(&ent);
             ++i;
@@ -232,7 +232,7 @@ void CL_RelinkEntities() {
         if (ent.effects & EF_BRIGHTLIGHT) AddLight(400.0f, 0.001f);
         if (ent.effects & EF_DIMLIGHT) AddLight(200.0f, 0.001f, 0.0f);
 
-        constexpr auto trail_map = eastl::array<std::pair<int, int>, 7>{{
+        constexpr auto trail_map = std::array<std::pair<int, int>, 7>{{
             { EF_GIB, 2 }, { EF_ZOMGIB, 4 }, { EF_TRACER, 3 }, { EF_TRACER2, 5 },
             { EF_GRENADE, 1 }, { EF_TRACER3, 6 }, { EF_ROCKET, 0 }
         }};

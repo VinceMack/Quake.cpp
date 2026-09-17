@@ -1,13 +1,12 @@
 // server_types.hpp -- Server Subsystem Core Types and State
 #pragma once
 
-#include <EASTL/array.h>
-#include <EASTL/vector.h>
-#include <EASTL/string.h>
-#include <EASTL/fixed_string.h>
-#include <EASTL/span.h>
-#include <EASTL/string_view.h>
-#include <EASTL/algorithm.h>
+#include <array>
+#include <vector>
+#include <string>
+#include <span>
+#include <string_view>
+#include <algorithm>
 #include <cstdint>
 #include <cstddef>
 
@@ -93,15 +92,15 @@ struct client_t {
     Vector3 wishdir{};
 
     sizebuf_t message{};
-    eastl::array<byte, MAX_MSGLEN> msgbuf{};
+    std::array<byte, MAX_MSGLEN> msgbuf{};
     edict_t* edict{nullptr};
-    eastl::array<char, 32> name{};
+    std::array<char, 32> name{};
     int colors{0};
 
-    eastl::array<float, NUM_PING_TIMES> ping_times{};
+    std::array<float, NUM_PING_TIMES> ping_times{};
     int num_pings{0};
 
-    eastl::array<float, NUM_SPAWN_PARMS> spawn_parms{};
+    std::array<float, NUM_SPAWN_PARMS> spawn_parms{};
     int old_frags{0};
 
     void Reset() noexcept { *this = client_t{}; }
@@ -110,14 +109,14 @@ struct client_t {
 
     [[nodiscard]] const char* GetName() const noexcept { return name.data(); }
     [[nodiscard]] char* GetName() noexcept { return name.data(); }
-    void SetName(eastl::string_view new_name) noexcept {
-        const size_t copy_len = eastl::min(new_name.length(), name.size() - 1);
-        eastl::copy_n(new_name.data(), copy_len, name.data());
+    void SetName(std::string_view new_name) noexcept {
+        const size_t copy_len = std::min(new_name.length(), name.size() - 1);
+        std::copy_n(new_name.data(), copy_len, name.data());
         name[copy_len] = '\0';
     }
 
-    [[nodiscard]] eastl::span<const float> GetPingTimes() const noexcept {
-        return eastl::span<const float>(ping_times.data(), ping_times.size());
+    [[nodiscard]] std::span<const float> GetPingTimes() const noexcept {
+        return std::span<const float>(ping_times.data(), ping_times.size());
     }
 };
 
@@ -125,7 +124,7 @@ struct server_static_t {
     int maxclients{0};
     int maxclientslimit{0};
     client_t* clients{nullptr};
-    eastl::vector<client_t> client_storage{};
+    std::vector<client_t> client_storage{};
     int serverflags{0};
     bool changelevel_issued{false};
 
@@ -135,11 +134,11 @@ struct server_static_t {
         clients = client_storage.data();
     }
 
-    [[nodiscard]] eastl::span<client_t> GetClients() noexcept {
-        return eastl::span<client_t>(client_storage.data(), static_cast<size_t>(maxclients));
+    [[nodiscard]] std::span<client_t> GetClients() noexcept {
+        return std::span<client_t>(client_storage.data(), static_cast<size_t>(maxclients));
     }
-    [[nodiscard]] eastl::span<const client_t> GetClients() const noexcept {
-        return eastl::span<const client_t>(client_storage.data(), static_cast<size_t>(maxclients));
+    [[nodiscard]] std::span<const client_t> GetClients() const noexcept {
+        return std::span<const client_t>(client_storage.data(), static_cast<size_t>(maxclients));
     }
     [[nodiscard]] int GetClientIndex(const client_t* client) const noexcept {
         return static_cast<int>(client - clients);
@@ -166,13 +165,13 @@ struct server_t {
     int lastcheck{0};
     double lastchecktime{0.0};
 
-    eastl::array<char, 64> name{};
-    eastl::array<char, 64> modelname{};
+    std::array<char, 64> name{};
+    std::array<char, 64> modelname{};
     struct model_s* worldmodel{nullptr};
-    eastl::array<char*, MAX_MODELS> model_precache{};
-    eastl::array<struct model_s*, MAX_MODELS> models{};
-    eastl::array<char*, MAX_SOUNDS> sound_precache{};
-    eastl::array<char*, MAX_LIGHTSTYLES> lightstyles{};
+    std::array<char*, MAX_MODELS> model_precache{};
+    std::array<struct model_s*, MAX_MODELS> models{};
+    std::array<char*, MAX_SOUNDS> sound_precache{};
+    std::array<char*, MAX_LIGHTSTYLES> lightstyles{};
     int num_edicts{0};
     int max_edicts{0};
     edict_t* edicts{nullptr};
@@ -180,20 +179,20 @@ struct server_t {
     server_state_t state{server_state_t::ss_loading};
 
     sizebuf_t datagram{};
-    eastl::array<byte, MAX_DATAGRAM> datagram_buf{};
+    std::array<byte, MAX_DATAGRAM> datagram_buf{};
 
     sizebuf_t reliable_datagram{};
-    eastl::array<byte, MAX_DATAGRAM> reliable_datagram_buf{};
+    std::array<byte, MAX_DATAGRAM> reliable_datagram_buf{};
 
     sizebuf_t signon{};
-    eastl::array<byte, 8192> signon_buf{};
+    std::array<byte, 8192> signon_buf{};
 
     [[nodiscard]] bool IsActive() const noexcept { return active; }
     [[nodiscard]] bool IsPaused() const noexcept { return paused; }
     [[nodiscard]] const char* GetName() const noexcept { return name.data(); }
-    void SetName(eastl::string_view new_name) noexcept {
-        const size_t copy_len = eastl::min(new_name.length(), name.size() - 1);
-        eastl::copy_n(new_name.data(), copy_len, name.data());
+    void SetName(std::string_view new_name) noexcept {
+        const size_t copy_len = std::min(new_name.length(), name.size() - 1);
+        std::copy_n(new_name.data(), copy_len, name.data());
         name[copy_len] = '\0';
     }
 };

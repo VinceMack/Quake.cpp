@@ -22,7 +22,7 @@ using namespace Audio;
 namespace Server {
 
 static int fatbytes = 0;
-static eastl::array<byte, MAX_MAP_LEAFS / 8> fatpvs{};
+static std::array<byte, MAX_MAP_LEAFS / 8> fatpvs{};
 
 edict_t* sv_player = nullptr;
 static Vector3 wishdir{};
@@ -88,7 +88,7 @@ void SV_StartSound(edict_t* entity, int channel, const char* sample, int vol, fl
 
 void SV_SendServerinfo(client_t* client)
 {
-    eastl::array<char, 2048> message{};
+    std::array<char, 2048> message{};
 
     MSG_WriteByte(&client->message, svc_print);
     sprintf_s(message.data(), message.size(), "%c\nVERSION %4.2f SERVER (%i CRC)", 2, static_cast<double>(VERSION), pr_crc);
@@ -137,9 +137,9 @@ void SV_ConnectClient(int clientnum)
     edict_t* ent = EDICT_NUM(edictnum);
     qsocket_s* netconnection = client->netconnection;
 
-    eastl::array<float, NUM_SPAWN_PARMS> spawn_parms{};
+    std::array<float, NUM_SPAWN_PARMS> spawn_parms{};
     if (sv.loadgame) {
-        eastl::copy(client->spawn_parms.begin(), client->spawn_parms.end(), spawn_parms.begin());
+        std::copy(client->spawn_parms.begin(), client->spawn_parms.end(), spawn_parms.begin());
     }
 
     client->Reset();
@@ -154,7 +154,7 @@ void SV_ConnectClient(int clientnum)
     client->privileged = false;
 
     if (sv.loadgame) {
-        eastl::copy(spawn_parms.begin(), spawn_parms.end(), client->spawn_parms.begin());
+        std::copy(spawn_parms.begin(), spawn_parms.end(), client->spawn_parms.begin());
     } else {
         PR_ExecuteProgram(pr_global_struct->SetNewParms);
         for (int i = 0; i < NUM_SPAWN_PARMS; ++i) {
@@ -172,13 +172,13 @@ void SV_CheckForNewClients()
         if (!ret) break;
 
         auto clients = svs.GetClients();
-        auto it = eastl::find_if(clients.begin(), clients.end(), [](const client_t& cl) {
+        auto it = std::find_if(clients.begin(), clients.end(), [](const client_t& cl) {
             return !cl.active;
         });
 
         if (it == clients.end()) Sys_Error("Host_CheckForNewClients: no free clients");
 
-        const int i = static_cast<int>(eastl::distance(clients.begin(), it));
+        const int i = static_cast<int>(std::distance(clients.begin(), it));
         it->netconnection = ret;
         SV_ConnectClient(i);
 
@@ -213,7 +213,7 @@ void SV_AddToFatPVS(const Vector3& org, mnode_t* node)
 byte* SV_FatPVS(const Vector3& org)
 {
     fatbytes = (sv.worldmodel->numleafs + 31) >> 3;
-    eastl::fill_n(fatpvs.begin(), static_cast<size_t>(fatbytes), static_cast<byte>(0));
+    std::fill_n(fatpvs.begin(), static_cast<size_t>(fatbytes), static_cast<byte>(0));
     SV_AddToFatPVS(org, sv.worldmodel->nodes);
     return fatpvs.data();
 }
@@ -365,7 +365,7 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
 
 qboolean SV_SendClientDatagram(client_t* client)
 {
-    eastl::array<byte, MAX_DATAGRAM> buf{};
+    std::array<byte, MAX_DATAGRAM> buf{};
     sizebuf_t msg{};
 
     msg.data = buf.data();
@@ -416,7 +416,7 @@ void SV_UpdateToReliableMessages()
 
 void SV_SendNop(client_t* client)
 {
-    eastl::array<byte, 4> buf{};
+    std::array<byte, 4> buf{};
     sizebuf_t msg{};
 
     msg.data = buf.data();
@@ -486,7 +486,7 @@ void SV_SetIdealPitch()
     const float sinval = sinf(angleval);
     const float cosval = cosf(angleval);
 
-    eastl::array<float, MAX_FORWARD> z{};
+    std::array<float, MAX_FORWARD> z{};
 
     int i = 0;
     for (; i < MAX_FORWARD; ++i) {
@@ -724,7 +724,7 @@ static void SV_ReadClientMove(usercmd_t* move)
 
 static qboolean SV_ReadClientMessage()
 {
-    static constexpr eastl::array<eastl::string_view, 19> allowed_commands = {
+    static constexpr std::array<std::string_view, 19> allowed_commands = {
         "status", "god", "notarget", "fly", "name", "noclip",
         "say", "say_team", "tell", "color", "kill", "pause",
         "spawn", "begin", "prespawn", "kick", "ping", "give", "ban"
@@ -768,7 +768,7 @@ static qboolean SV_ReadClientMessage()
                 const char* s = MSG_ReadString();
                 ret = host_client->privileged ? 2 : 0;
 
-                const eastl::string_view cmd_sv(s);
+                const std::string_view cmd_sv(s);
                 for (const auto& allowed : allowed_commands) {
                     if (cmd_sv.length() >= allowed.length() && Q_strncasecmp(s, allowed.data(), static_cast<int>(allowed.length())) == 0) {
                         ret = 1;

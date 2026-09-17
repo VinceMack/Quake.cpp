@@ -8,7 +8,7 @@ namespace View {
 
 extern cvar_t v_gamma;
 extern cvar_t gl_cshiftpercent;
-extern eastl::array<byte, 256> gammatable;
+extern std::array<byte, 256> gammatable;
 
 void V_InitBlend();
 void V_ParseDamage();

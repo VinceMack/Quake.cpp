@@ -11,10 +11,10 @@
 #endif
 
 #include <cstdint>
-#include <EASTL/array.h>
-#include <EASTL/vector.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/functional.h>
+#include <array>
+#include <vector>
+#include <memory>
+#include <functional>
 
 #include "core/types.hpp"
 #include "core/msg.hpp"
@@ -49,12 +49,12 @@ struct qsocket_s {
     unsigned int sendSequence = 0;
     unsigned int unreliableSendSequence = 0;
     int sendMessageLength = 0;
-    eastl::array<byte, NET_MAXMESSAGE> sendMessage{};
+    std::array<byte, NET_MAXMESSAGE> sendMessage{};
 
     unsigned int receiveSequence = 0;
     unsigned int unreliableReceiveSequence = 0;
     int receiveMessageLength = 0;
-    eastl::array<byte, NET_MAXMESSAGE> receiveMessage{};
+    std::array<byte, NET_MAXMESSAGE> receiveMessage{};
 
     struct qsockaddr addr{};
     char address[NET_NAMELEN]{};
@@ -148,7 +148,7 @@ struct hostcache_t {
 struct PollProcedure {
     PollProcedure* next = nullptr;
     double nextTime = 0.0;
-    eastl::function<void()> procedure;
+    std::function<void()> procedure;
 };
 
 //=============================================================================
@@ -160,10 +160,10 @@ extern qsocket_t* net_freeSockets;
 extern int net_numsockets;
 
 extern int net_numlandrivers;
-extern eastl::vector<eastl::unique_ptr<NetLanDriver>> net_landrivers;
+extern std::vector<std::unique_ptr<NetLanDriver>> net_landrivers;
 
 extern int net_numdrivers;
-extern eastl::vector<eastl::unique_ptr<NetDriver>> net_drivers;
+extern std::vector<std::unique_ptr<NetDriver>> net_drivers;
 
 extern int DEFAULTnet_hostport;
 extern int net_hostport;
@@ -184,7 +184,7 @@ extern int shortPacketCount;
 extern int droppedDatagrams;
 
 extern int hostCacheCount;
-extern eastl::array<hostcache_t, HOSTCACHESIZE> hostcache;
+extern std::array<hostcache_t, HOSTCACHESIZE> hostcache;
 
 extern double net_time;
 extern sizebuf_t net_message;

@@ -20,7 +20,7 @@ kbutton_t in_strafe, in_speed, in_use, in_jump, in_attack, in_up, in_down;
 int in_impulse = 0;
 
 static void KeyDown(kbutton_t* b) {
-    eastl::string_view c = Cmd::Argv(1);
+    std::string_view c = Cmd::Argv(1);
     int k = c.empty() ? -1 : Q_atoi(c);
     if (k == b->down[0] || k == b->down[1]) return;
     if (!b->down[0]) b->down[0] = k;
@@ -30,7 +30,7 @@ static void KeyDown(kbutton_t* b) {
 }
 
 static void KeyUp(kbutton_t* b) {
-    eastl::string_view c = Cmd::Argv(1);
+    std::string_view c = Cmd::Argv(1);
     if (c.empty()) { b->down[0] = b->down[1] = 0; b->state = 4; return; }
     int k = Q_atoi(c);
     if (b->down[0] == k) b->down[0] = 0;
@@ -62,8 +62,8 @@ void CL_AdjustAngles() {
     const float up = CL_KeyState(&in_lookup), down = CL_KeyState(&in_lookdown);
     cl.viewangles[PITCH] += speed * cl_pitchspeed.value * (down - up);
     if (up || down) V_StopPitchDrift();
-    cl.viewangles[PITCH] = eastl::clamp(cl.viewangles[PITCH], -70.0f, 80.0f);
-    cl.viewangles[ROLL]  = eastl::clamp(cl.viewangles[ROLL], -50.0f, 50.0f);
+    cl.viewangles[PITCH] = std::clamp(cl.viewangles[PITCH], -70.0f, 80.0f);
+    cl.viewangles[ROLL]  = std::clamp(cl.viewangles[ROLL], -50.0f, 50.0f);
 }
 
 void CL_BaseMove(usercmd_t* cmd) {
@@ -84,7 +84,7 @@ void CL_BaseMove(usercmd_t* cmd) {
 }
 
 void CL_SendMove(usercmd_t* cmd) {
-    eastl::array<byte, 128> data{};
+    std::array<byte, 128> data{};
     sizebuf_t buf{};
     buf.data = data.data();
     buf.maxsize = 128;
@@ -115,8 +115,8 @@ struct BtnPair { const char* name; kbutton_t* btn; };
 
 void CL_InitInput() {
     auto BindBtn = [](const char* name, kbutton_t* btn) {
-        Cmd::AddCommand(("+" + eastl::string(name)).c_str(), [btn]() { KeyDown(btn); });
-        Cmd::AddCommand(("-" + eastl::string(name)).c_str(), [btn]() { KeyUp(btn); });
+        Cmd::AddCommand(("+" + std::string(name)).c_str(), [btn]() { KeyDown(btn); });
+        Cmd::AddCommand(("-" + std::string(name)).c_str(), [btn]() { KeyUp(btn); });
     };
     constexpr BtnPair btns[] = {
         {"moveup", &in_up}, {"movedown", &in_down}, {"left", &in_left}, {"right", &in_right},

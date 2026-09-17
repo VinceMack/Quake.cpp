@@ -55,7 +55,7 @@ void CL_DecayLights() {
     const float dt = static_cast<float>(cl.time - cl.oldtime);
     for (auto& dl : cl_dlights) {
         if (dl.die >= cl.time && dl.radius > 0.0f) {
-            dl.radius = eastl::max(0.0f, dl.radius - dt * dl.decay);
+            dl.radius = std::max(0.0f, dl.radius - dt * dl.decay);
         }
     }
 }
@@ -102,7 +102,7 @@ void CL_ParseTEnt() {
     case TE_KNIGHTSPIKE:PosSnd(cl_sfx_knighthit, 226, 20); break;
     case TE_SPIKE: case TE_SUPERSPIKE: {
         Vector3 pos = PosSnd(nullptr, 0, (type == TE_SPIKE) ? 10 : 20);
-        sfx_t* s = (rand() % 5) ? cl_sfx_tink1 : (eastl::array{ cl_sfx_ric3, cl_sfx_ric1, cl_sfx_ric2, cl_sfx_ric3 }[rand() & 3]);
+        sfx_t* s = (rand() % 5) ? cl_sfx_tink1 : (std::array{ cl_sfx_ric3, cl_sfx_ric1, cl_sfx_ric2, cl_sfx_ric3 }[rand() & 3]);
         S_StartSound(-1, 0, s, pos, 1, 1);
         break;
     }

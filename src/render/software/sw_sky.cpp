@@ -18,9 +18,9 @@ byte* r_skysource = nullptr;
 int r_skymade = 0;
 int r_skydirect = 0;
 
-static eastl::array<byte, 128 * 131> bottomsky{};
-static eastl::array<byte, 128 * 131> bottommask{};
-alignas(unsigned) static eastl::array<byte, 128 * 256> newsky{};
+static std::array<byte, 128 * 131> bottomsky{};
+static std::array<byte, 128 * 131> bottommask{};
+alignas(unsigned) static std::array<byte, 128 * 256> newsky{};
 
 void R_InitSky(texture_t* mt)
 {

@@ -3,8 +3,8 @@
 
 #include "core/types.hpp"
 #include <cstdio>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
+#include <string>
+#include <string_view>
 
 namespace Common {
 
@@ -23,7 +23,7 @@ void COM_InitArgv(int argc, char** argv);
 
 void COM_FileBase(const char* in, char* out);
 void COM_DefaultExtension(char* path, const char* extension);
-eastl::string_view COM_FileExtension(eastl::string_view in);
+std::string_view COM_FileExtension(std::string_view in);
 
 extern int com_filesize;
 extern char com_gamedir[128];

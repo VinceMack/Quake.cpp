@@ -102,7 +102,7 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
     Vector3 original_velocity = ent->v.velocity;
     Vector3 primal_velocity = ent->v.velocity;
     int numplanes = 0;
-    eastl::array<Vector3, MAX_CLIP_PLANES> planes{};
+    std::array<Vector3, MAX_CLIP_PLANES> planes{};
 
     float time_left = time;
 
@@ -233,8 +233,8 @@ void SV_PushMove(edict_t* pusher, float movetime)
     SV_LinkEdict(pusher, false);
 
     int num_moved = 0;
-    eastl::array<edict_t*, MAX_EDICTS> moved_edict{};
-    eastl::array<Vector3, MAX_EDICTS> moved_from{};
+    std::array<edict_t*, MAX_EDICTS> moved_edict{};
+    std::array<Vector3, MAX_EDICTS> moved_from{};
 
     edict_t* check = NEXT_EDICT(sv.edicts);
     for (int e = 1; e < sv.num_edicts; ++e, check = NEXT_EDICT(check)) {
@@ -820,7 +820,7 @@ constexpr float DI_NODIR = -1.0f;
 
 void SV_NewChaseDir(edict_t* actor, edict_t* enemy, float dist)
 {
-    eastl::array<float, 3> d{0.0f, DI_NODIR, DI_NODIR};
+    std::array<float, 3> d{0.0f, DI_NODIR, DI_NODIR};
 
     const float olddir = anglemod(static_cast<float>(static_cast<int>(actor->v.ideal_yaw / 45.0f) * 45));
     const float turnaround = anglemod(olddir - 180.0f);

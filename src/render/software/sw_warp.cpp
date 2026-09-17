@@ -11,8 +11,8 @@ using namespace Screen;
 
 namespace Render {
 
-eastl::array<int, SIN_BUFFER_SIZE> sintable{};
-eastl::array<int, SIN_BUFFER_SIZE> intsintable{};
+std::array<int, SIN_BUFFER_SIZE> sintable{};
+std::array<int, SIN_BUFFER_SIZE> intsintable{};
 
 unsigned char* r_turb_pbase = nullptr;
 unsigned char* r_turb_pdest = nullptr;
@@ -44,8 +44,8 @@ void D_DrawTurbulent8Span()
 
 void D_WarpScreen()
 {
-    eastl::array<byte*, MAXHEIGHT + (AMP2 * 2)> rowptr{};
-    eastl::array<int, MAXWIDTH + (AMP2 * 2)> column{};
+    std::array<byte*, MAXHEIGHT + (AMP2 * 2)> rowptr{};
+    std::array<int, MAXWIDTH + (AMP2 * 2)> column{};
     const auto& scr_vrect = GetScreenSystem().GetVrect();
     int w = r_refdef.vrect.width;
     int h = r_refdef.vrect.height;

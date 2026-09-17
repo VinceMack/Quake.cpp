@@ -4,7 +4,7 @@
 #include "core/types.hpp"
 #include "core/string_utils.hpp"
 #include "core/endian.hpp"
-#include <EASTL/span.h>
+#include <span>
 
 struct sizebuf_t {
     bool allowoverflow = false;
@@ -13,8 +13,8 @@ struct sizebuf_t {
     int maxsize = 0;
     int cursize = 0;
 
-    [[nodiscard]] constexpr eastl::span<byte> as_span() noexcept { return {data, static_cast<size_t>(cursize)}; }
-    [[nodiscard]] constexpr eastl::span<const byte> as_span() const noexcept { return {data, static_cast<size_t>(cursize)}; }
+    [[nodiscard]] constexpr std::span<byte> as_span() noexcept { return {data, static_cast<size_t>(cursize)}; }
+    [[nodiscard]] constexpr std::span<const byte> as_span() const noexcept { return {data, static_cast<size_t>(cursize)}; }
     [[nodiscard]] constexpr int remaining() const noexcept { return maxsize - cursize; }
     [[nodiscard]] constexpr bool has_overflowed() const noexcept { return overflowed; }
 };

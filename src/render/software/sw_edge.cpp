@@ -15,8 +15,8 @@ void R_DrawCulledPolys();
 
 surf_t *surfaces = nullptr, *surface_p = nullptr, *surf_max = nullptr;
 edge_t *r_edges = nullptr, *edge_p = nullptr, *edge_max = nullptr;
-eastl::array<edge_t*, MAXHEIGHT> newedges{};
-eastl::array<edge_t*, MAXHEIGHT> removeedges{};
+std::array<edge_t*, MAXHEIGHT> newedges{};
+std::array<edge_t*, MAXHEIGHT> removeedges{};
 
 edge_t edge_head{}, edge_tail{}, edge_aftertail{};
 static edge_t edge_sentinel{};

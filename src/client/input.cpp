@@ -5,10 +5,10 @@
 #include "ui/menu.hpp"
 
 #include <SDL.h>
-#include <EASTL/array.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/algorithm.h>
+#include <array>
+#include <string>
+#include <string_view>
+#include <algorithm>
 #include <ostream>
 
 using namespace Client;
@@ -40,17 +40,17 @@ using namespace Cmd;
 
 namespace Keys {
 
-eastl::array<eastl::array<char, MAXCMDLINE>, 32> key_lines;
+std::array<std::array<char, MAXCMDLINE>, 32> key_lines;
 int key_linepos, edit_line = 0, history_line = 0;
-eastl::array<char, 32> chat_buffer;
+std::array<char, 32> chat_buffer;
 bool team_message = false;
 int shift_down = false, key_lastpress;
 keydest_t key_dest;
 int key_count;
 
-eastl::array<eastl::string, 256> keybindings;
-eastl::array<bool, 256> consolekeys, menubound, keydown;
-eastl::array<int, 256> keyshift, key_repeats;
+std::array<std::string, 256> keybindings;
+std::array<bool, 256> consolekeys, menubound, keydown;
+std::array<int, 256> keyshift, key_repeats;
 
 struct keyname_t { const char* name; int keynum; };
 constexpr keyname_t keynames[] = {
@@ -87,10 +87,10 @@ void Key_Console(int key) {
         return;
     }
     if (key == K_TAB) {
-        eastl::string_view cmd_view = Cmd::CompleteCommand(key_lines[edit_line].data() + 1);
+        std::string_view cmd_view = Cmd::CompleteCommand(key_lines[edit_line].data() + 1);
         if (cmd_view.empty()) cmd_view = Cvar::CompleteVariable(key_lines[edit_line].data() + 1);
         if (!cmd_view.empty()) {
-            eastl::string cmd_str(cmd_view.data(), cmd_view.length());
+            std::string cmd_str(cmd_view.data(), cmd_view.length());
             Q_strcpy(key_lines[edit_line].data() + 1, cmd_str.c_str());
             key_linepos = Q_strlen(cmd_str.c_str()) + 1;
             key_lines[edit_line][key_linepos++] = ' '; key_lines[edit_line][key_linepos] = 0;
@@ -112,8 +112,8 @@ void Key_Console(int key) {
         return;
     }
     auto& con = GetConsoleSystem();
-    if (key == K_PGUP || key == K_MWHEELUP) { con.SetBackscroll(eastl::min(con.GetBackscroll() + 2, con.GetTotalLines() - (int)(vid.height >> 3) - 1)); return; }
-    if (key == K_PGDN || key == K_MWHEELDOWN) { con.SetBackscroll(eastl::max(0, con.GetBackscroll() - 2)); return; }
+    if (key == K_PGUP || key == K_MWHEELUP) { con.SetBackscroll(std::min(con.GetBackscroll() + 2, con.GetTotalLines() - (int)(vid.height >> 3) - 1)); return; }
+    if (key == K_PGDN || key == K_MWHEELDOWN) { con.SetBackscroll(std::max(0, con.GetBackscroll() - 2)); return; }
     if (key == K_HOME) { con.SetBackscroll(con.GetTotalLines() - (vid.height >> 3) - 1); return; }
     if (key == K_END)  { con.SetBackscroll(0); return; }
     if (key >= 32 && key <= 127 && key_linepos < MAXCMDLINE - 1) {
@@ -134,23 +134,23 @@ void Key_Message(int key) {
     if (key >= 32 && key <= 127 && chat_bufferlen < 31) { chat_buffer[chat_bufferlen++] = static_cast<char>(key); chat_buffer[chat_bufferlen] = 0; }
 }
 
-int Key_StringToKeynum(eastl::string_view str) {
+int Key_StringToKeynum(std::string_view str) {
     if (str.empty()) return -1;
     if (str.size() == 1) return str[0];
-    const auto it = eastl::find_if(eastl::begin(keynames), eastl::end(keynames), [str](const keyname_t& kn) {
+    const auto it = std::find_if(std::begin(keynames), std::end(keynames), [str](const keyname_t& kn) {
         return kn.name && Q_strcasecmp(str, kn.name) == 0;
     });
-    return (it != eastl::end(keynames)) ? it->keynum : -1;
+    return (it != std::end(keynames)) ? it->keynum : -1;
 }
 
 const char* Key_KeynumToString(int keynum) {
     static char tinystr[2];
     if (keynum == -1) return "<KEY NOT FOUND>";
     if (keynum > 32 && keynum < 127) { tinystr[0] = static_cast<char>(keynum); tinystr[1] = 0; return tinystr; }
-    const auto it = eastl::find_if(eastl::begin(keynames), eastl::end(keynames), [keynum](const keyname_t& kn) {
+    const auto it = std::find_if(std::begin(keynames), std::end(keynames), [keynum](const keyname_t& kn) {
         return kn.name && kn.keynum == keynum;
     });
-    return (it != eastl::end(keynames)) ? it->name : "<UNKNOWN KEYNUM>";
+    return (it != std::end(keynames)) ? it->name : "<UNKNOWN KEYNUM>";
 }
 
 void Key_SetBinding(int keynum, const char* binding) { if (keynum >= 0 && keynum < 256) keybindings[keynum] = binding; }

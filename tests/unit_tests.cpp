@@ -126,7 +126,7 @@ void TestCaseInsensitiveCompare() {
     CHECK(Q_strcasecmp("Quake", "qUAKE") == 0);
     CHECK(Q_strcasecmp("abc", "abd") < 0);
     CHECK(Q_strncasecmp("abcdef", "ABCxyz", 3) == 0);
-    CHECK(Q_strcasecmp(eastl::string_view("e1m1"), eastl::string_view("E1M1")) == 0);
+    CHECK(Q_strcasecmp(std::string_view("e1m1"), std::string_view("E1M1")) == 0);
 }
 
 void TestCrc() {

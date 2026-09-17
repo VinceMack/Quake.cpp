@@ -24,7 +24,7 @@ model_t* Mod_LoadModel(model_t* mod, qboolean crash);
 static byte mod_novis[MAX_MAP_LEAFS / 8];
 
 constexpr int MAX_MOD_KNOWN = 256;
-static eastl::array<model_t, MAX_MOD_KNOWN> mod_known;
+static std::array<model_t, MAX_MOD_KNOWN> mod_known;
 static int mod_numknown = 0;
 
 // values for model_t's needload

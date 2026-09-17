@@ -5,9 +5,9 @@
 #include "core/cvar.hpp"
 #include "render/draw2d.hpp"
 
-#include <EASTL/fixed_string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/vector.h>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace Screen {
 
@@ -20,10 +20,10 @@ public:
     void UpdateScreen();
     void SizeUp();
     void SizeDown();
-    void CenterPrint(eastl::string_view str);
+    void CenterPrint(std::string_view str);
     void BeginLoadingPlaque();
     void EndLoadingPlaque();
-    bool ModalMessage(eastl::string_view text);
+    bool ModalMessage(std::string_view text);
 
     [[nodiscard]] vrect_t& GetVrect() { return vrect_; }
     [[nodiscard]] const vrect_t& GetVrect() const { return vrect_; }
@@ -105,8 +105,8 @@ private:
     qboolean block_drawing_ = false;
     qboolean drawdialog_ = false;
 
-    eastl::fixed_string<char, 1024> centerstring_{};
-    eastl::string_view notifystring_{};
+    std::string centerstring_;
+    std::string_view notifystring_{};
 
     qpic_t* ram_pic_ = nullptr;
     qpic_t* net_pic_ = nullptr;

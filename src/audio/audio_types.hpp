@@ -1,9 +1,9 @@
 // audio_types.hpp -- Audio Subsystem Types and Command Structures
 #pragma once
 
-#include <EASTL/array.h>
-#include <EASTL/string_view.h>
-#include <EASTL/span.h>
+#include <array>
+#include <string_view>
+#include <span>
 #include <atomic>
 #include <type_traits>
 
@@ -66,7 +66,7 @@ struct AudioCommand {
     float vol{}, attenuation{};
     bool clear{};
     Vector3 v_forward{}, v_right{}, v_up{};
-    eastl::array<int, NUM_AMBIENTS> ambient_vols{};
+    std::array<int, NUM_AMBIENTS> ambient_vols{};
     float host_frametime{}, ambient_fade{};
     bool snd_ambient{};
     int random_offset{};
@@ -75,7 +75,7 @@ struct AudioCommand {
 template <typename T, size_t Capacity>
 class SPSCQueue {
     static_assert((Capacity & (Capacity - 1)) == 0 && std::is_trivially_copyable_v<T>);
-    eastl::array<T, Capacity> buffer_;
+    std::array<T, Capacity> buffer_;
     alignas(64) std::atomic<size_t> write_idx_{0}, read_idx_{0};
 public:
     [[nodiscard]] bool Push(const T& val) {

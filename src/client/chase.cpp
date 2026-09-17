@@ -44,7 +44,7 @@ void Chase_Update() {
     Vector3 stop;
     TraceLine(r_refdef.vieworg, r_refdef.vieworg + forward * 4096.0f, stop);
     stop = stop - r_refdef.vieworg;
-    float dist = eastl::max(1.0f, stop.dot(forward));
+    float dist = std::max(1.0f, stop.dot(forward));
     r_refdef.viewangles[PITCH] = static_cast<float>(-std::atan(stop.z / dist) / std::numbers::pi * 180.0f);
     r_refdef.vieworg = chase_dest;
 }

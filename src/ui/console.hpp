@@ -2,8 +2,8 @@
 #pragma once
 
 #include <cstdint>
-#include <EASTL/vector.h>
-#include <EASTL/string_view.h>
+#include <vector>
+#include <string_view>
 
 namespace Console {
 
@@ -15,7 +15,7 @@ public:
     void Init();
     void CheckResize();
     void DrawConsole(int lines, bool drawinput);
-    void Print(eastl::string_view txt);
+    void Print(std::string_view txt);
     void Printf(const char* fmt, ...);
     void DPrintf(const char* fmt, ...);
     void Clear();
@@ -39,11 +39,11 @@ private:
     bool initialized_{false}, forcedup_{false}, debuglog_{false};
     int totallines_{0}, backscroll_{0}, notifylines_{0}, linewidth_{0}, current_{0}, x_{0}, vislines_{0};
     float cursorspeed_{4.0f};
-    eastl::vector<char> text_;
-    eastl::vector<float> times_;
+    std::vector<char> text_;
+    std::vector<float> times_;
 
     void Linefeed();
-    void DebugLog(eastl::string_view file, eastl::string_view text);
+    void DebugLog(std::string_view file, std::string_view text);
     void DrawInput();
 };
 
