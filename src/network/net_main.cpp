@@ -49,6 +49,7 @@ static qboolean listening = false;
 static double slistStartTime = 0.0;
 static int slistLastShown = 0;
 static std::vector<std::unique_ptr<qsocket_t>> socket_pool;
+static std::array<byte, NET_MAXMESSAGE> net_message_buf{};
 
 cvar_t net_messagetimeout = { "net_messagetimeout", "300", {}, {}, {}, {} };
 cvar_t hostname = { "hostname", "UNNAMED", {}, {}, {}, {} };
@@ -414,7 +415,7 @@ void NET_Init() {
         s->disconnected = true;
     }
 
-    SZ_Alloc(&net_message, NET_MAXMESSAGE);
+    SZ_Init(&net_message, net_message_buf);
     cvar_t* cvars[] = { &net_messagetimeout, &hostname };
     for (auto* c : cvars) Cvar::Register(c);
 

@@ -3,7 +3,6 @@
 #include "core/types.hpp"
 #include "core/endian.hpp"
 #include "core/string_utils.hpp"
-#include "core/memory.hpp"
 #include "core/cvar.hpp"
 #include "core/cmd.hpp"
 #include "platform/system.hpp"
@@ -13,6 +12,8 @@
 #include "quakedef.hpp"
 
 #include <array>
+#include <memory>
+#include <utility>
 #include <vector>
 #include <SDL.h>
 
@@ -170,20 +171,19 @@ void COM_Init() {
 int com_filesize = 0;
 
 struct packfile_t { char name[MAX_QPATH]; int filepos, filelen; };
-struct pack_t { char filename[MAX_OSPATH]; int handle; int numfiles; packfile_t* files; };
+struct pack_t { char filename[MAX_OSPATH]; int handle; std::vector<packfile_t> files; };
 struct dpackfile_t { char name[56]; int filepos, filelen; };
 struct dpackheader_t { char id[4]; int dirofs; int dirlen; };
 
-constexpr int MAX_FILES_IN_PACK = 2048;
 char com_gamedir[MAX_OSPATH];
 
-struct SearchPath { std::string filename; pack_t* pack = nullptr; };
+struct SearchPath { std::string filename; std::unique_ptr<pack_t> pack; };
 static std::vector<SearchPath> com_searchpaths;
 
 void COM_Path_f(void) {
     Console::Con_Printf("Current search path:\n");
     for (const auto& s : com_searchpaths) {
-        if (s.pack) Console::Con_Printf("%s (%i files)\n", s.pack->filename, s.pack->numfiles);
+        if (s.pack) Console::Con_Printf("%s (%i files)\n", s.pack->filename, static_cast<int>(s.pack->files.size()));
         else Console::Con_Printf("%s\n", s.filename.c_str());
     }
 }
@@ -208,13 +208,13 @@ int COM_FindFile(const char* filename, int* handle, FILE** file) {
     for (; it != com_searchpaths.end(); ++it) {
         const auto& search = *it;
         if (search.pack) {
-            pack_t* pak = search.pack;
-            for (int i = 0; i < pak->numfiles; i++) {
-                if (std::strcmp(pak->files[i].name, filename) == 0) {
+            pack_t* pak = search.pack.get();
+            for (const packfile_t& entry : pak->files) {
+                if (std::strcmp(entry.name, filename) == 0) {
                     Sys_Printf("PackFile: %s : %s\n", pak->filename, filename);
-                    if (handle) { *handle = pak->handle; Sys_FileSeek(pak->handle, pak->files[i].filepos); }
-                    else { fopen_s(file, pak->filename, "rb"); if (*file) fseek(*file, pak->files[i].filepos, SEEK_SET); }
-                    com_filesize = pak->files[i].filelen; return com_filesize;
+                    if (handle) { *handle = pak->handle; Sys_FileSeek(pak->handle, entry.filepos); }
+                    else { fopen_s(file, pak->filename, "rb"); if (*file) fseek(*file, entry.filepos, SEEK_SET); }
+                    com_filesize = entry.filelen; return com_filesize;
                 }
             }
         } else {
@@ -239,63 +239,58 @@ void COM_CloseFile(int h) {
     Sys_FileClose(h);
 }
 
-cache_user_t* loadcache = nullptr;
-byte* loadbuf = nullptr;
-int loadsize = 0;
-
-byte* COM_LoadFile(const char* path, HunkType usehunk) {
-    int h = 0; char base[32];
-    int len = COM_OpenFile(path, &h);
-    if (h == -1) return nullptr;
-    COM_FileBase(path, base);
-    byte* buf = nullptr;
-    switch (usehunk) {
-    case HunkType::Hunk: buf = static_cast<byte*>(Hunk_Alloc(len + 1, base)); break;
-    case HunkType::HunkTemp: buf = static_cast<byte*>(Hunk_TempAlloc(len + 1)); break;
-    case HunkType::Zone: buf = static_cast<byte*>(Z_Malloc(len + 1)); break;
-    case HunkType::Cache: buf = static_cast<byte*>(Cache_Alloc(loadcache, len + 1, base)); break;
-    case HunkType::Stack: buf = (len + 1 > loadsize) ? static_cast<byte*>(Hunk_TempAlloc(len + 1)) : loadbuf; break;
-    default: Sys_Error("COM_LoadFile: bad usehunk");
-    }
-    if (!buf) Sys_Error("COM_LoadFile: not enough space for %s", path);
-    buf[len] = 0;
-    Draw::Draw_BeginDisc(); Sys_FileRead(h, buf, len); COM_CloseFile(h); Draw::Draw_EndDisc();
-    return buf;
+std::vector<byte> COM_LoadFile(const char* path) {
+    int handle = 0;
+    int len = COM_OpenFile(path, &handle);
+    if (handle == -1) return {};
+    std::vector<byte> buffer(static_cast<size_t>(len) + 1); // trailing zero for text files
+    Draw::Draw_BeginDisc();
+    Sys_FileRead(handle, buffer.data(), len);
+    COM_CloseFile(handle);
+    Draw::Draw_EndDisc();
+    return buffer;
 }
 
-void COM_LoadCacheFile(const char* path, cache_user_s* cu) { loadcache = cu; COM_LoadFile(path, HunkType::Cache); }
-byte* COM_LoadStackFile(const char* path, void* buffer, int bufsize) { loadbuf = static_cast<byte*>(buffer); loadsize = bufsize; return COM_LoadFile(path, HunkType::Stack); }
-
-pack_t* COM_LoadPackFile(char* packfile) {
-    dpackheader_t header; dpackfile_t info[MAX_FILES_IN_PACK];
+std::unique_ptr<pack_t> COM_LoadPackFile(const char* packfile) {
     int packhandle = 0;
     if (Sys_FileOpenRead(packfile, &packhandle) == -1) return nullptr;
+
+    dpackheader_t header;
     Sys_FileRead(packhandle, &header, sizeof(header));
     if (header.id[0] != 'P' || header.id[1] != 'A' || header.id[2] != 'C' || header.id[3] != 'K') Sys_Error("%s is not a packfile", packfile);
-    header.dirofs = LittleLong(header.dirofs); header.dirlen = LittleLong(header.dirlen);
-    int numpackfiles = header.dirlen / sizeof(dpackfile_t);
-    if (numpackfiles > MAX_FILES_IN_PACK) Sys_Error("%s has %i files", packfile, numpackfiles);
-    auto* newfiles = static_cast<packfile_t*>(Hunk_Alloc(numpackfiles * sizeof(packfile_t), "packfile"));
-    Sys_FileSeek(packhandle, header.dirofs); Sys_FileRead(packhandle, info, header.dirlen);
-    for (int i = 0; i < numpackfiles; i++) {
-        strcpy_s(newfiles[i].name, sizeof(newfiles[i].name), info[i].name);
-        newfiles[i].filepos = LittleLong(info[i].filepos); newfiles[i].filelen = LittleLong(info[i].filelen);
-    }
-    auto* pack = static_cast<pack_t*>(Hunk_Alloc(sizeof(pack_t)));
+    header.dirofs = LittleLong(header.dirofs);
+    header.dirlen = LittleLong(header.dirlen);
+    const int numpackfiles = header.dirlen / static_cast<int>(sizeof(dpackfile_t));
+
+    std::vector<dpackfile_t> info(static_cast<size_t>(numpackfiles));
+    Sys_FileSeek(packhandle, header.dirofs);
+    Sys_FileRead(packhandle, info.data(), header.dirlen);
+
+    auto pack = std::make_unique<pack_t>();
     strcpy_s(pack->filename, sizeof(pack->filename), packfile);
-    pack->handle = packhandle; pack->numfiles = numpackfiles; pack->files = newfiles;
+    pack->handle = packhandle;
+    pack->files.resize(info.size());
+    for (size_t i = 0; i < info.size(); i++) {
+        strcpy_s(pack->files[i].name, sizeof(pack->files[i].name), info[i].name);
+        pack->files[i].filepos = LittleLong(info[i].filepos);
+        pack->files[i].filelen = LittleLong(info[i].filelen);
+    }
     Console::Con_Printf("Added packfile %s (%i files)\n", packfile, numpackfiles);
     return pack;
 }
 
 void COM_AddGameDirectory(const char* dir) {
     char pakfile[MAX_OSPATH]; strcpy_s(com_gamedir, sizeof(com_gamedir), dir);
-    SearchPath search; search.filename = dir; com_searchpaths.insert(com_searchpaths.begin(), search);
+    SearchPath search;
+    search.filename = dir;
+    com_searchpaths.insert(com_searchpaths.begin(), std::move(search));
     for (int i = 0;; i++) {
         sprintf_s(pakfile, sizeof(pakfile), "%s/pak%i.pak", dir, i);
-        pack_t* pak = COM_LoadPackFile(pakfile);
+        std::unique_ptr<pack_t> pak = COM_LoadPackFile(pakfile);
         if (!pak) break;
-        SearchPath sp; sp.pack = pak; com_searchpaths.insert(com_searchpaths.begin(), sp);
+        SearchPath sp;
+        sp.pack = std::move(pak);
+        com_searchpaths.insert(com_searchpaths.begin(), std::move(sp));
     }
 }
 
@@ -321,7 +316,7 @@ void COM_InitFilesystem(void) {
                 sp.pack = COM_LoadPackFile(com_argv[i]);
                 if (!sp.pack) Sys_Error("Couldn't load packfile: %s", com_argv[i]);
             } else sp.filename = com_argv[i];
-            com_searchpaths.insert(com_searchpaths.begin(), sp);
+            com_searchpaths.insert(com_searchpaths.begin(), std::move(sp));
         }
     }
     if (COM_CheckParm("-proghack")) proghack = true;

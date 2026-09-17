@@ -19,10 +19,12 @@
 #include "world/model.hpp"
 #include "core/cmd.hpp"
 #include "core/cvar.hpp"
-#include "core/memory.hpp"
 #include "platform/system.hpp"
 #include "audio/audio_main.hpp"
 #include "ui/console.hpp"
+
+#include <new>
+#include <vector>
 
 using namespace Common;
 using namespace Console;
@@ -97,8 +99,8 @@ cvar_t r_numedges = { "r_numedges", "0", false };
 
 void R_InitTextures()
 {
-    r_notexture_mip = static_cast<texture_t*>(Hunk_Alloc(
-        sizeof(texture_t) + 16 * 16 + 8 * 8 + 4 * 4 + 2 * 2, "notexture"));
+    static std::vector<byte> notexture_storage(sizeof(texture_t) + 16 * 16 + 8 * 8 + 4 * 4 + 2 * 2);
+    r_notexture_mip = new (notexture_storage.data()) texture_t{};
     r_notexture_mip->width = r_notexture_mip->height = 16;
     r_notexture_mip->offsets[0] = sizeof(texture_t);
     r_notexture_mip->offsets[1] = r_notexture_mip->offsets[0] + 16 * 16;
@@ -171,7 +173,9 @@ void R_NewMap()
         r_cnumsurfs = MINSURFACES;
     }
     if (r_cnumsurfs > NUMSTACKSURFACES) {
-        surfaces = static_cast<surf_t*>(Hunk_Alloc(r_cnumsurfs * sizeof(surf_t), "surfaces"));
+        static std::vector<surf_t> surfaces_storage;
+        surfaces_storage.assign(static_cast<size_t>(r_cnumsurfs), surf_t{});
+        surfaces = surfaces_storage.data();
         surface_p = surfaces;
         surf_max = &surfaces[r_cnumsurfs];
         r_surfsonstack = false;
@@ -188,7 +192,9 @@ void R_NewMap()
     if (r_numallocatededges <= NUMSTACKEDGES) {
         auxedges = nullptr;
     } else {
-        auxedges = static_cast<edge_t*>(Hunk_Alloc(r_numallocatededges * sizeof(edge_t), "edges"));
+        static std::vector<edge_t> edges_storage;
+        edges_storage.assign(static_cast<size_t>(r_numallocatededges), edge_t{});
+        auxedges = edges_storage.data();
     }
     r_dowarpold = false;
     r_viewchanged = false;

@@ -29,7 +29,6 @@ set(ENGINE_SRCS
     src/core/string_utils.cpp
     src/core/cvar.cpp
     src/core/cmd.cpp
-    src/core/memory.cpp
     src/core/msg.cpp
     src/core/filesystem.cpp
     src/core/wad.cpp

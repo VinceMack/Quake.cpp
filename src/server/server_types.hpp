@@ -171,9 +171,11 @@ struct server_t {
     std::array<char*, MAX_MODELS> model_precache{};
     std::array<struct model_s*, MAX_MODELS> models{};
     std::array<char*, MAX_SOUNDS> sound_precache{};
-    std::array<char*, MAX_LIGHTSTYLES> lightstyles{};
+    std::array<const char*, MAX_LIGHTSTYLES> lightstyles{};
+    std::array<std::string, MAX_LIGHTSTYLES> loaded_lightstyles{}; // backing store for styles read from a savegame
     int num_edicts{0};
     int max_edicts{0};
+    std::vector<byte> edicts_storage; // max_edicts * pr_edict_size bytes, zero-initialized
     edict_t* edicts{nullptr};
 
     server_state_t state{server_state_t::ss_loading};

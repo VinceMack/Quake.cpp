@@ -18,9 +18,6 @@ constexpr double VERSION = 1.09;
 
 constexpr int CACHE_SIZE = 32; // used to align key data structures
 
-constexpr int MINIMUM_MEMORY = 0x550000;
-constexpr int MINIMUM_MEMORY_LEVELPAK = MINIMUM_MEMORY + 0x100000;
-
 constexpr int MAX_NUM_ARGVS = 50;
 
 // up / down

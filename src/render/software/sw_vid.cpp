@@ -5,6 +5,7 @@
 #include <SDL.h>
 #include <cstdio>
 #include <cstring>
+#include <vector>
 
 using namespace Common;
 using namespace Host;
@@ -23,6 +24,7 @@ void VID_HandlePause()
 
 static SDL_Window* window = nullptr;
 static SDL_Surface* screen = nullptr;
+static std::vector<byte> video_storage; // z-buffer followed by the surface cache
 
 SDL_Window* GetWindow() noexcept
 {
@@ -46,7 +48,7 @@ void VID_SetPalette(unsigned char* palette)
 
 void VID_Init(unsigned char* palette)
 {
-    int pnum, chunk;
+    int pnum;
     byte* cache;
     int cachesize;
     Uint32 flags;
@@ -111,14 +113,11 @@ void VID_Init(unsigned char* palette)
     vid.rowbytes = screen->pitch;
     vid.conbuffer = vid.buffer;
     vid.conrowbytes = vid.rowbytes;
-    chunk = vid.width * vid.height * sizeof(*d_pzbuffer);
+    const size_t zbuffer_bytes = static_cast<size_t>(vid.width) * vid.height * sizeof(*d_pzbuffer);
     cachesize = D_SurfaceCacheForRes(vid.width, vid.height);
-    chunk += cachesize;
-    d_pzbuffer = (short *) Hunk_HighAllocName(chunk, "video");
-    if (d_pzbuffer == NULL) {
-        Sys_Error("Not enough memory for video mode\n");
-    }
-    cache = (byte*)d_pzbuffer + vid.width * vid.height * sizeof(*d_pzbuffer);
+    video_storage.assign(zbuffer_bytes + static_cast<size_t>(cachesize), 0);
+    d_pzbuffer = reinterpret_cast<short*>(video_storage.data());
+    cache = video_storage.data() + zbuffer_bytes;
     D_InitCaches(cache, cachesize);
     SDL_ShowCursor(0);
 }

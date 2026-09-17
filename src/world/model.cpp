@@ -3,6 +3,10 @@
 #include "world/bsp_format.hpp"
 #include "world/model.hpp"
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 using namespace Common;
 using namespace Console;
 using namespace Cmd;
@@ -45,15 +49,13 @@ void* Mod_Extradata(model_t* mod)
     if (!mod) {
         Sys_Error("Mod_Extradata: NULL mod");
     }
-    void* r = Cache_Check(&mod->cache);
-    if (r) {
-        return r;
+    if (!mod->extradata) {
+        Mod_LoadModel(mod, true);
+        if (!mod->extradata) {
+            Sys_Error("Mod_Extradata: %s has no frame data", mod->name);
+        }
     }
-    Mod_LoadModel(mod, true);
-    if (!mod->cache.data) {
-        Sys_Error("Mod_Extradata: caching failed");
-    }
-    return mod->cache.data;
+    return mod->extradata;
 }
 
 mleaf_t* Mod_PointInLeaf(const Vector3& p, model_t* model)
@@ -144,11 +146,7 @@ model_t* Mod_FindName(const char* name)
     if (mod_numknown == MAX_MOD_KNOWN) {
         if (avail) {
             mod = avail;
-            if (mod->type == mod_alias) {
-                if (Cache_Check(&mod->cache)) {
-                    Cache_Free(&mod->cache);
-                }
-            }
+            *mod = model_t{};
         } else {
             Sys_Error("mod_numknown == MAX_MOD_KNOWN");
         }
@@ -161,32 +159,14 @@ model_t* Mod_FindName(const char* name)
     return mod;
 }
 
-void Mod_TouchModel(char* name)
-{
-    model_t* mod = Mod_FindName(name);
-    if (mod->needload == NL_PRESENT) {
-        if (mod->type == mod_alias) {
-            Cache_Check(&mod->cache);
-        }
-    }
-}
-
 model_t* Mod_LoadModel(model_t* mod, qboolean crash)
 {
-    if (mod->type == mod_alias) {
-        if (Cache_Check(&mod->cache)) {
-            mod->needload = NL_PRESENT;
-            return mod;
-        }
-    } else {
-        if (mod->needload == NL_PRESENT) {
-            return mod;
-        }
+    if (mod->needload == NL_PRESENT) {
+        return mod;
     }
-    // load the file
-    byte stackbuf[1024]; // avoid dirtying the cache heap
-    unsigned* buf = reinterpret_cast<unsigned*>(COM_LoadStackFile(mod->name, stackbuf, sizeof(stackbuf)));
-    if (!buf) {
+    std::vector<byte> file = COM_LoadFile(mod->name);
+    unsigned* buf = reinterpret_cast<unsigned*>(file.data());
+    if (file.empty()) {
         if (crash) {
             Sys_Error("Mod_NumForName: %s not found", mod->name);
         }
@@ -226,9 +206,9 @@ void Mod_LoadTextures(lump_t* l)
     dmiptexlump_t* m = reinterpret_cast<dmiptexlump_t*>(mod_base + l->fileofs);
     m->nummiptex = LittleLong(m->nummiptex);
     loadmodel->numtextures = m->nummiptex;
-    loadmodel->textures_owner.resize(m->nummiptex);
-    loadmodel->textures = loadmodel->textures_owner.data();
-    loadmodel->texture_allocations.clear();
+    loadmodel->brush->textures.resize(m->nummiptex);
+    loadmodel->textures = loadmodel->brush->textures.data();
+    loadmodel->brush->texture_data.clear();
     for (int i = 0; i < m->nummiptex; i++) {
         m->dataofs[i] = LittleLong(m->dataofs[i]);
         if (m->dataofs[i] == -1) {
@@ -246,8 +226,8 @@ void Mod_LoadTextures(lump_t* l)
         }
         int pixels = mt->width * mt->height / 64 * 85;
         int texture_size = sizeof(texture_t) + pixels;
-        loadmodel->texture_allocations.emplace_back();
-        auto& tex_buf = loadmodel->texture_allocations.back();
+        loadmodel->brush->texture_data.emplace_back();
+        auto& tex_buf = loadmodel->brush->texture_data.back();
         tex_buf.resize(texture_size);
         texture_t* tx = reinterpret_cast<texture_t*>(tex_buf.data());
         loadmodel->textures[i] = tx;
@@ -359,8 +339,8 @@ void Mod_LoadLighting(lump_t* l)
         loadmodel->lightdata = nullptr;
         return;
     }
-    loadmodel->lightdata_owner.resize(l->filelen);
-    loadmodel->lightdata = loadmodel->lightdata_owner.data();
+    loadmodel->brush->lightdata.resize(l->filelen);
+    loadmodel->lightdata = loadmodel->brush->lightdata.data();
     std::memcpy(loadmodel->lightdata, mod_base + l->fileofs, l->filelen);
 }
 
@@ -370,8 +350,8 @@ void Mod_LoadVisibility(lump_t* l)
         loadmodel->visdata = nullptr;
         return;
     }
-    loadmodel->visdata_owner.resize(l->filelen);
-    loadmodel->visdata = loadmodel->visdata_owner.data();
+    loadmodel->brush->visdata.resize(l->filelen);
+    loadmodel->visdata = loadmodel->brush->visdata.data();
     std::memcpy(loadmodel->visdata, mod_base + l->fileofs, l->filelen);
 }
 
@@ -381,8 +361,8 @@ void Mod_LoadEntities(lump_t* l)
         loadmodel->entities = nullptr;
         return;
     }
-    loadmodel->entities_owner.resize(l->filelen);
-    loadmodel->entities = loadmodel->entities_owner.data();
+    loadmodel->brush->entities.resize(l->filelen);
+    loadmodel->entities = loadmodel->brush->entities.data();
     std::memcpy(loadmodel->entities, mod_base + l->fileofs, l->filelen);
 }
 
@@ -392,8 +372,8 @@ void Mod_LoadVertexes(lump_t* l)
         Sys_Error("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     int count = l->filelen / sizeof(dvertex_t);
-    loadmodel->vertexes_owner.resize(count);
-    loadmodel->vertexes = loadmodel->vertexes_owner.data();
+    loadmodel->brush->vertexes.resize(count);
+    loadmodel->vertexes = loadmodel->brush->vertexes.data();
     loadmodel->numvertexes = count;
     dvertex_t* in = reinterpret_cast<dvertex_t*>(mod_base + l->fileofs);
     mvertex_t* out = loadmodel->vertexes;
@@ -410,8 +390,8 @@ void Mod_LoadSubmodels(lump_t* l)
         Sys_Error("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     int count = l->filelen / sizeof(dmodel_t);
-    loadmodel->submodels_owner.resize(count);
-    loadmodel->submodels = loadmodel->submodels_owner.data();
+    loadmodel->brush->submodels.resize(count);
+    loadmodel->submodels = loadmodel->brush->submodels.data();
     loadmodel->numsubmodels = count;
     dmodel_t* in = reinterpret_cast<dmodel_t*>(mod_base + l->fileofs);
     dmodel_t* out = loadmodel->submodels;
@@ -436,8 +416,8 @@ void Mod_LoadEdges(lump_t* l)
         Sys_Error("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     int count = l->filelen / sizeof(dedge_t);
-    loadmodel->edges_owner.resize(count + 1);
-    loadmodel->edges = loadmodel->edges_owner.data();
+    loadmodel->brush->edges.resize(count + 1);
+    loadmodel->edges = loadmodel->brush->edges.data();
     loadmodel->numedges = count;
     dedge_t* in = reinterpret_cast<dedge_t*>(mod_base + l->fileofs);
     medge_t* out = loadmodel->edges;
@@ -453,8 +433,8 @@ void Mod_LoadTexinfo(lump_t* l)
         Sys_Error("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     int count = l->filelen / sizeof(texinfo_t);
-    loadmodel->texinfo_owner.resize(count);
-    loadmodel->texinfo = loadmodel->texinfo_owner.data();
+    loadmodel->brush->texinfo.resize(count);
+    loadmodel->texinfo = loadmodel->brush->texinfo.data();
     loadmodel->numtexinfo = count;
     texinfo_t* in = reinterpret_cast<texinfo_t*>(mod_base + l->fileofs);
     mtexinfo_t* out = loadmodel->texinfo;
@@ -533,8 +513,8 @@ void Mod_LoadFaces(lump_t* l)
         Sys_Error("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     int count = l->filelen / sizeof(dface_t);
-    loadmodel->surfaces_owner.resize(count);
-    loadmodel->surfaces = loadmodel->surfaces_owner.data();
+    loadmodel->brush->surfaces.resize(count);
+    loadmodel->surfaces = loadmodel->brush->surfaces.data();
     loadmodel->numsurfaces = count;
     dface_t* in = reinterpret_cast<dface_t*>(mod_base + l->fileofs);
     msurface_t* out = loadmodel->surfaces;
@@ -594,8 +574,8 @@ void Mod_LoadNodes(lump_t* l)
         Sys_Error("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     int count = l->filelen / sizeof(dnode_t);
-    loadmodel->nodes_owner.resize(count);
-    loadmodel->nodes = loadmodel->nodes_owner.data();
+    loadmodel->brush->nodes.resize(count);
+    loadmodel->nodes = loadmodel->brush->nodes.data();
     loadmodel->numnodes = count;
     dnode_t* in = reinterpret_cast<dnode_t*>(mod_base + l->fileofs);
     mnode_t* out = loadmodel->nodes;
@@ -626,8 +606,8 @@ void Mod_LoadLeafs(lump_t* l)
         Sys_Error("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     int count = l->filelen / sizeof(dleaf_t);
-    loadmodel->leafs_owner.resize(count);
-    loadmodel->leafs = loadmodel->leafs_owner.data();
+    loadmodel->brush->leafs.resize(count);
+    loadmodel->leafs = loadmodel->brush->leafs.data();
     loadmodel->numleafs = count;
     dleaf_t* in = reinterpret_cast<dleaf_t*>(mod_base + l->fileofs);
     mleaf_t* out = loadmodel->leafs;
@@ -659,8 +639,8 @@ void Mod_LoadClipnodes(lump_t* l)
         Sys_Error("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     int count = l->filelen / sizeof(dclipnode_t);
-    loadmodel->clipnodes_owner.resize(count);
-    loadmodel->clipnodes = loadmodel->clipnodes_owner.data();
+    loadmodel->brush->clipnodes.resize(count);
+    loadmodel->clipnodes = loadmodel->brush->clipnodes.data();
     loadmodel->numclipnodes = count;
     dclipnode_t* in = reinterpret_cast<dclipnode_t*>(mod_base + l->fileofs);
     dclipnode_t* out = loadmodel->clipnodes;
@@ -698,8 +678,8 @@ void Mod_MakeHull0(void)
     hull_t* hull = &loadmodel->hulls[0];
     mnode_t* in = loadmodel->nodes;
     int count = loadmodel->numnodes;
-    loadmodel->hull0_clipnodes_owner.resize(count);
-    dclipnode_t* out = loadmodel->hull0_clipnodes_owner.data();
+    loadmodel->brush->hull0_clipnodes.resize(count);
+    dclipnode_t* out = loadmodel->brush->hull0_clipnodes.data();
     hull->clipnodes = out;
     hull->firstclipnode = 0;
     hull->lastclipnode = count - 1;
@@ -723,8 +703,8 @@ void Mod_LoadMarksurfaces(lump_t* l)
         Sys_Error("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     int count = l->filelen / sizeof(short);
-    loadmodel->marksurfaces_owner.resize(count);
-    loadmodel->marksurfaces = loadmodel->marksurfaces_owner.data();
+    loadmodel->brush->marksurfaces.resize(count);
+    loadmodel->marksurfaces = loadmodel->brush->marksurfaces.data();
     loadmodel->nummarksurfaces = count;
     short* in = reinterpret_cast<short*>(mod_base + l->fileofs);
     msurface_t** out = loadmodel->marksurfaces;
@@ -743,8 +723,8 @@ void Mod_LoadSurfedges(lump_t* l)
         Sys_Error("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     int count = l->filelen / sizeof(int);
-    loadmodel->surfedges_owner.resize(count);
-    loadmodel->surfedges = loadmodel->surfedges_owner.data();
+    loadmodel->brush->surfedges.resize(count);
+    loadmodel->surfedges = loadmodel->brush->surfedges.data();
     loadmodel->numsurfedges = count;
     int* in = reinterpret_cast<int*>(mod_base + l->fileofs);
     int* out = loadmodel->surfedges;
@@ -759,8 +739,8 @@ void Mod_LoadPlanes(lump_t* l)
         Sys_Error("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     int count = l->filelen / sizeof(dplane_t);
-    loadmodel->planes_owner.resize(count);
-    loadmodel->planes = loadmodel->planes_owner.data();
+    loadmodel->brush->planes.resize(count);
+    loadmodel->planes = loadmodel->brush->planes.data();
     loadmodel->numplanes = count;
     dplane_t* in = reinterpret_cast<dplane_t*>(mod_base + l->fileofs);
     mplane_t* out = loadmodel->planes;
@@ -790,6 +770,7 @@ float RadiusFromBounds(const Vector3& mins, const Vector3& maxs)
 void Mod_LoadBrushModel(model_t* mod, void* buffer)
 {
     loadmodel->type = mod_brush;
+    loadmodel->brush = std::make_shared<BrushModelData>();
     dheader_t* header = reinterpret_cast<dheader_t*>(buffer);
     int version = LittleLong(header->version);
     if (version != BSPVERSION) {
@@ -848,6 +829,97 @@ void Mod_LoadBrushModel(model_t* mod, void* buffer)
     }
 }
 
+namespace {
+
+// Bump allocator used while building an alias model's frame data. Every reference inside
+// the block is a byte offset from the block start (the original engine copied the block
+// into its cache), so the finished block can live anywhere.
+class AliasArena {
+public:
+    explicit AliasArena(size_t capacity) : buffer_(capacity) {}
+
+    void* Alloc(size_t size) {
+        size = Align(size);
+        if (used_ + size > buffer_.size()) {
+            Sys_Error("Mod_LoadAliasModel: %s needs more memory than Mod_AliasModelMemorySize computed", loadname);
+        }
+        void* p = buffer_.data() + used_;
+        used_ += size;
+        return p;
+    }
+
+    std::vector<byte> Finish() {
+        if (used_ != buffer_.size()) {
+            Sys_Error("Mod_LoadAliasModel: %s used %zu of %zu arena bytes", loadname, used_, buffer_.size());
+        }
+        return std::move(buffer_);
+    }
+
+    static size_t Align(size_t n) { return (n + 15) & ~static_cast<size_t>(15); }
+
+private:
+    std::vector<byte> buffer_;
+    size_t used_ = 0;
+};
+
+AliasArena* alias_arena = nullptr;
+
+// Walks an .mdl file the same way Mod_LoadAliasModel does and returns the exact number
+// of bytes the in-memory block will need. Keep this in step with the loader.
+size_t Mod_AliasModelMemorySize(const mdl_t* pinmodel)
+{
+    const auto aligned = AliasArena::Align;
+    const int numskins = LittleLong(pinmodel->numskins);
+    const int numframes = LittleLong(pinmodel->numframes);
+    const int numverts = LittleLong(pinmodel->numverts);
+    const int numtris = LittleLong(pinmodel->numtris);
+    const size_t skinsize = static_cast<size_t>(LittleLong(pinmodel->skinheight)) * LittleLong(pinmodel->skinwidth);
+    const size_t vertbytes = static_cast<size_t>(numverts) * sizeof(trivertx_t);
+
+    size_t total = aligned(sizeof(aliashdr_t) + (numframes - 1) * sizeof(aliashdr_t::frames[0]) + sizeof(mdl_t)
+        + numverts * sizeof(stvert_t) + numtris * sizeof(mtriangle_t));
+    total += aligned(numskins * sizeof(maliasskindesc_t));
+
+    const byte* p = reinterpret_cast<const byte*>(pinmodel + 1);
+    for (int i = 0; i < numskins; i++) {
+        const auto type = static_cast<aliasskintype_t>(LittleLong(static_cast<int>(reinterpret_cast<const daliasskintype_t*>(p)->type)));
+        p += sizeof(daliasskintype_t);
+        if (type == aliasskintype_t::ALIAS_SKIN_SINGLE) {
+            total += aligned(skinsize);
+            p += skinsize;
+        } else {
+            const int groupskins = LittleLong(reinterpret_cast<const daliasskingroup_t*>(p)->numskins);
+            p += sizeof(daliasskingroup_t);
+            total += aligned(sizeof(maliasskingroup_t) + (groupskins - 1) * sizeof(maliasskindesc_t));
+            total += aligned(groupskins * sizeof(float));
+            p += groupskins * sizeof(daliasskininterval_t);
+            total += groupskins * aligned(skinsize);
+            p += groupskins * skinsize;
+        }
+    }
+    p += numverts * sizeof(stvert_t) + numtris * sizeof(dtriangle_t);
+    for (int i = 0; i < numframes; i++) {
+        const auto type = static_cast<aliasframetype_t>(LittleLong(static_cast<int>(reinterpret_cast<const daliasframetype_t*>(p)->type)));
+        p += sizeof(daliasframetype_t);
+        const size_t framebytes = sizeof(daliasframe_t) + vertbytes;
+        if (type == aliasframetype_t::ALIAS_SINGLE) {
+            total += aligned(vertbytes);
+            p += framebytes;
+        } else {
+            const int groupframes = LittleLong(reinterpret_cast<const daliasgroup_t*>(p)->numframes);
+            p += sizeof(daliasgroup_t);
+            total += aligned(sizeof(maliasgroup_t) + (groupframes - 1) * sizeof(maliasgroupframedesc_t));
+            total += aligned(groupframes * sizeof(float));
+            p += groupframes * sizeof(daliasinterval_t);
+            total += groupframes * aligned(vertbytes);
+            p += groupframes * framebytes;
+        }
+    }
+    return total;
+}
+
+} // namespace
+
 void* Mod_LoadAliasFrame(void* pin,
     int* pframeindex,
     int numv,
@@ -865,7 +937,7 @@ void* Mod_LoadAliasFrame(void* pin,
         pbboxmax->v[i] = pdaliasframe->bboxmax.v[i];
     }
     trivertx_t* pinframe = reinterpret_cast<trivertx_t*>(pdaliasframe + 1);
-    trivertx_t* pframe = reinterpret_cast<trivertx_t*>(Hunk_Alloc(numv * sizeof(*pframe), loadname));
+    trivertx_t* pframe = reinterpret_cast<trivertx_t*>(alias_arena->Alloc(numv * sizeof(*pframe)));
     *pframeindex = static_cast<int>(reinterpret_cast<byte*>(pframe) - reinterpret_cast<byte*>(pheader));
     for (int j = 0; j < numv; j++) {
         // these are all byte values, so no need to deal with endianness
@@ -888,9 +960,8 @@ void* Mod_LoadAliasGroup(void* pin,
 {
     daliasgroup_t* pingroup = reinterpret_cast<daliasgroup_t*>(pin);
     int numframes = LittleLong(pingroup->numframes);
-    maliasgroup_t* paliasgroup = reinterpret_cast<maliasgroup_t*>(Hunk_Alloc(
-        sizeof(maliasgroup_t) + (numframes - 1) * sizeof(paliasgroup->frames[0]),
-        loadname));
+    maliasgroup_t* paliasgroup = reinterpret_cast<maliasgroup_t*>(alias_arena->Alloc(
+        sizeof(maliasgroup_t) + (numframes - 1) * sizeof(paliasgroup->frames[0])));
     paliasgroup->numframes = numframes;
     for (int i = 0; i < 3; i++) {
         // these are byte values, so we don't have to worry about endianness
@@ -899,7 +970,7 @@ void* Mod_LoadAliasGroup(void* pin,
     }
     *pframeindex = static_cast<int>(reinterpret_cast<byte*>(paliasgroup) - reinterpret_cast<byte*>(pheader));
     daliasinterval_t* pin_intervals = reinterpret_cast<daliasinterval_t*>(pingroup + 1);
-    float* poutintervals = reinterpret_cast<float*>(Hunk_Alloc(numframes * sizeof(float), loadname));
+    float* poutintervals = reinterpret_cast<float*>(alias_arena->Alloc(numframes * sizeof(float)));
     paliasgroup->intervals = static_cast<int>(reinterpret_cast<byte*>(poutintervals) - reinterpret_cast<byte*>(pheader));
     for (int i = 0; i < numframes; i++) {
         *poutintervals = LittleFloat(pin_intervals->interval);
@@ -923,7 +994,7 @@ void* Mod_LoadAliasSkin(void* pin,
     int skinsize,
     aliashdr_t* pheader)
 {
-    byte* pskin = reinterpret_cast<byte*>(Hunk_Alloc(skinsize, loadname));
+    byte* pskin = reinterpret_cast<byte*>(alias_arena->Alloc(skinsize));
     byte* pinskin = reinterpret_cast<byte*>(pin);
     *pskinindex = static_cast<int>(reinterpret_cast<byte*>(pskin) - reinterpret_cast<byte*>(pheader));
     Q_memcpy(pskin, pinskin, skinsize);
@@ -938,13 +1009,12 @@ void* Mod_LoadAliasSkinGroup(void* pin,
 {
     daliasskingroup_t* pinskingroup = reinterpret_cast<daliasskingroup_t*>(pin);
     int numskins = LittleLong(pinskingroup->numskins);
-    maliasskingroup_t* paliasskingroup = reinterpret_cast<maliasskingroup_t*>(Hunk_Alloc(
-        sizeof(maliasskingroup_t) + (numskins - 1) * sizeof(paliasskingroup->skindescs[0]),
-        loadname));
+    maliasskingroup_t* paliasskingroup = reinterpret_cast<maliasskingroup_t*>(alias_arena->Alloc(
+        sizeof(maliasskingroup_t) + (numskins - 1) * sizeof(paliasskingroup->skindescs[0])));
     paliasskingroup->numskins = numskins;
     *pskinindex = static_cast<int>(reinterpret_cast<byte*>(paliasskingroup) - reinterpret_cast<byte*>(pheader));
     daliasskininterval_t* pinskinintervals = reinterpret_cast<daliasskininterval_t*>(pinskingroup + 1);
-    float* poutskinintervals = reinterpret_cast<float*>(Hunk_Alloc(numskins * sizeof(float), loadname));
+    float* poutskinintervals = reinterpret_cast<float*>(alias_arena->Alloc(numskins * sizeof(float)));
     paliasskingroup->intervals = static_cast<int>(reinterpret_cast<byte*>(poutskinintervals) - reinterpret_cast<byte*>(pheader));
     for (int i = 0; i < numskins; i++) {
         *poutskinintervals = LittleFloat(pinskinintervals->interval);
@@ -964,19 +1034,20 @@ void* Mod_LoadAliasSkinGroup(void* pin,
 
 void Mod_LoadAliasModel(model_t* mod, void* buffer)
 {
-    int start = Hunk_LowMark();
     mdl_t* pinmodel = reinterpret_cast<mdl_t*>(buffer);
     int version = LittleLong(pinmodel->version);
     if (version != ALIAS_VERSION) {
         Sys_Error("%s has wrong version number (%i should be %i)", mod->name,
             version, ALIAS_VERSION);
     }
+    AliasArena arena(Mod_AliasModelMemorySize(pinmodel));
+    alias_arena = &arena;
     //
     // allocate space for a working header, plus all the data except the frames,
     // skin and group info
     //
     int size = sizeof(aliashdr_t) + (LittleLong(pinmodel->numframes) - 1) * sizeof(aliashdr_t::frames[0]) + sizeof(mdl_t) + LittleLong(pinmodel->numverts) * sizeof(stvert_t) + LittleLong(pinmodel->numtris) * sizeof(mtriangle_t);
-    aliashdr_t* pheader = reinterpret_cast<aliashdr_t*>(Hunk_Alloc(size, loadname));
+    aliashdr_t* pheader = reinterpret_cast<aliashdr_t*>(alias_arena->Alloc(size));
     mdl_t* pmodel = reinterpret_cast<mdl_t*>(reinterpret_cast<byte*>(&pheader[1]) + (LittleLong(pinmodel->numframes) - 1) * sizeof(pheader->frames[0]));
     mod->flags = LittleLong(pinmodel->flags);
     //
@@ -1023,7 +1094,7 @@ void Mod_LoadAliasModel(model_t* mod, void* buffer)
         Sys_Error("Mod_LoadAliasModel: Invalid # of skins: %d\n", numskins);
     }
     daliasskintype_t* pskintype = reinterpret_cast<daliasskintype_t*>(&pinmodel[1]);
-    maliasskindesc_t* pskindesc = reinterpret_cast<maliasskindesc_t*>(Hunk_Alloc(numskins * sizeof(maliasskindesc_t), loadname));
+    maliasskindesc_t* pskindesc = reinterpret_cast<maliasskindesc_t*>(alias_arena->Alloc(numskins * sizeof(maliasskindesc_t)));
     pheader->skindesc = static_cast<int>(reinterpret_cast<byte*>(pskindesc) - reinterpret_cast<byte*>(pheader));
     for (int i = 0; i < numskins; i++) {
         aliasskintype_t skintype = static_cast<aliasskintype_t>(LittleLong(static_cast<int>(pskintype->type)));
@@ -1087,16 +1158,11 @@ void Mod_LoadAliasModel(model_t* mod, void* buffer)
     mod->mins[0] = mod->mins[1] = mod->mins[2] = -16.0f;
     mod->maxs[0] = mod->maxs[1] = mod->maxs[2] = 16.0f;
     //
-    // move the complete, relocatable alias model to the cache
+    // the block is complete and relocatable; hand it to the model
     //
-    int end = Hunk_LowMark();
-    int total = end - start;
-    Cache_Alloc(&mod->cache, total, loadname);
-    if (!mod->cache.data) {
-        return;
-    }
-    std::memcpy(mod->cache.data, pheader, total);
-    Hunk_FreeToLowMark(start);
+    alias_arena = nullptr;
+    mod->alias_data = arena.Finish();
+    mod->extradata = mod->alias_data.data();
 }
 void* Mod_LoadSpriteFrame(void* pin, mspriteframe_t** ppframe)
 {
@@ -1105,8 +1171,8 @@ void* Mod_LoadSpriteFrame(void* pin, mspriteframe_t** ppframe)
     int height = LittleLong(pinframe->height);
     int size = width * height;
     int alloc_size = sizeof(mspriteframe_t) + size;
-    loadmodel->sprite_allocations.emplace_back();
-    auto& sprite_buf = loadmodel->sprite_allocations.back();
+    loadmodel->sprite_data.emplace_back();
+    auto& sprite_buf = loadmodel->sprite_data.back();
     sprite_buf.resize(alloc_size);
     std::memset(sprite_buf.data(), 0, alloc_size);
     mspriteframe_t* pspriteframe = reinterpret_cast<mspriteframe_t*>(sprite_buf.data());
@@ -1129,8 +1195,8 @@ void* Mod_LoadSpriteGroup(void* pin, mspriteframe_t** ppframe)
     dspritegroup_t* pingroup = reinterpret_cast<dspritegroup_t*>(pin);
     int numframes = LittleLong(pingroup->numframes);
     int group_size = sizeof(mspritegroup_t) + (numframes - 1) * sizeof(mspritegroup_t::frames[0]);
-    loadmodel->sprite_allocations.emplace_back();
-    auto& group_buf = loadmodel->sprite_allocations.back();
+    loadmodel->sprite_data.emplace_back();
+    auto& group_buf = loadmodel->sprite_data.back();
     group_buf.resize(group_size);
     std::memset(group_buf.data(), 0, group_size);
     mspritegroup_t* pspritegroup = reinterpret_cast<mspritegroup_t*>(group_buf.data());
@@ -1138,8 +1204,8 @@ void* Mod_LoadSpriteGroup(void* pin, mspriteframe_t** ppframe)
     *ppframe = reinterpret_cast<mspriteframe_t*>(pspritegroup);
     dspriteinterval_t* pin_intervals = reinterpret_cast<dspriteinterval_t*>(pingroup + 1);
     int intervals_size = numframes * sizeof(float);
-    loadmodel->sprite_allocations.emplace_back();
-    auto& intervals_buf = loadmodel->sprite_allocations.back();
+    loadmodel->sprite_data.emplace_back();
+    auto& intervals_buf = loadmodel->sprite_data.back();
     intervals_buf.resize(intervals_size);
     float* poutintervals = reinterpret_cast<float*>(intervals_buf.data());
     pspritegroup->intervals = poutintervals;
@@ -1170,13 +1236,13 @@ void Mod_LoadSpriteModel(model_t* mod, void* buffer)
     }
     int numframes = LittleLong(pin->numframes);
     int size = sizeof(msprite_t) + (numframes - 1) * sizeof(mspriteframedesc_t);
-    mod->sprite_allocations.clear();
-    mod->sprite_allocations.emplace_back();
-    auto& sprite_buf = mod->sprite_allocations.back();
+    mod->sprite_data.clear();
+    mod->sprite_data.emplace_back();
+    auto& sprite_buf = mod->sprite_data.back();
     sprite_buf.resize(size);
     std::memset(sprite_buf.data(), 0, size);
     msprite_t* psprite = reinterpret_cast<msprite_t*>(sprite_buf.data());
-    mod->cache.data = psprite;
+    mod->extradata = psprite;
     psprite->type = LittleLong(pin->type);
     psprite->maxwidth = LittleLong(pin->width);
     psprite->maxheight = LittleLong(pin->height);
@@ -1214,7 +1280,7 @@ void Mod_Print(void)
     Con_Printf("Cached models:\n");
     for (int i = 0; i < mod_numknown; ++i) {
         model_t* mod = &mod_known[i];
-        Con_Printf("%8p : %s", mod->cache.data, mod->name);
+        Con_Printf("%8p : %s", mod->extradata, mod->name);
         if (mod->needload & NL_UNREFERENCED) {
             Con_Printf(" (!R)");
         }

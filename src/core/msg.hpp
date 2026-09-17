@@ -21,7 +21,11 @@ struct sizebuf_t {
 
 namespace Common {
 
-void SZ_Alloc(sizebuf_t* buf, int startsize);
+inline void SZ_Init(sizebuf_t* buf, std::span<byte> storage) {
+    buf->data = storage.data();
+    buf->maxsize = static_cast<int>(storage.size());
+    buf->cursize = 0;
+}
 void SZ_Clear(sizebuf_t* buf);
 void* SZ_GetSpace(sizebuf_t* buf, int length);
 void SZ_Print(sizebuf_t* buf, const char* data);

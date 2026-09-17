@@ -41,13 +41,7 @@ inline void ClearLink(link_t* l) { if (l) l->clear(); }
 inline void RemoveLink(link_t* l) { if (l) l->remove(); }
 inline void InsertLinkBefore(link_t* l, link_t* before) { if (l) l->insert_before(before); }
 
-enum class HunkType { Zone = 0, Hunk = 1, HunkTemp = 2, Cache = 3, Stack = 4 };
-
 } // namespace Common
-
-// Cache user handle
-struct cache_user_s { void* data = nullptr; };
-using cache_user_t = cache_user_s;
 
 //============================================================================
 // Numerical Bounds

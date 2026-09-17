@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <array>
+#include <memory>
 #include <vector>
 #include <string_view>
 #include "sys_core.hpp"
@@ -195,6 +196,28 @@ enum modtype_t {
 inline constexpr int EF_ROCKET = 1, EF_GRENADE = 2, EF_GIB = 4, EF_ROTATE = 8;
 inline constexpr int EF_TRACER = 16, EF_ZOMGIB = 32, EF_TRACER2 = 64, EF_TRACER3 = 128;
 
+// Owning storage for a loaded BSP. Sized once at load time; nothing here is resized
+// afterwards, so pointers into these vectors stay valid for the life of the model.
+struct BrushModelData {
+    std::vector<dmodel_t> submodels;
+    std::vector<mplane_t> planes;
+    std::vector<mleaf_t> leafs;
+    std::vector<mvertex_t> vertexes;
+    std::vector<medge_t> edges;
+    std::vector<mnode_t> nodes;
+    std::vector<mtexinfo_t> texinfo;
+    std::vector<msurface_t> surfaces;
+    std::vector<int> surfedges;
+    std::vector<dclipnode_t> clipnodes;
+    std::vector<dclipnode_t> hull0_clipnodes;
+    std::vector<msurface_t*> marksurfaces;
+    std::vector<texture_t*> textures;
+    std::vector<byte> visdata;
+    std::vector<byte> lightdata;
+    std::vector<char> entities;
+    std::vector<std::vector<byte>> texture_data;
+};
+
 struct model_s {
     char name[MAX_QPATH]{};
     int needload = 0;
@@ -235,28 +258,14 @@ struct model_s {
     byte* visdata = nullptr;
     byte* lightdata = nullptr;
     char* entities = nullptr;
-    cache_user_t cache{};
+    // Frame data for alias and sprite models; Mod_Extradata() returns it, loading on demand.
+    void* extradata = nullptr;
+    std::vector<byte> alias_data;
+    std::vector<std::vector<byte>> sprite_data;
 
-    std::vector<dmodel_t> submodels_owner;
-    std::vector<mplane_t> planes_owner;
-    std::vector<mleaf_t> leafs_owner;
-    std::vector<mvertex_t> vertexes_owner;
-    std::vector<medge_t> edges_owner;
-    std::vector<mnode_t> nodes_owner;
-    std::vector<mtexinfo_t> texinfo_owner;
-    std::vector<msurface_t> surfaces_owner;
-    std::vector<int> surfedges_owner;
-    std::vector<dclipnode_t> clipnodes_owner;
-    std::vector<dclipnode_t> hull0_clipnodes_owner;
-    std::vector<msurface_t*> marksurfaces_owner;
-    std::vector<texture_t*> textures_owner;
-
-    std::vector<byte> visdata_owner;
-    std::vector<byte> lightdata_owner;
-    std::vector<char> entities_owner;
-
-    std::vector<std::vector<byte>> texture_allocations;
-    std::vector<std::vector<byte>> sprite_allocations;
+    // Storage behind the raw pointers above. A BSP's submodels ("*1", "*2", ...) are
+    // copies of the world model_t that share this block, so it is reference counted.
+    std::shared_ptr<BrushModelData> brush;
 };
 using model_t = model_s;
 
@@ -266,7 +275,6 @@ void Mod_Init();
 void Mod_ClearAll();
 model_t* Mod_ForName(const char* name, qboolean crash);
 void* Mod_Extradata(model_t* mod);
-void Mod_TouchModel(char* name);
 mleaf_t* Mod_PointInLeaf(const Vector3& p, model_t* model);
 byte* Mod_LeafPVS(mleaf_t* leaf, model_t* model);
 } // namespace Model

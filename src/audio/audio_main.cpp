@@ -86,10 +86,6 @@ void S_Init() {
         Cvar::Register(c);
     }
 
-    if (host_parms.memsize < 0x800000) {
-        Cvar::Set("loadas8bit", "1");
-        Con_Printf("loading all sounds as 8bit\n");
-    }
     snd_initialized = true;
     S_Startup();
     SND_InitScaletable();
@@ -98,7 +94,8 @@ void S_Init() {
 
     if (fakedma) {
         shm = &the_shm;
-        shm->Reset(16, 22050, 2, 32768, static_cast<unsigned char*>(Hunk_Alloc(1 << 16, "shmbuf")));
+        static std::vector<unsigned char> fakedma_buffer(1 << 16);
+        shm->Reset(16, 22050, 2, 32768, fakedma_buffer.data());
     }
     if (shm) Con_Printf("Sound sampling rate: %i\n", shm->speed.load());
     ambient_sfx[AMBIENT_WATER] = S_PrecacheSound("ambience/water1.wav");
@@ -127,10 +124,6 @@ sfx_t* S_FindName(std::string_view name) {
     sfx_t& new_sfx = known_sfx.emplace_back();
     name.copy(new_sfx.name, name.length());
     return &new_sfx;
-}
-
-void S_TouchSound(std::string_view name) {
-    if (sound_started) Cache_Check(&S_FindName(name)->cache);
 }
 
 sfx_t* S_PrecacheSound(std::string_view name) {
@@ -177,7 +170,7 @@ void S_StartSoundInternal(int entnum, int entchannel, sfx_t* sfx, const Vector3&
     *target = { .sfx = nullptr, .entnum = entnum, .entchannel = entchannel, .origin = origin,
                 .dist_mult = attenuation / sound_nominal_clip_dist, .master_vol = static_cast<int>(fvol * 255) };
     SND_Spatialize(target);
-    sfxcache_t* sc = static_cast<sfxcache_t*>(Cache_Check(&sfx->cache));
+    sfxcache_t* sc = S_SfxCache(sfx);
     if ((!target->leftvol && !target->rightvol) || !sc) return;
     target->sfx = sfx;
     target->pos = 0;
@@ -208,7 +201,7 @@ void S_StopAllSoundsInternal(bool) {
 
 void S_StaticSoundInternal(sfx_t* sfx, const Vector3& origin, float vol, float attenuation) {
     if (total_channels == MAX_CHANNELS) return;
-    auto* sc = static_cast<sfxcache_t*>(Cache_Check(&sfx->cache));
+    sfxcache_t* sc = S_SfxCache(sfx);
     if (!sc || sc->loopstart == -1) return;
     channel_t& ss = channels[total_channels++];
     ss = { .sfx = sfx, .end = paintedtime + sc->length, .origin = origin,
@@ -240,7 +233,7 @@ void ExecuteAudioCommand(const AudioCommand& cmd) {
 }
 
 void S_StartSound(int entnum, int entchannel, sfx_t* sfx, const Vector3& origin, float fvol, float attenuation) {
-    if (!sound_started || !sfx || nosound.value || !Cache_Check(&sfx->cache)) return;
+    if (!sound_started || !sfx || nosound.value || !S_SfxCache(sfx)) return;
     int rand_off = 0;
     if (shm) {
         if (int max_skip = static_cast<int>(0.1 * shm->speed.load(std::memory_order_relaxed)); max_skip > 0) {
@@ -253,7 +246,7 @@ void S_StartSound(int entnum, int entchannel, sfx_t* sfx, const Vector3& origin,
 }
 
 void S_StaticSound(sfx_t* sfx, const Vector3& origin, float vol, float attenuation) {
-    if (sound_started && sfx && Cache_Check(&sfx->cache)) {
+    if (sound_started && sfx && S_SfxCache(sfx)) {
         PushAudioCommand({ .type = AudioCommandType::StaticSound, .sfx = sfx, .origin = origin, .vol = vol, .attenuation = attenuation });
     }
 }
@@ -357,7 +350,7 @@ void S_PlayVol() { S_PlayHelper(true); }
 void S_SoundList() {
     int total = 0;
     for (auto& sfx : known_sfx) {
-        if (auto* sc = static_cast<sfxcache_t*>(Cache_Check(&sfx.cache))) {
+        if (sfxcache_t* sc = S_SfxCache(&sfx)) {
             total += sc->length * sc->width * (sc->stereo + 1);
             Con_Printf("%s%s\n", (sc->loopstart >= 0) ? "L" : " ", sfx.name);
         }

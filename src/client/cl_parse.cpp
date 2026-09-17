@@ -80,7 +80,8 @@ void CL_ParseServerInfo() {
     if (MSG_ReadLong() != PROTOCOL_VERSION) { Con_Printf("Server version mismatch"); return; }
     cl.maxclients = MSG_ReadByte();
     if (cl.maxclients < 1 || cl.maxclients > MAX_SCOREBOARD) { Con_Printf("Bad maxclients (%u)\n", cl.maxclients); return; }
-    cl.scores = static_cast<scoreboard_t*>(Hunk_Alloc(cl.maxclients * sizeof(*cl.scores), "scores"));
+    cl.scores_storage.assign(static_cast<size_t>(cl.maxclients), scoreboard_t{});
+    cl.scores = cl.scores_storage.data();
     cl.gametype = MSG_ReadByte();
     const char* str = MSG_ReadString();
     strncpy_s(cl.levelname.data(), cl.levelname.size(), str, _TRUNCATE);
@@ -94,11 +95,11 @@ void CL_ParseServerInfo() {
     int nummodels = 1, numsounds = 1;
     while (char* mstr = MSG_ReadString()) {
         if (!mstr[0]) break;
-        if (nummodels < MAX_MODELS) { model_names[nummodels++] = mstr; Mod_TouchModel(mstr); }
+        if (nummodels < MAX_MODELS) model_names[nummodels++] = mstr;
     }
     while (char* sstr = MSG_ReadString()) {
         if (!sstr[0]) break;
-        if (numsounds < MAX_SOUNDS) { sound_names[numsounds++] = sstr; S_TouchSound(sstr); }
+        if (numsounds < MAX_SOUNDS) sound_names[numsounds++] = sstr;
     }
 
     for (int idx = 1; idx < nummodels; ++idx) {
@@ -115,7 +116,6 @@ void CL_ParseServerInfo() {
 
     cl_entities[0].model = cl.worldmodel = cl.model_precache[1];
     R_NewMap();
-    Hunk_Check();
     noclip_anglehack = false;
 }
 

@@ -1,7 +1,6 @@
 // msg.cpp -- Network buffer and message serialization primitives
 #include "quakedef.hpp"
 #include "core/msg.hpp"
-#include "core/memory.hpp"
 #include "ui/console.hpp"
 
 namespace Common {
@@ -103,13 +102,6 @@ char* MSG_ReadString(void) {
     } while (l < static_cast<int>(sizeof(string) - 1));
     string[l] = '\0';
     return string;
-}
-
-void SZ_Alloc(sizebuf_t* buf, int startsize) {
-    if (startsize < 256) startsize = 256;
-    buf->data = static_cast<byte*>(Hunk_Alloc(startsize, "sizebuf"));
-    buf->maxsize = startsize;
-    buf->cursize = 0;
 }
 
 void SZ_Clear(sizebuf_t* buf) {

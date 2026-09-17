@@ -188,7 +188,7 @@ mspriteframe_t* R_GetSpriteframe(msprite_t* psprite)
 
 void R_DrawSprite()
 {
-    msprite_t* psprite = (msprite_t*)currententity->model->cache.data;
+    msprite_t* psprite = static_cast<msprite_t*>(Model::Mod_Extradata(currententity->model));
     r_spritedesc.pspriteframe = R_GetSpriteframe(psprite);
     sprite_width = r_spritedesc.pspriteframe->width;
     sprite_height = r_spritedesc.pspriteframe->height;

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <fstream>
 #include <limits>
+#include <vector>
 
 using namespace Client;
 using namespace Common;
@@ -36,9 +37,10 @@ namespace Host {
 quakeparms_t host_parms;
 qboolean host_initialized;
 double host_frametime, host_time, realtime, oldrealtime;
-int host_framecount, host_hunklevel, minimum_memory;
+int host_framecount;
 client_t* host_client;
 byte *host_basepal, *host_colormap;
+static std::vector<byte> palette_data, colormap_data;
 
 cvar_t host_framerate = { "host_framerate", "0", {}, {}, {}, {} };
 cvar_t host_speeds    = { "host_speeds", "0", {}, {}, {}, {} };
@@ -140,7 +142,6 @@ void Host_ShutdownServer(qboolean crash) {
 
 void Host_ClearMemory() {
     Con_DPrintf("Clearing memory\n"); D_FlushCaches(); Mod_ClearAll();
-    if (host_hunklevel) Hunk_FreeToLowMark(host_hunklevel);
     cls.signon = 0; sv = {}; cl = {};
 }
 
@@ -213,25 +214,26 @@ void Host_Frame(float time) {
 }
 
 void Host_Init(quakeparms_t* parms) {
-    minimum_memory = standard_quake ? MINIMUM_MEMORY : MINIMUM_MEMORY_LEVELPAK;
-    if (COM_CheckParm("-minmemory")) parms->memsize = minimum_memory;
     host_parms = *parms;
-    if (parms->memsize < minimum_memory) Sys_Error("Only %4.1f megs of memory available, can't execute game", parms->memsize / (float)0x100000);
     com_argc = parms->argc; com_argv = parms->argv;
-    Memory_Init(parms->membase, parms->memsize);
     Cmd::BufferInit(); Cmd::Init(); V_Init(); Chase_Init(); COM_Init(); Host_InitLocal();
     W_LoadWadFile("gfx.wad"); Key_Init(); GetConsoleSystem().Init(); M_Init(); PR_Init(); Mod_Init(); NET_Init(); SV_Init();
-    Con_Printf("Exe: " __TIME__ " " __DATE__ "\n%4.1f megabyte heap\n", parms->memsize / (1024 * 1024.0));
+    Con_Printf("Exe: " __TIME__ " " __DATE__ "\n");
     R_InitTextures();
     if (cls.state != ca_dedicated) {
-        host_basepal = (byte*)COM_LoadHunkFile("gfx/palette.lmp"); if (!host_basepal) Sys_Error("Couldn't load gfx/palette.lmp");
-        host_colormap = (byte*)COM_LoadHunkFile("gfx/colormap.lmp"); if (!host_colormap) Sys_Error("Couldn't load gfx/colormap.lmp");
+        palette_data = COM_LoadFile("gfx/palette.lmp");
+        if (palette_data.empty()) Sys_Error("Couldn't load gfx/palette.lmp");
+        host_basepal = palette_data.data();
+        colormap_data = COM_LoadFile("gfx/colormap.lmp");
+        if (colormap_data.empty()) Sys_Error("Couldn't load gfx/colormap.lmp");
+        host_colormap = colormap_data.data();
         static Render::SoftwareRenderer sw_renderer;
         Render::SetRenderer(&sw_renderer);
         VID_Init(host_basepal); Draw_Init(); Screen::GetScreenSystem().Init(); Render::GetRenderer()->Init(); S_Init(); Sbar_Init(); CL_Init(); IN_Init();
     }
-    Cmd::BufferInsertText("exec quake.rc\n"); Hunk_Alloc(0, "-HOST_HUNKLEVEL-");
-    host_hunklevel = Hunk_LowMark(); host_initialized = true; Sys_Printf("========Quake Initialized=========\n");
+    Cmd::BufferInsertText("exec quake.rc\n");
+    host_initialized = true;
+    Sys_Printf("========Quake Initialized=========\n");
 }
 
 void Host_Shutdown() {
@@ -446,8 +448,8 @@ void Host_Loadgame_f() {
     sv.paused = sv.loadgame = true;
     for (int i = 0; i < MAX_LIGHTSTYLES; i++) {
         if (!std::getline(f, temp_line)) { Con_Printf("ERROR: read error.\n"); return; }
-        sv.lightstyles[i] = static_cast<char*>(Hunk_Alloc(static_cast<int>(temp_line.length()) + 1));
-        strcpy_s(sv.lightstyles[i], temp_line.length() + 1, temp_line.c_str());
+        sv.loaded_lightstyles[i] = temp_line;
+        sv.lightstyles[i] = sv.loaded_lightstyles[i].c_str();
     }
     int entnum = -1;
     while (true) {

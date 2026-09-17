@@ -3,6 +3,7 @@
 
 #include "core/types.hpp"
 #include <cstdio>
+#include <vector>
 #include <string>
 #include <string_view>
 
@@ -30,15 +31,16 @@ extern char com_gamedir[128];
 
 void COM_WriteFile(const char* filename, void* data, int len);
 int COM_FindFile(const char* filename, int* handle, FILE** file);
-byte* COM_LoadFile(const char* path, HunkType usehunk);
+
+// Loads a whole file from the search path. The buffer carries one extra zero byte after
+// the contents so text files can be read as C strings; com_filesize holds the true
+// length. Returns an empty vector if the file does not exist.
+[[nodiscard]] std::vector<byte> COM_LoadFile(const char* path);
 
 inline int COM_OpenFile(const char* filename, int* hndl) { return COM_FindFile(filename, hndl, nullptr); }
 inline int COM_FOpenFile(const char* filename, FILE** file) { return COM_FindFile(filename, nullptr, file); }
 void COM_CloseFile(int h);
 
-byte* COM_LoadStackFile(const char* path, void* buffer, int bufsize);
-inline byte* COM_LoadHunkFile(const char* path) { return COM_LoadFile(path, HunkType::Hunk); }
-void COM_LoadCacheFile(const char* path, cache_user_s* cu);
 
 void COM_AddGameDirectory(const char* dir);
 void COM_InitFilesystem(void);

@@ -3,22 +3,27 @@
 #include "vm/program.hpp"
 #include "vm/edict.hpp"
 #include "vm/interpreter.hpp"
-#include "core/memory.hpp"
 #include "core/filesystem.hpp"
 #include "core/endian.hpp"
 #include "core/string_utils.hpp"
 #include "host/host.hpp"
 #include "ui/console.hpp"
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 namespace VM {
 
 dprograms_t* progs = nullptr;
+static std::vector<byte> progs_data; // the loaded progs.dat; every pr_* pointer below points into it
 dfunction_t* pr_functions = nullptr;
 char* pr_strings = nullptr;
 static int pr_stringssize = 0;
-static char** pr_knownstrings = nullptr;
-static int pr_maxknownstrings = 0;
-static int pr_numknownstrings = 0;
+// Negative string_t handles index this table of engine-owned strings (see PR_SetString).
+static std::vector<const char*> pr_knownstrings;
+// Strings created at runtime (entity keys parsed from the map) live for the level.
+static std::vector<std::unique_ptr<char[]>> pr_created_strings;
 ddef_t* pr_fielddefs = nullptr;
 ddef_t* pr_globaldefs = nullptr;
 dstatement_t* pr_statements = nullptr;
@@ -30,23 +35,16 @@ std::array<int, 8> type_size = {
     1, static_cast<int>(sizeof(string_t) / 4), 1, 3, 1, 1, static_cast<int>(sizeof(func_t) / 4), static_cast<int>(sizeof(void*) / 4)
 };
 
-static void PR_ExpandStringSlots(void) {
-    pr_maxknownstrings += 256;
-    size_t new_size = pr_maxknownstrings * sizeof(char*);
-    pr_knownstrings = (char**)Common::Z_Realloc((void*)pr_knownstrings, static_cast<int>(new_size));
-}
-
 static string_t PR_FindString(const char* str) {
-    for (string_t slot_index = 0; slot_index < pr_numknownstrings; slot_index++) {
-        if (pr_knownstrings[slot_index] == str) return slot_index;
+    for (size_t slot_index = 0; slot_index < pr_knownstrings.size(); slot_index++) {
+        if (pr_knownstrings[slot_index] == str) return static_cast<string_t>(slot_index);
     }
-    return pr_numknownstrings;
+    return static_cast<string_t>(pr_knownstrings.size());
 }
 
 static void PR_SetStringAt(int slot_index, const char* str) {
-    if (slot_index >= pr_maxknownstrings) PR_ExpandStringSlots();
-    pr_knownstrings[slot_index] = const_cast<char*>(str);
-    if (slot_index >= pr_numknownstrings) pr_numknownstrings = slot_index + 1;
+    if (static_cast<size_t>(slot_index) >= pr_knownstrings.size()) pr_knownstrings.resize(static_cast<size_t>(slot_index) + 1, nullptr);
+    pr_knownstrings[static_cast<size_t>(slot_index)] = str;
 }
 
 string_t PR_SetString(const char* str) {
@@ -56,18 +54,19 @@ string_t PR_SetString(const char* str) {
     }
 
     string_t slot_index = PR_FindString(str);
-    if (slot_index >= pr_numknownstrings) PR_SetStringAt(slot_index, str);
+    if (static_cast<size_t>(slot_index) >= pr_knownstrings.size()) PR_SetStringAt(slot_index, str);
     return -(slot_index + 1);
 }
 
 char* PR_GetString(string_t handle) {
     if (handle >= 0 && handle < pr_stringssize) return &pr_strings[handle];
-    if (handle < -pr_numknownstrings || handle >= pr_stringssize) {
+    const int numknown = static_cast<int>(pr_knownstrings.size());
+    if (handle < -numknown || handle >= pr_stringssize) {
         Host::Host_Error("PR_GetString: invalid string handle %d\n", handle);
     }
 
     int index = -1 - handle;
-    if (pr_knownstrings[index]) return pr_knownstrings[index];
+    if (pr_knownstrings[static_cast<size_t>(index)]) return const_cast<char*>(pr_knownstrings[static_cast<size_t>(index)]);
 
     Host::Host_Error("PR_GetString: attempt to access missing string %d\n", handle);
 }
@@ -76,7 +75,9 @@ string_t PR_CreateString(int size, char** out_ptr) {
     if (size <= 0) return 0;
 
     string_t slot_index = PR_FindString(nullptr);
-    char* str_buffer = (char*)Common::Hunk_Alloc(size, "string");
+    auto buffer = std::make_unique<char[]>(static_cast<size_t>(size)); // zero-filled
+    char* str_buffer = buffer.get();
+    pr_created_strings.push_back(std::move(buffer));
     PR_SetStringAt(slot_index, str_buffer);
 
     if (out_ptr) *out_ptr = str_buffer;
@@ -154,8 +155,9 @@ void PR_LoadProgs(void) {
 
     Common::CRC_Init(pr_crc);
 
-    progs = (dprograms_t*)Common::COM_LoadHunkFile("progs.dat");
-    if (!progs) Common::Sys_Error("PR_LoadProgs: couldn't load progs.dat");
+    progs_data = Common::COM_LoadFile("progs.dat");
+    if (progs_data.empty()) Common::Sys_Error("PR_LoadProgs: couldn't load progs.dat");
+    progs = reinterpret_cast<dprograms_t*>(progs_data.data());
 
     Console::Con_DPrintf("Programs occupy %iK.\n", Common::com_filesize / 1024);
 
@@ -174,11 +176,8 @@ void PR_LoadProgs(void) {
     pr_functions = (dfunction_t*)((byte*)progs + progs->ofs_functions);
     pr_strings = (char*)progs + progs->ofs_strings;
     pr_stringssize = progs->numstrings;
-    pr_numknownstrings = 0;
-    pr_maxknownstrings = 0;
-    if (pr_knownstrings) Common::Z_Free((void*)pr_knownstrings);
-
-    pr_knownstrings = nullptr;
+    pr_knownstrings.clear();
+    pr_created_strings.clear();
     PR_SetString("");
 
     pr_globaldefs = (ddef_t*)((byte*)progs + progs->ofs_globaldefs);

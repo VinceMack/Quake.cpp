@@ -5,6 +5,7 @@
 #include "core/endian.hpp"
 #include "core/string_utils.hpp"
 #include <array>
+#include <vector>
 #include <cctype>
 
 namespace Wad {
@@ -12,6 +13,7 @@ namespace Wad {
 int wad_numlumps = 0;
 lumpinfo_t* wad_lumps = nullptr;
 byte* wad_base = nullptr;
+static std::vector<byte> wad_data;
 
 void W_CleanupName(std::string_view in, std::span<char, 16> out) {
     size_t i = 0, len = std::min(in.length(), static_cast<size_t>(16));
@@ -25,8 +27,9 @@ void W_CleanupName(std::string_view in, std::span<char, 16> out) {
 
 void W_LoadWadFile(std::string_view filename) {
     std::string fname(filename.data(), filename.length());
-    wad_base = static_cast<byte*>(Common::COM_LoadHunkFile(fname.c_str()));
-    if (!wad_base) Common::Sys_Error("W_LoadWadFile: couldn't load %s", fname.c_str());
+    wad_data = Common::COM_LoadFile(fname.c_str());
+    if (wad_data.empty()) Common::Sys_Error("W_LoadWadFile: couldn't load %s", fname.c_str());
+    wad_base = wad_data.data();
     auto* header = reinterpret_cast<wadinfo_t*>(wad_base);
     if (header->identification[0] != 'W' || header->identification[1] != 'A' ||
         header->identification[2] != 'D' || header->identification[3] != '2') {

@@ -126,7 +126,6 @@ void CL_SignonReply() {
         break;
     case 3:
         WriteCmd("begin");
-        Cache_Report();
         break;
     case 4:
         Screen::GetScreenSystem().EndLoadingPlaque();
@@ -300,7 +299,7 @@ void CL_SendCmd() {
 struct CmdPair { const char* name; void (*fn)(); };
 
 void CL_Init() {
-    SZ_Alloc(&cls.message, 1024);
+    SZ_Init(&cls.message, cls.message_buf);
     CL_InitInput();
     CL_InitTEnts();
     for (auto* c : { &cl_name, &cl_color, &cl_upspeed, &cl_forwardspeed, &cl_backspeed, &cl_sidespeed,

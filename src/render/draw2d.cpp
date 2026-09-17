@@ -38,19 +38,19 @@ qpic_t* draw_backtile;
 
 struct CachePic {
     std::string name;
-    cache_user_t cache{};
+    std::vector<byte> data; // empty until first use
 };
 
 static std::vector<std::unique_ptr<CachePic>> menu_cachepics;
 
 static qpic_t* LoadCachePic(CachePic& pic)
 {
-    if (auto* data = static_cast<qpic_t*>(Cache_Check(&pic.cache))) return data;
-    COM_LoadCacheFile(pic.name.c_str(), &pic.cache);
-    auto* data = static_cast<qpic_t*>(pic.cache.data);
-    if (!data) Sys_Error("Draw_CachePic: failed to load %s", pic.name.c_str());
-    SwapPic(data);
-    return data;
+    if (pic.data.empty()) {
+        pic.data = COM_LoadFile(pic.name.c_str());
+        if (pic.data.empty()) Sys_Error("Draw_CachePic: failed to load %s", pic.name.c_str());
+        SwapPic(reinterpret_cast<qpic_t*>(pic.data.data()));
+    }
+    return reinterpret_cast<qpic_t*>(pic.data.data());
 }
 
 qpic_t* Draw_CachePic(std::string_view path)

@@ -3,11 +3,8 @@
 
 #include <SDL.h>
 #include <csignal>
-#include <cstdlib>
 
 namespace {
-
-constexpr int kDefaultHeapSize = 64 * 1024 * 1024;
 
 // Runs exactly `frames` frames at the fixed server tick rate, prints a hash of the
 // resulting game state, and exits. Used by tests/regression.py to detect behavioral
@@ -27,8 +24,6 @@ int main(int argc, char** argv) {
     std::signal(SIGFPE, SIG_IGN);
 
     quakeparms_t parms{};
-    parms.memsize = kDefaultHeapSize;
-    parms.membase = std::malloc(static_cast<size_t>(parms.memsize));
     parms.basedir = ".";
 
     Common::COM_InitArgv(argc, argv);

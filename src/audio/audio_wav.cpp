@@ -7,6 +7,7 @@
 #include <cstring>
 #include <cstdio>
 #include <bit>
+#include <vector>
 
 using namespace Common;
 using namespace Console;
@@ -119,7 +120,7 @@ wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data) {
 }
 
 void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data) {
-    auto* sc = static_cast<sfxcache_t*>(Cache_Check(&sfx->cache));
+    sfxcache_t* sc = S_SfxCache(sfx);
     if (!sc) return;
     float stepscale = static_cast<float>(inrate) / shm->speed.load();
     sc->length = static_cast<int>(sc->length / stepscale);
@@ -158,26 +159,25 @@ void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data) {
 }
 
 sfxcache_t* S_LoadSound(sfx_t* s) {
-    if (auto* sc = static_cast<sfxcache_t*>(Cache_Check(&s->cache))) return sc;
+    if (sfxcache_t* sc = S_SfxCache(s)) return sc;
     std::array<char, MAX_QPATH + 16> namebuffer;
     std::snprintf(namebuffer.data(), namebuffer.size(), "sound/%s", s->name);
-    std::array<byte, 1024> stackbuf;
-    byte* data = COM_LoadStackFile(namebuffer.data(), stackbuf.data(), sizeof(stackbuf));
-    if (!data) {
+    std::vector<byte> file = COM_LoadFile(namebuffer.data());
+    if (file.empty()) {
         Con_Printf("Couldn't load %s\n", namebuffer.data());
         return nullptr;
     }
-    wavinfo_t info = GetWavinfo(s->name, std::span<const byte>(data, com_filesize));
+    wavinfo_t info = GetWavinfo(s->name, std::span<const byte>(file.data(), static_cast<size_t>(com_filesize)));
     if (info.channels != 1) {
         Con_Printf("%s is a stereo sample\n", s->name);
         return nullptr;
     }
     float stepscale = static_cast<float>(info.rate) / shm->speed.load(std::memory_order_relaxed);
     int len = static_cast<int>(info.samples / stepscale) * info.width * info.channels;
-    auto* sc = static_cast<sfxcache_t*>(Cache_Alloc(&s->cache, len + sizeof(sfxcache_t), s->name));
-    if (!sc) return nullptr;
+    s->data.assign(static_cast<size_t>(len) + sizeof(sfxcache_t), 0);
+    sfxcache_t* sc = S_SfxCache(s);
     *sc = { .length = info.samples, .loopstart = info.loopstart, .speed = info.rate, .width = info.width, .stereo = info.channels };
-    ResampleSfx(s, sc->speed, sc->width, data + info.dataofs);
+    ResampleSfx(s, sc->speed, sc->width, file.data() + info.dataofs);
     return sc;
 }
 

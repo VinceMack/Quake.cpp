@@ -156,7 +156,8 @@ void SV_SpawnServer(const char* server)
     PR_LoadProgs();
 
     sv.max_edicts = MAX_EDICTS;
-    sv.edicts = reinterpret_cast<edict_t*>(Hunk_Alloc(sv.max_edicts * pr_edict_size, "edicts"));
+    sv.edicts_storage.assign(static_cast<size_t>(sv.max_edicts) * pr_edict_size, 0);
+    sv.edicts = reinterpret_cast<edict_t*>(sv.edicts_storage.data());
 
     sv.datagram.maxsize = static_cast<int>(sv.datagram_buf.size());
     sv.datagram.cursize = 0;

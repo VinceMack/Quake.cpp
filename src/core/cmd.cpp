@@ -3,13 +3,13 @@
 #include "core/cmd.hpp"
 #include "core/cvar.hpp"
 #include "core/string_utils.hpp"
-#include "core/memory.hpp"
 #include "core/filesystem.hpp"
 #include "core/msg.hpp"
 #include "ui/console.hpp"
 #include "host/host.hpp"
 
 #include <utility>
+#include <vector>
 
 namespace Cmd {
 
@@ -93,17 +93,15 @@ static void Exec_f(void) {
         Console::Con_Printf("exec <filename> : execute a script file\n");
         return;
     }
-    int mark = Common::Hunk_LowMark();
     std::string_view filename = Cmd::Argv(1);
     std::string filename_str(filename.data(), filename.length());
-    auto* f = reinterpret_cast<char*>(Common::COM_LoadHunkFile(filename_str.c_str()));
-    if (!f) {
+    std::vector<byte> script = Common::COM_LoadFile(filename_str.c_str());
+    if (script.empty()) {
         Console::Con_Printf("couldn't exec %s\n", filename_str.c_str());
         return;
     }
     Console::Con_Printf("execing %s\n", filename_str.c_str());
-    Cmd::BufferInsertText(f);
-    Common::Hunk_FreeToLowMark(mark);
+    Cmd::BufferInsertText(reinterpret_cast<const char*>(script.data()));
 }
 
 static void Echo_f(void) {

@@ -35,7 +35,6 @@ void S_ClearBuffer();
 void S_Update(const Vector3& origin, const Vector3& v_forward, const Vector3& v_right, const Vector3& v_up);
 
 [[nodiscard]] sfx_t* S_PrecacheSound(std::string_view sample);
-void S_TouchSound(std::string_view sample);
 inline void S_BeginPrecaching() {}
 inline void S_EndPrecaching() {}
 void S_LocalSound(std::string_view s);

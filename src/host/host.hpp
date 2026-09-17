@@ -14,8 +14,6 @@ struct quakeparms_t {
     const char* basedir{nullptr};
     int argc{0};
     char** argv{nullptr};
-    void* membase{nullptr};
-    int memsize{0};
 };
 
 namespace Host {
@@ -25,7 +23,7 @@ extern cvar_t sys_ticrate, sys_nostdout, developer;
 extern qboolean host_initialized, isDedicated, noclip_anglehack;
 extern double host_frametime, host_time, realtime;
 extern byte *host_basepal, *host_colormap;
-extern int host_framecount, current_skill, minimum_memory;
+extern int host_framecount, current_skill;
 extern ::client_t* host_client;
 
 void Host_ClearMemory();

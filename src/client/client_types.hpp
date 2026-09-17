@@ -80,6 +80,7 @@ struct client_static_t {
     int signon{0};
     struct qsocket_s* netcon{nullptr};
     sizebuf_t message{};
+    std::array<byte, 1024> message_buf{};
 };
 
 namespace Client {
@@ -113,6 +114,7 @@ struct client_state_t {
     int num_entities{0}, num_statics{0};
     entity_t viewent{};
     int cdtrack{0}, looptrack{0};
+    std::vector<scoreboard_t> scores_storage;
     scoreboard_t* scores{nullptr};
 };
 

@@ -26,6 +26,10 @@ CASES = {
     "server_e2m1": ["-dedicated", "1", "+map", "e2m1", "-runframes", "300"],
     "client_demo1": ["-winsize", "320", "240", "+playdemo", "demo1", "-runframes", "240"],
     "client_demo2": ["-winsize", "320", "240", "+playdemo", "demo2", "-runframes", "240"],
+    # Level change: reloads progs.dat, the BSP and its submodels while the server is live.
+    "server_changelevel": ["-dedicated", "1", "+map", "e1m1", "+wait", "+changelevel", "e1m2", "-runframes", "300"],
+    # Listen server with a local client: server, client, and rasterizer together.
+    "listen_e1m1": ["-winsize", "320", "240", "+map", "e1m1", "-runframes", "200"],
 }
 
 

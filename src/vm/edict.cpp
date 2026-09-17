@@ -3,7 +3,6 @@
 #include "vm/edict.hpp"
 #include "vm/program.hpp"
 #include "vm/interpreter.hpp"
-#include "core/memory.hpp"
 #include "core/filesystem.hpp"
 #include "core/string_utils.hpp"
 #include "core/cmd.hpp"

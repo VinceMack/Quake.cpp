@@ -5,11 +5,11 @@
 #include <string_view>
 #include <span>
 #include <atomic>
+#include <vector>
 #include <type_traits>
 
 #include "core/types.hpp"
 #include "core/math.hpp"
-#include "core/memory.hpp"
 #include "world/bsp_format.hpp"
 
 namespace Audio {
@@ -21,9 +21,6 @@ inline constexpr int MAX_DYNAMIC_CHANNELS = 8;
 inline constexpr size_t MAX_SFX = 512;
 
 struct portable_samplepair_t { int left{}; int right{}; };
-struct sfx_t { char name[MAX_QPATH]{}; cache_user_t cache{}; };
-using sfx_s = sfx_t;
-
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable: 4200)
@@ -32,6 +29,17 @@ struct sfxcache_t { int length{}; int loopstart{}; int speed{}; int width{}; int
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+
+struct sfx_t {
+    char name[MAX_QPATH]{};
+    std::vector<byte> data; // an sfxcache_t header followed by the samples; empty until loaded
+};
+using sfx_s = sfx_t;
+
+// Returns the loaded sound data, or nullptr if the sound has not been loaded yet.
+[[nodiscard]] inline sfxcache_t* S_SfxCache(sfx_t* sfx) {
+    return sfx->data.empty() ? nullptr : reinterpret_cast<sfxcache_t*>(sfx->data.data());
+}
 
 struct dma_t {
     std::atomic<bool> gamealive{false}, soundalive{false}, splitbuffer{false};

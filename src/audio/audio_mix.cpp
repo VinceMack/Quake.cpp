@@ -91,7 +91,7 @@ void S_PaintChannels(int endtime) {
         for (int i = 0; i < total_channels; i++) {
             auto& chan = channels[i];
             if (!chan.sfx || (!chan.leftvol && !chan.rightvol)) continue;
-            auto* sc = static_cast<sfxcache_t*>(Cache_Check(&chan.sfx->cache));
+            sfxcache_t* sc = S_SfxCache(chan.sfx);
             if (!sc) { chan.sfx = nullptr; continue; }
             int ltime = paintedtime;
             while (ltime < end) {
