@@ -98,9 +98,9 @@ static void Test_Poll() {
         if (MSG_ReadByte() != CCREP_PLAYER_INFO) Sys_Error("Unexpected repsonse to Player Info request\n");
 
         MSG_ReadByte(); char name[32], address[64];
-        Q_strcpy(name, MSG_ReadString());
+        Q_strncpy(name, MSG_ReadString(), sizeof(name));
         int colors = MSG_ReadLong(), frags = MSG_ReadLong(), connectTime = MSG_ReadLong();
-        Q_strcpy(address, MSG_ReadString());
+        Q_strncpy(address, MSG_ReadString(), sizeof(address));
         Con_Printf("%s\n  frags:%3i  colors:%u %u  time:%u\n  %s\n", name, frags, colors >> 4, colors & 0x0f, connectTime / 60, address);
     }
 
@@ -148,10 +148,10 @@ static void Test2_Poll() {
     if (len < static_cast<int>(sizeof(int))) goto Reschedule;
     if (!ReadControlHeader(len, control) || MSG_ReadByte() != CCREP_RULE_INFO) goto Error;
 
-    char name[256], value[256]; Q_strcpy(name, MSG_ReadString());
+    char name[256], value[256]; Q_strncpy(name, MSG_ReadString(), sizeof(name));
     if (name[0] == 0) goto Done;
 
-    Q_strcpy(value, MSG_ReadString()); Con_Printf("%-16.16s  %-16.16s\n", name, value);
+    Q_strncpy(value, MSG_ReadString(), sizeof(value)); Con_Printf("%-16.16s  %-16.16s\n", name, value);
     SZ_Clear(&net_message); MSG_WriteLong(&net_message, 0); MSG_WriteByte(&net_message, CCREQ_RULE_INFO);
     MSG_WriteString(&net_message, name); WriteControlHeader(&net_message);
     lan.Write(test2Socket, net_message.data, net_message.cursize, &clientaddr); SZ_Clear(&net_message);
@@ -380,7 +380,7 @@ qsocket_t* DatagramDriver::CheckNewConnections() {
         if (lan.Connect(newsock, &clientaddr) == -1) { lan.CloseSocket(newsock); NET_FreeQSocket(sock); continue; }
 
         sock->socket = newsock; sock->landriver = net_landriverlevel; sock->addr = clientaddr;
-        Q_strcpy(sock->address, lan.AddrToString(&clientaddr));
+        Q_strncpy(sock->address, lan.AddrToString(&clientaddr), sizeof(sock->address));
         SendReply(CCREP_ACCEPT, [&]() {
             struct qsockaddr newaddr; lan.GetSocketAddr(newsock, &newaddr);
             MSG_WriteLong(&net_message, lan.GetSocketPort(&newaddr));
@@ -415,7 +415,8 @@ void DatagramDriver::SearchForHosts(qboolean xmit) {
             if (n < hostCacheCount) continue;
 
             hostCacheCount++;
-            Q_strcpy(hostcache[n].name, MSG_ReadString()); Q_strcpy(hostcache[n].map, MSG_ReadString());
+            Q_strncpy(hostcache[n].name, MSG_ReadString(), sizeof(hostcache[n].name));
+            Q_strncpy(hostcache[n].map, MSG_ReadString(), sizeof(hostcache[n].map));
             hostcache[n].users = MSG_ReadByte(); hostcache[n].maxusers = MSG_ReadByte();
             if (MSG_ReadByte() != NET_PROTOCOL_VERSION) {
                 Q_strcpy(hostcache[n].cname, hostcache[n].name); hostcache[n].cname[14] = 0;
@@ -423,7 +424,7 @@ void DatagramDriver::SearchForHosts(qboolean xmit) {
             }
             Q_memcpy(&hostcache[n].addr, &readaddr, sizeof(struct qsockaddr));
             hostcache[n].driver = net_driverlevel; hostcache[n].ldriver = net_landriverlevel;
-            Q_strcpy(hostcache[n].cname, lan.AddrToString(&readaddr));
+            Q_strncpy(hostcache[n].cname, lan.AddrToString(&readaddr), sizeof(hostcache[n].cname));
 
             for (int i = 0; i < hostCacheCount; i++) {
                 if (i == n) continue;

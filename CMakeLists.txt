@@ -150,7 +150,6 @@ function(quake_set_warnings target)
             -Wall -Wextra
             -Wunreachable-code
             -Wno-write-strings
-            -fno-exceptions
             -ffunction-sections
             -fdata-sections
         )

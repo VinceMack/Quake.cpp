@@ -18,8 +18,9 @@ int LoopbackDriver::Init() {
 void LoopbackDriver::SearchForHosts(qboolean) {
     if (!sv.active) return;
     hostCacheCount = 1;
-    Q_strcpy(hostcache[0].name, (Q_strcmp(hostname.string.c_str(), "UNNAMED") == 0) ? "local" : hostname.string.c_str());
-    Q_strcpy(hostcache[0].map, sv.name.data());
+    const char* name = (Q_strcmp(hostname.string.c_str(), "UNNAMED") == 0) ? "local" : hostname.string.c_str();
+    Q_strncpy(hostcache[0].name, name, sizeof(hostcache[0].name));
+    Q_strncpy(hostcache[0].map, sv.name.data(), sizeof(hostcache[0].map));
     hostcache[0].users = net_activeconnections;
     hostcache[0].maxusers = svs.maxclients;
     hostcache[0].driver = net_driverlevel;

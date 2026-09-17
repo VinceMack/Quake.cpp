@@ -2,6 +2,7 @@
 #include "quakedef.hpp"
 #include "vm/program.hpp"
 #include "vm/edict.hpp"
+#include "vm/interpreter.hpp"
 #include "core/memory.hpp"
 #include "core/filesystem.hpp"
 #include "core/endian.hpp"
@@ -149,6 +150,7 @@ void PR_Profile_f(void) {
 void PR_LoadProgs(void) {
     int i;
     ED_ClearFieldCache();
+    PR_ResetExecutionState();
 
     Common::CRC_Init(pr_crc);
 

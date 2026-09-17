@@ -16,6 +16,8 @@ extern builtin_t* pr_builtins;
 extern int pr_numbuiltins;
 
 void PR_ExecuteProgram(func_t fnum);
+// Discards any interpreter call stack left over after an aborted execution.
+void PR_ResetExecutionState();
 [[noreturn]] void PR_RunError(const char* error, ...);
 void PR_StackTrace();
 

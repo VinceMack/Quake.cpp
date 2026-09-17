@@ -73,12 +73,15 @@ void ConsoleSystem::Init() {
 }
 
 void ConsoleSystem::Linefeed() {
-    if (!initialized_) return; x_ = 0; current_++;
+    if (!initialized_) return;
+    x_ = 0;
+    current_++;
     eastl::fill_n(text_.begin() + (current_ % totallines_) * linewidth_, linewidth_, ' ');
 }
 
 void ConsoleSystem::Print(eastl::string_view txt) {
-    if (!initialized_) return; backscroll_ = 0;
+    if (!initialized_) return;
+    backscroll_ = 0;
     int mask = 0; size_t index = 0;
     if (!txt.empty() && txt[0] == 1) { mask = 128; S_LocalSound("misc/talk.wav"); index = 1; }
     else if (!txt.empty() && txt[0] == 2) { mask = 128; index = 1; }
@@ -132,7 +135,8 @@ void ConsoleSystem::DrawNotify() {
         float time = times_[i % NUM_CON_TIMES]; if (time == 0.0f || (realtime - time) > con_notifytime.value) continue;
         char* text_ptr = text_.data() + (i % totallines_) * linewidth_;
         Screen::GetScreenSystem().SetClearnotify(0); Screen::GetScreenSystem().SetCopytop(1);
-        for (int x = 0; x < linewidth_; x++) Draw_Character((x + 1) << 3, v, text_ptr[x]); v += 8;
+        for (int x = 0; x < linewidth_; x++) Draw_Character((x + 1) << 3, v, text_ptr[x]);
+        v += 8;
     }
     if (key_dest == key_message) {
         Screen::GetScreenSystem().SetClearnotify(0); Screen::GetScreenSystem().SetCopytop(1);

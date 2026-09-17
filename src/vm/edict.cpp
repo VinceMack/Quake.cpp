@@ -33,7 +33,7 @@ void ED_ClearFieldCache() {
 }
 
 void ED_ClearEdict(edict_t* e) {
-    std::memset(&e->v, 0, progs->entityfields * 4);
+    std::memset(static_cast<void*>(&e->v), 0, static_cast<size_t>(progs->entityfields) * 4);
     e->free = false;
 }
 
@@ -203,7 +203,7 @@ char* PR_GlobalStringNoContents(int ofs) {
     static char line[128];
     ddef_t* def = ED_GlobalAtOfs(ofs);
     if (!def) {
-        sprintf_s(line, sizeof(line), "%i(???)", ofs);
+        sprintf_s(line, sizeof(line), "%i(?\?\?)", ofs);
     } else {
         sprintf_s(line, sizeof(line), "%i(%s)", ofs, PR_GetString(def->s_name));
     }
@@ -426,7 +426,7 @@ char* ED_ParseEdict(char* data, edict_t* ent) {
     char keyname[256];
 
     if (ent != Server::sv.edicts) {
-        std::memset(&ent->v, 0, progs->entityfields * 4);
+        std::memset(static_cast<void*>(&ent->v), 0, static_cast<size_t>(progs->entityfields) * 4);
     }
 
     while (1) {

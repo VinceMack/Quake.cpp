@@ -346,7 +346,7 @@ void Sbar_DrawInventory()
     float time;
     int flashon;
     if (rogue) {
-        if (cl.stats[STAT_ACTIVEWEAPON] >= RIT_LAVA_NAILGUN) {
+        if (static_cast<uint32_t>(cl.stats[STAT_ACTIVEWEAPON]) >= RIT_LAVA_NAILGUN) {
             Sbar_DrawPic(0, -24, rsb_invbar[0]);
         } else {
             Sbar_DrawPic(0, -24, rsb_invbar[1]);
@@ -360,7 +360,7 @@ void Sbar_DrawInventory()
             time = cl.item_gettime[i];
             flashon = static_cast<int>((cl.time - time) * 10);
             if (flashon >= 10) {
-                if (cl.stats[STAT_ACTIVEWEAPON] == (IT_SHOTGUN << i)) {
+                if (static_cast<uint32_t>(cl.stats[STAT_ACTIVEWEAPON]) == (IT_SHOTGUN << i)) {
                     flashon = 1;
                 } else {
                     flashon = 0;
@@ -420,9 +420,9 @@ void Sbar_DrawInventory()
     }
     if (rogue) {
         // check for powered up weapon.
-        if (cl.stats[STAT_ACTIVEWEAPON] >= RIT_LAVA_NAILGUN) {
+        if (static_cast<uint32_t>(cl.stats[STAT_ACTIVEWEAPON]) >= RIT_LAVA_NAILGUN) {
             for (int i = 0; i < 5; i++) {
-                if (cl.stats[STAT_ACTIVEWEAPON] == (RIT_LAVA_NAILGUN << i)) {
+                if (static_cast<uint32_t>(cl.stats[STAT_ACTIVEWEAPON]) == (RIT_LAVA_NAILGUN << i)) {
                     Sbar_DrawPic((i + 2) * 24, -16, rsb_weapons[i]);
                 }
             }

@@ -41,7 +41,7 @@ cvar_t cl_yawspeed      = { "cl_yawspeed", "140", {}, {}, {}, {} };
 cvar_t cl_pitchspeed    = { "cl_pitchspeed", "150", {}, {}, {}, {} };
 cvar_t cl_anglespeedkey = { "cl_anglespeedkey", "1.5", {}, {}, {}, {} };
 
-ClientSubsystem& GetClientSubsystem() {
+ClientSubsystem& GetClientSubsystem() noexcept {
     static ClientSubsystem subsystem;
     return subsystem;
 }

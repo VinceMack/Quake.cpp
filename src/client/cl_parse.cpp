@@ -137,6 +137,7 @@ void CL_ParseUpdate(int bits) {
     }
     ent->frame = (bits & U_FRAME) ? MSG_ReadByte() : ent->baseline.frame;
     int colormap_idx = (bits & U_COLORMAP) ? MSG_ReadByte() : ent->baseline.colormap;
+    if (colormap_idx > cl.maxclients) Host_Error("CL_ParseUpdate: colormap %i > maxclients", colormap_idx);
     ent->colormap = !colormap_idx ? vid.colormap : cl.scores[colormap_idx - 1].translations;
     ent->skinnum = (bits & U_SKIN) ? MSG_ReadByte() : ent->baseline.skin;
     ent->effects = (bits & U_EFFECTS) ? MSG_ReadByte() : ent->baseline.effects;

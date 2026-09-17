@@ -35,6 +35,12 @@ void Host_InitCommands();
 void Host_Init(quakeparms_t* parms);
 void Host_Shutdown();
 
+// Thrown by Host_Error and Host_EndGame after the server and client have been shut
+// down. Host_Frame catches it, so a recoverable error (a QuakeC runtime fault, a lost
+// connection, a malformed server message) returns the engine to the console instead of
+// terminating the process. Fatal errors go through Sys_Error, which never returns.
+struct HostAbort {};
+
 [[noreturn]] void Host_Error(const char* error, ...);
 [[noreturn]] void Host_EndGame(const char* message, ...);
 void Host_Frame(float time);

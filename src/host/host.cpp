@@ -57,7 +57,7 @@ cvar_t temp1          = { "temp1", "0", {}, {}, {}, {} };
     if (sv.active) Host_ShutdownServer(false);
     if (cls.state == ca_dedicated) Sys_Error("Host_EndGame: %s\n", string);
     if (cls.demonum != -1) CL_NextDemo(); else CL_Disconnect();
-    Sys_Error("Host_EndGame: %s\n", string);
+    throw HostAbort{};
 }
 
 [[noreturn]] void Host_Error(const char* error, ...) {
@@ -69,8 +69,11 @@ cvar_t temp1          = { "temp1", "0", {}, {}, {}, {} };
     Sys_Printf("Host_Error: %s\n", string);
     if (sv.active) Host_ShutdownServer(false);
     if (cls.state == ca_dedicated) Sys_Error("Host_Error: %s\n", string);
-    CL_Disconnect(); cls.demonum = -1; inerror = false;
-    Sys_Error("Host_Error: %s\n", string);
+    CL_Disconnect();
+    cls.demonum = -1;
+    PR_ResetExecutionState();
+    inerror = false;
+    throw HostAbort{};
 }
 
 void Host_FindMaxClients() {
@@ -183,11 +186,28 @@ void _Host_Frame(float time) {
 }
 
 void Host_Frame(float time) {
-    static double timetotal; static int timecount;
-    if (!serverprofile.value) { _Host_Frame(time); return; }
-    double time1 = Sys_FloatTime(); _Host_Frame(time); double time2 = Sys_FloatTime();
-    timetotal += time2 - time1; timecount++; if (timecount < 1000) return;
-    int m = static_cast<int>(timetotal * 1000 / timecount); timecount = 0; timetotal = 0;
+    static double timetotal = 0.0;
+    static int timecount = 0;
+
+    try {
+        if (!serverprofile.value) {
+            _Host_Frame(time);
+            return;
+        }
+        double time1 = Sys_FloatTime();
+        _Host_Frame(time);
+        double time2 = Sys_FloatTime();
+        timetotal += time2 - time1;
+        timecount++;
+    } catch (const HostAbort&) {
+        // Host_Error already tore down the server and client; resume at the next frame.
+        return;
+    }
+
+    if (timecount < 1000) return;
+    int m = static_cast<int>(timetotal * 1000 / timecount);
+    timecount = 0;
+    timetotal = 0;
     int c = static_cast<int>(eastl::count_if(svs.clients, svs.clients + svs.maxclients, [](const client_t& cl) { return cl.active; }));
     Con_Printf("serverprofile: %2i clients %2i msec\n", c, m);
 }
@@ -279,17 +299,28 @@ int current_skill;
 void Host_Quit_f() { if (key_dest != key_console && cls.state != ca_dedicated) { M_Menu_Quit_f(); return; } CL_Disconnect(); Host_ShutdownServer(false); Sys_Quit(); }
 
 void Host_Status_f() {
-    auto print = (Cmd::state.source == Cmd::Source::Command) ? (sv.active ? Con_Printf : (Cmd::ForwardToServer(), (void(*)(const char*,...))nullptr)) : SV_ClientPrintf;
-    if (!print) return;
-    print("host:    %s\nversion: %4.2f\n", Cvar::VariableString("hostname"), VERSION);
+    void (*print)(const char*, ...) = SV_ClientPrintf;
+    if (Cmd::state.source == Cmd::Source::Command) {
+        if (!sv.active) {
+            Cmd::ForwardToServer();
+            return;
+        }
+        print = Con_Printf;
+    }
+
+    print("host:    %s\nversion: %4.2f\n", hostname.string.c_str(), VERSION);
     if (tcpipAvailable) print("tcp/ip:  %s\n", my_tcpip_address);
-    if (ipxAvailable) print("ipx:     %s\n", my_ipx_address);
-    print("map:     %s\nplayers: %i active (%i max)\n\n", sv.name, net_activeconnections, svs.maxclients);
+    print("map:     %s\nplayers: %i active (%i max)\n\n", sv.name.data(), net_activeconnections, svs.maxclients);
     for (int j = 0; j < svs.maxclients; j++) {
-        client_t* client = &svs.clients[j]; if (!client->active) continue;
-        int seconds = static_cast<int>(net_time - client->netconnection->connecttime), minutes = seconds / 60, hours = minutes / 60;
-        seconds %= 60; minutes %= 60;
-        print("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n   %s\n", j + 1, client->name.data(), static_cast<int>(client->edict->v.frags), hours, minutes, seconds, client->netconnection->address);
+        const client_t* client = &svs.clients[j];
+        if (!client->active) continue;
+        int seconds = static_cast<int>(net_time - client->netconnection->connecttime);
+        int minutes = seconds / 60;
+        int hours = minutes / 60;
+        seconds %= 60;
+        minutes %= 60;
+        print("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n   %s\n", j + 1, client->name.data(),
+            static_cast<int>(client->edict->v.frags), hours, minutes, seconds, client->netconnection->address);
     }
 }
 
@@ -582,7 +613,8 @@ void Host_Kick_f() {
         if (Cmd::Argc() > 2) {
             args_holder = eastl::string(Cmd::Args().data(), Cmd::Args().length());
             const char* ptr = COM_Parse(args_holder.c_str()); if (byNumber) ptr = COM_Parse(ptr);
-            while (*ptr == ' ') ptr++; if (*ptr != '\0') message = ptr;
+            while (*ptr == ' ') ptr++;
+            if (*ptr != '\0') message = ptr;
         }
         SV_ClientPrintf(message ? "Kicked by %s: %s\n" : "Kicked by %s\n", who, message); SV_DropClient(false);
     }

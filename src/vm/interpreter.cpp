@@ -96,6 +96,11 @@ void PR_StackTrace(void) {
     Host::Host_Error("Program error");
 }
 
+void PR_ResetExecutionState() {
+    pr_depth = 0;
+    localstack_used = 0;
+}
+
 static int PR_EnterFunction(dfunction_t* f) {
     pr_stack[pr_depth].s = pr_xstatement;
     pr_stack[pr_depth].f = pr_xfunction;

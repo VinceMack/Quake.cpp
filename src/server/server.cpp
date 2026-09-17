@@ -201,8 +201,7 @@ void SV_SpawnServer(const char* server)
     }
 
     edict_t* ent = EDICT_NUM(0);
-    memset(&ent->v, 0, progs->entityfields * 4);
-    ent->free = false;
+    ED_ClearEdict(ent);
     ent->v.model = PR_SetString(sv.worldmodel->name);
     ent->v.modelindex = 1;
     ent->v.solid = SOLID_BSP;

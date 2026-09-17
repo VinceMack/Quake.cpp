@@ -617,7 +617,8 @@ void M_NetStart_Change(int dir) {
     case 1:
         maxplayers += dir;
         if (maxplayers > svs.maxclientslimit) { maxplayers = svs.maxclientslimit; m_serverInfoMessage = true; m_serverInfoMessageTime = realtime; }
-        if (maxplayers < 2) maxplayers = 2; break;
+        if (maxplayers < 2) maxplayers = 2;
+        break;
     case 2: Cvar::SetValue("coop", static_cast<float>(coop.value ? 0 : 1)); break;
     case 3: {
         int count = rogue ? 6 : 2; float new_val = teamplay.value + dir;
