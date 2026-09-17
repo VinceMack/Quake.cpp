@@ -11,27 +11,30 @@
 namespace Client {
 
 namespace {
-cvar_t chase_back = { "chase_back", "100", {}, {}, {}, {} };
-cvar_t chase_up   = { "chase_up", "16", {}, {}, {}, {} };
-cvar_t chase_right= { "chase_right", "0", {}, {}, {}, {} };
+cvar_t chase_back = { "chase_back", "100", { }, { }, { }, { } };
+cvar_t chase_up = { "chase_up", "16", { }, { }, { }, { } };
+cvar_t chase_right = { "chase_right", "0", { }, { }, { }, { } };
 Vector3 chase_dest;
 
-void TraceLine(const Vector3& start, const Vector3& end, Vector3& impact) {
-    trace_t trace{};
+void TraceLine(const Vector3& start, const Vector3& end, Vector3& impact)
+{
+    trace_t trace { };
     SV_RecursiveHullCheck(cl.worldmodel->hulls, 0, 0, 1, start, end, &trace);
     impact = trace.endpos;
 }
 } // anonymous namespace
 
-cvar_t chase_active = { "chase_active", "0", {}, {}, {}, {} };
+cvar_t chase_active = { "chase_active", "0", { }, { }, { }, { } };
 
-void Chase_Init() {
+void Chase_Init()
+{
     for (auto* c : { &chase_back, &chase_up, &chase_right, &chase_active }) {
         Cvar::Register(c);
     }
 }
 
-void Chase_Update() {
+void Chase_Update()
+{
     Vector3 forward, up, right;
     Math::AngleVectors(cl.viewangles, forward, right, up);
     chase_dest = Render::r_refdef.vieworg - forward * chase_back.value - right * chase_right.value;

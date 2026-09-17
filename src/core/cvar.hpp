@@ -21,7 +21,9 @@ extern struct cvar_s cmdline;
 
 namespace Cvar {
 
-struct State { cvar_t* vars = nullptr; };
+struct State {
+    cvar_t* vars = nullptr;
+};
 
 class CvarRegistry {
 public:

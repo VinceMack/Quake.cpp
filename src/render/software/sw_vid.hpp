@@ -11,7 +11,10 @@ extern viddef_t vid;
 
 void VID_HandlePause();
 void VID_SetPalette(unsigned char* palette);
-inline void VID_ShiftPalette(unsigned char* palette) { VID_SetPalette(palette); }
+inline void VID_ShiftPalette(unsigned char* palette)
+{
+    VID_SetPalette(palette);
+}
 void VID_Init(unsigned char* palette);
 void VID_Shutdown();
 void VID_Update(vrect_t* rects);
@@ -22,4 +25,3 @@ void D_EndDirectRect(int x, int y, int width, int height);
 [[nodiscard]] SDL_Window* GetWindow() noexcept;
 
 } // namespace Vid
-

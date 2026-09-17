@@ -5,11 +5,13 @@ namespace Render {
 
 static IRenderer* g_renderer = nullptr;
 
-IRenderer* GetRenderer() {
+IRenderer* GetRenderer()
+{
     return g_renderer;
 }
 
-void SetRenderer(IRenderer* renderer) {
+void SetRenderer(IRenderer* renderer)
+{
     g_renderer = renderer;
 }
 

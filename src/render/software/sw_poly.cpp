@@ -31,7 +31,7 @@ struct spanpackage_t {
     int sfrac = 0, tfrac = 0, light = 0, zi = 0;
 };
 
-static std::array<int, 6> r_p0{}, r_p1{}, r_p2{};
+static std::array<int, 6> r_p0 { }, r_p1 { }, r_p2 { };
 static byte* d_pcolormap = nullptr;
 static int d_xdenom = 0;
 
@@ -68,11 +68,12 @@ static int d_lightbasestep = 0, d_pdestbasestep = 0, d_ptexbasestep = 0;
 static int d_sfracbasestep = 0, d_tfracbasestep = 0;
 static int d_ziextrastep = 0, d_zibasestep = 0;
 static int d_pzextrastep = 0, d_pzbasestep = 0;
-static std::array<byte*, MAX_LBM_HEIGHT> skintable{};
+static std::array<byte*, MAX_LBM_HEIGHT> skintable { };
 static int skinwidth = 0;
 static byte* skinstart = nullptr;
 
-static void D_PolysetRecursiveTriangle(const std::array<int, 6>* p1, const std::array<int, 6>* p2, const std::array<int, 6>* p3);
+static void D_PolysetRecursiveTriangle(
+    const std::array<int, 6>* p1, const std::array<int, 6>* p2, const std::array<int, 6>* p3);
 static void D_PolysetSetEdgeTable();
 static void D_RasterizeAliasPolySmooth();
 static void D_PolysetScanLeftEdge(int height);
@@ -117,8 +118,9 @@ void D_DrawSubdiv()
         finalvert_t* index1 = pfv + ptri[i].vertindex[1];
         finalvert_t* index2 = pfv + ptri[i].vertindex[2];
 
-        if (((index0->v[1] - index1->v[1]) * (index0->v[0] - index2->v[0]) -
-             (index0->v[0] - index1->v[0]) * (index0->v[1] - index2->v[1])) >= 0) {
+        if (((index0->v[1] - index1->v[1]) * (index0->v[0] - index2->v[0])
+                - (index0->v[0] - index1->v[0]) * (index0->v[1] - index2->v[1]))
+            >= 0) {
             continue;
         }
 
@@ -157,8 +159,8 @@ void D_DrawNonSubdiv()
         finalvert_t* index1 = pfv + ptri->vertindex[1];
         finalvert_t* index2 = pfv + ptri->vertindex[2];
 
-        d_xdenom = (index0->v[1] - index1->v[1]) * (index0->v[0] - index2->v[0]) -
-                   (index0->v[0] - index1->v[0]) * (index0->v[1] - index2->v[1]);
+        d_xdenom = (index0->v[1] - index1->v[1]) * (index0->v[0] - index2->v[0])
+            - (index0->v[0] - index1->v[0]) * (index0->v[1] - index2->v[1]);
         if (d_xdenom >= 0) {
             continue;
         }
@@ -182,12 +184,11 @@ void D_DrawNonSubdiv()
     }
 }
 
-static void D_PolysetRecursiveTriangle(const std::array<int, 6>* lp1,
-    const std::array<int, 6>* lp2,
-    const std::array<int, 6>* lp3)
+static void D_PolysetRecursiveTriangle(
+    const std::array<int, 6>* lp1, const std::array<int, 6>* lp2, const std::array<int, 6>* lp3)
 {
     const std::array<int, 6>* temp;
-    std::array<int, 6> new_poly{};
+    std::array<int, 6> new_poly { };
 
     int d = (*lp2)[0] - (*lp1)[0];
     if (d < -1 || d > 1) {
@@ -315,10 +316,7 @@ static void D_PolysetScanLeftEdge(int height)
     } while (--height);
 }
 
-static void D_PolysetSetUpForLineScan(fixed8_t startvertu,
-    fixed8_t startvertv,
-    fixed8_t endvertu,
-    fixed8_t endvertv)
+static void D_PolysetSetUpForLineScan(fixed8_t startvertu, fixed8_t startvertv, fixed8_t endvertu, fixed8_t endvertv)
 {
     errorterm = -1;
     int tm = endvertu - startvertu;
@@ -414,7 +412,8 @@ static void D_RasterizeAliasPolySmooth()
     d_pedgespanpackage = a_spans;
     ystart = (*plefttop)[1];
     d_aspancount = (*plefttop)[0] - (*prighttop)[0];
-    d_ptex = reinterpret_cast<byte*>(r_affinetridesc.pskin) + ((*plefttop)[2] >> 16) + ((*plefttop)[3] >> 16) * r_affinetridesc.skinwidth;
+    d_ptex = reinterpret_cast<byte*>(r_affinetridesc.pskin) + ((*plefttop)[2] >> 16)
+        + ((*plefttop)[3] >> 16) * r_affinetridesc.skinwidth;
     d_sfrac = (*plefttop)[2] & 0xFFFF;
     d_tfrac = (*plefttop)[3] & 0xFFFF;
     d_light = (*plefttop)[4];
@@ -441,12 +440,14 @@ static void D_RasterizeAliasPolySmooth()
         d_pdestextrastep = d_pdestbasestep + 1;
         working_lstepx = (ubasestep < 0) ? r_lstepx - 1 : r_lstepx;
         d_countextrastep = ubasestep + 1;
-        d_ptexbasestep = ((r_sstepy + r_sstepx * ubasestep) >> 16) + ((r_tstepy + r_tstepx * ubasestep) >> 16) * r_affinetridesc.skinwidth;
+        d_ptexbasestep = ((r_sstepy + r_sstepx * ubasestep) >> 16)
+            + ((r_tstepy + r_tstepx * ubasestep) >> 16) * r_affinetridesc.skinwidth;
         d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) & 0xFFFF;
         d_tfracbasestep = (r_tstepy + r_tstepx * ubasestep) & 0xFFFF;
         d_lightbasestep = r_lstepy + working_lstepx * ubasestep;
         d_zibasestep = r_zistepy + r_zistepx * ubasestep;
-        d_ptexextrastep = ((r_sstepy + r_sstepx * d_countextrastep) >> 16) + ((r_tstepy + r_tstepx * d_countextrastep) >> 16) * r_affinetridesc.skinwidth;
+        d_ptexextrastep = ((r_sstepy + r_sstepx * d_countextrastep) >> 16)
+            + ((r_tstepy + r_tstepx * d_countextrastep) >> 16) * r_affinetridesc.skinwidth;
         d_sfracextrastep = (r_sstepy + r_sstepx * d_countextrastep) & 0xFFFF;
         d_tfracextrastep = (r_tstepy + r_tstepx * d_countextrastep) & 0xFFFF;
         d_lightextrastep = d_lightbasestep + working_lstepx;
@@ -460,7 +461,8 @@ static void D_RasterizeAliasPolySmooth()
         int height = (*pleftbottom)[1] - (*plefttop)[1];
         ystart = (*plefttop)[1];
         d_aspancount = (*plefttop)[0] - (*prighttop)[0];
-        d_ptex = reinterpret_cast<byte*>(r_affinetridesc.pskin) + ((*plefttop)[2] >> 16) + ((*plefttop)[3] >> 16) * r_affinetridesc.skinwidth;
+        d_ptex = reinterpret_cast<byte*>(r_affinetridesc.pskin) + ((*plefttop)[2] >> 16)
+            + ((*plefttop)[3] >> 16) * r_affinetridesc.skinwidth;
         d_sfrac = 0;
         d_tfrac = 0;
         d_light = (*plefttop)[4];
@@ -485,12 +487,14 @@ static void D_RasterizeAliasPolySmooth()
             d_pzextrastep = d_pzbasestep + 1;
             working_lstepx = (ubasestep < 0) ? r_lstepx - 1 : r_lstepx;
             d_countextrastep = ubasestep + 1;
-            d_ptexbasestep = ((r_sstepy + r_sstepx * ubasestep) >> 16) + ((r_tstepy + r_tstepx * ubasestep) >> 16) * r_affinetridesc.skinwidth;
+            d_ptexbasestep = ((r_sstepy + r_sstepx * ubasestep) >> 16)
+                + ((r_tstepy + r_tstepx * ubasestep) >> 16) * r_affinetridesc.skinwidth;
             d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) & 0xFFFF;
             d_tfracbasestep = (r_tstepy + r_tstepx * ubasestep) & 0xFFFF;
             d_lightbasestep = r_lstepy + working_lstepx * ubasestep;
             d_zibasestep = r_zistepy + r_zistepx * ubasestep;
-            d_ptexextrastep = ((r_sstepy + r_sstepx * d_countextrastep) >> 16) + ((r_tstepy + r_tstepx * d_countextrastep) >> 16) * r_affinetridesc.skinwidth;
+            d_ptexextrastep = ((r_sstepy + r_sstepx * d_countextrastep) >> 16)
+                + ((r_tstepy + r_tstepx * d_countextrastep) >> 16) * r_affinetridesc.skinwidth;
             d_sfracextrastep = (r_sstepy + r_sstepx * d_countextrastep) & 0xFFFF;
             d_tfracextrastep = (r_tstepy + r_tstepx * d_countextrastep) & 0xFFFF;
             d_lightextrastep = d_lightbasestep + working_lstepx;

@@ -7,8 +7,21 @@
 namespace Menu {
 
 enum class MenuState {
-    None, Main, SinglePlayer, Load, Save, MultiPlayer, Setup, Options,
-    Keys, Help, Quit, LanConfig, GameOptions, Search, SList
+    None,
+    Main,
+    SinglePlayer,
+    Load,
+    Save,
+    MultiPlayer,
+    Setup,
+    Options,
+    Keys,
+    Help,
+    Quit,
+    LanConfig,
+    GameOptions,
+    Search,
+    SList
 };
 
 void M_Init();

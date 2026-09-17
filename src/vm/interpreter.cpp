@@ -30,19 +30,15 @@ dfunction_t* pr_xfunction = nullptr;
 int pr_xstatement = 0;
 int pr_argc = 0;
 
-static const char* pr_opnames[] = {
-    "DONE", "MUL_F", "MUL_V", "MUL_FV", "MUL_VF", "DIV", "ADD_F", "ADD_V",
-    "SUB_F", "SUB_V", "EQ_F", "EQ_V", "EQ_S", "EQ_E", "EQ_FNC", "NE_F",
-    "NE_V", "NE_S", "NE_E", "NE_FNC", "LE", "GE", "LT", "GT", "INDIRECT",
-    "INDIRECT", "INDIRECT", "INDIRECT", "INDIRECT", "INDIRECT", "ADDRESS",
-    "STORE_F", "STORE_V", "STORE_S", "STORE_ENT", "STORE_FLD", "STORE_FNC",
-    "STOREP_F", "STOREP_V", "STOREP_S", "STOREP_ENT", "STOREP_FLD", "STOREP_FNC",
-    "RETURN", "NOT_F", "NOT_V", "NOT_S", "NOT_ENT", "NOT_FNC", "IF", "IFNOT",
-    "CALL0", "CALL1", "CALL2", "CALL3", "CALL4", "CALL5", "CALL6", "CALL7",
-    "CALL8", "STATE", "GOTO", "AND", "OR", "BITAND", "BITOR"
-};
+static const char* pr_opnames[] = { "DONE", "MUL_F", "MUL_V", "MUL_FV", "MUL_VF", "DIV", "ADD_F", "ADD_V", "SUB_F",
+    "SUB_V", "EQ_F", "EQ_V", "EQ_S", "EQ_E", "EQ_FNC", "NE_F", "NE_V", "NE_S", "NE_E", "NE_FNC", "LE", "GE", "LT", "GT",
+    "INDIRECT", "INDIRECT", "INDIRECT", "INDIRECT", "INDIRECT", "INDIRECT", "ADDRESS", "STORE_F", "STORE_V", "STORE_S",
+    "STORE_ENT", "STORE_FLD", "STORE_FNC", "STOREP_F", "STOREP_V", "STOREP_S", "STOREP_ENT", "STOREP_FLD", "STOREP_FNC",
+    "RETURN", "NOT_F", "NOT_V", "NOT_S", "NOT_ENT", "NOT_FNC", "IF", "IFNOT", "CALL0", "CALL1", "CALL2", "CALL3",
+    "CALL4", "CALL5", "CALL6", "CALL7", "CALL8", "STATE", "GOTO", "AND", "OR", "BITAND", "BITOR" };
 
-void PR_PrintStatement(dstatement_t* s) {
+void PR_PrintStatement(dstatement_t* s)
+{
     if (static_cast<unsigned>(s->op) < sizeof(pr_opnames) / sizeof(pr_opnames[0])) {
         Console::Con_Printf("%s ", pr_opnames[s->op]);
         int i = static_cast<int>(std::strlen(pr_opnames[s->op]));
@@ -65,7 +61,8 @@ void PR_PrintStatement(dstatement_t* s) {
     Console::Con_Printf("\n");
 }
 
-void PR_StackTrace(void) {
+void PR_StackTrace(void)
+{
     if (pr_depth == 0) {
         Console::Con_Printf("<NO STACK>\n");
         return;
@@ -74,12 +71,15 @@ void PR_StackTrace(void) {
     pr_stack[pr_depth].f = pr_xfunction;
     for (int i = pr_depth; i >= 0; i--) {
         dfunction_t* f = pr_stack[i].f;
-        if (!f) Console::Con_Printf("<NO FUNCTION>\n");
-        else Console::Con_Printf("%12s : %s\n", PR_GetString(f->s_file), PR_GetString(f->s_name));
+        if (!f)
+            Console::Con_Printf("<NO FUNCTION>\n");
+        else
+            Console::Con_Printf("%12s : %s\n", PR_GetString(f->s_file), PR_GetString(f->s_name));
     }
 }
 
-[[noreturn]] void PR_RunError(const char* error, ...) {
+[[noreturn]] void PR_RunError(const char* error, ...)
+{
     va_list argptr;
     char string[1024];
 
@@ -95,12 +95,14 @@ void PR_StackTrace(void) {
     Host::Host_Error("Program error");
 }
 
-void PR_ResetExecutionState() {
+void PR_ResetExecutionState()
+{
     pr_depth = 0;
     localstack_used = 0;
 }
 
-static int PR_EnterFunction(dfunction_t* f) {
+static int PR_EnterFunction(dfunction_t* f)
+{
     pr_stack[pr_depth].s = pr_xstatement;
     pr_stack[pr_depth].f = pr_xfunction;
     pr_depth++;
@@ -128,7 +130,8 @@ static int PR_EnterFunction(dfunction_t* f) {
     return f->first_statement - 1;
 }
 
-static int PR_LeaveFunction(void) {
+static int PR_LeaveFunction(void)
+{
     if (pr_depth <= 0) Common::Sys_Error("prog stack underflow");
 
     int c = pr_xfunction->locals;
@@ -144,7 +147,8 @@ static int PR_LeaveFunction(void) {
     return pr_stack[pr_depth].s;
 }
 
-void PR_ExecuteProgram(func_t fnum) {
+void PR_ExecuteProgram(func_t fnum)
+{
     eval_t *a, *b, *c;
     int s, runaway, exitdepth;
     dstatement_t* st;
@@ -256,7 +260,8 @@ void PR_ExecuteProgram(func_t fnum) {
             c->_float = a->_float == b->_float;
             break;
         case OP_EQ_V:
-            c->_float = (a->vector[0] == b->vector[0]) && (a->vector[1] == b->vector[1]) && (a->vector[2] == b->vector[2]);
+            c->_float
+                = (a->vector[0] == b->vector[0]) && (a->vector[1] == b->vector[1]) && (a->vector[2] == b->vector[2]);
             break;
         case OP_EQ_S:
             c->_float = !std::strcmp(PR_GetString(a->string), PR_GetString(b->string));
@@ -271,7 +276,8 @@ void PR_ExecuteProgram(func_t fnum) {
             c->_float = a->_float != b->_float;
             break;
         case OP_NE_V:
-            c->_float = (a->vector[0] != b->vector[0]) || (a->vector[1] != b->vector[1]) || (a->vector[2] != b->vector[2]);
+            c->_float
+                = (a->vector[0] != b->vector[0]) || (a->vector[1] != b->vector[1]) || (a->vector[2] != b->vector[2]);
             break;
         case OP_NE_S:
             c->_float = static_cast<float>(std::strcmp(PR_GetString(a->string), PR_GetString(b->string)));

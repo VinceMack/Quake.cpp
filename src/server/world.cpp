@@ -17,9 +17,12 @@ hull_t* SV_HullForEntity(edict_t* ent, const Vector3& mins, const Vector3& maxs,
         if (!model || model->type != mod_brush) Common::Sys_Error("MOVETYPE_PUSH with a non bsp model");
 
         size = maxs - mins;
-        if (size.x < 3) hull = &model->hulls[0];
-        else if (size.x <= 32) hull = &model->hulls[1];
-        else hull = &model->hulls[2];
+        if (size.x < 3)
+            hull = &model->hulls[0];
+        else if (size.x <= 32)
+            hull = &model->hulls[1];
+        else
+            hull = &model->hulls[2];
 
         offset = hull->clip_mins - mins;
         offset += ent->v.origin;
@@ -64,12 +67,16 @@ static areanode_t* SV_CreateAreaNode(int depth, const Vector3& mins, const Vecto
     }
 
     size = maxs - mins;
-    if (size.x > size.y) anode->axis = 0;
-    else anode->axis = 1;
+    if (size.x > size.y)
+        anode->axis = 0;
+    else
+        anode->axis = 1;
 
     anode->dist = static_cast<float>(0.5 * (maxs[anode->axis] + mins[anode->axis]));
-    mins1 = mins; mins2 = mins;
-    maxs1 = maxs; maxs2 = maxs;
+    mins1 = mins;
+    mins2 = mins;
+    maxs1 = maxs;
+    maxs2 = maxs;
 
     maxs1[anode->axis] = mins2[anode->axis] = anode->dist;
 
@@ -82,7 +89,7 @@ static areanode_t* SV_CreateAreaNode(int depth, const Vector3& mins, const Vecto
 void SV_ClearWorld(void)
 {
     SV_InitBoxHull();
-    for (auto& node : sv_areanodes) node = areanode_t{};
+    for (auto& node : sv_areanodes) node = areanode_t { };
     sv_numareanodes = 0;
     SV_CreateAreaNode(0, sv.worldmodel->mins, sv.worldmodel->maxs);
 }
@@ -106,8 +113,9 @@ static void SV_TouchLinks(edict_t* ent, areanode_t* node)
         if (touch == ent) continue;
         if (!touch->v.touch || touch->v.solid != SOLID_TRIGGER) continue;
 
-        if (ent->v.absmin.x > touch->v.absmax.x || ent->v.absmin.y > touch->v.absmax.y || ent->v.absmin.z > touch->v.absmax.z ||
-            ent->v.absmax.x < touch->v.absmin.x || ent->v.absmax.y < touch->v.absmin.y || ent->v.absmax.z < touch->v.absmin.z) {
+        if (ent->v.absmin.x > touch->v.absmax.x || ent->v.absmin.y > touch->v.absmax.y
+            || ent->v.absmin.z > touch->v.absmax.z || ent->v.absmax.x < touch->v.absmin.x
+            || ent->v.absmax.y < touch->v.absmin.y || ent->v.absmax.z < touch->v.absmin.z) {
             continue;
         }
 
@@ -163,11 +171,17 @@ void SV_LinkEdict(edict_t* ent, qboolean touch_triggers)
     ent->v.absmax = ent->v.origin + ent->v.maxs;
 
     if ((int)ent->v.flags & FL_ITEM) {
-        ent->v.absmin.x -= 15; ent->v.absmin.y -= 15;
-        ent->v.absmax.x += 15; ent->v.absmax.y += 15;
+        ent->v.absmin.x -= 15;
+        ent->v.absmin.y -= 15;
+        ent->v.absmax.x += 15;
+        ent->v.absmax.y += 15;
     } else {
-        ent->v.absmin.x -= 1; ent->v.absmin.y -= 1; ent->v.absmin.z -= 1;
-        ent->v.absmax.x += 1; ent->v.absmax.y += 1; ent->v.absmax.z += 1;
+        ent->v.absmin.x -= 1;
+        ent->v.absmin.y -= 1;
+        ent->v.absmin.z -= 1;
+        ent->v.absmax.x += 1;
+        ent->v.absmax.y += 1;
+        ent->v.absmax.z += 1;
     }
 
     ent->num_leafs = 0;
@@ -178,13 +192,18 @@ void SV_LinkEdict(edict_t* ent, qboolean touch_triggers)
     node = sv_areanodes;
     while (1) {
         if (node->axis == -1) break;
-        if (ent->v.absmin[node->axis] > node->dist) node = node->children[0];
-        else if (ent->v.absmax[node->axis] < node->dist) node = node->children[1];
-        else break;
+        if (ent->v.absmin[node->axis] > node->dist)
+            node = node->children[0];
+        else if (ent->v.absmax[node->axis] < node->dist)
+            node = node->children[1];
+        else
+            break;
     }
 
-    if (ent->v.solid == SOLID_TRIGGER) Common::InsertLinkBefore(&ent->area, &node->trigger_edicts);
-    else Common::InsertLinkBefore(&ent->area, &node->solid_edicts);
+    if (ent->v.solid == SOLID_TRIGGER)
+        Common::InsertLinkBefore(&ent->area, &node->trigger_edicts);
+    else
+        Common::InsertLinkBefore(&ent->area, &node->solid_edicts);
 
     if (touch_triggers) SV_TouchLinks(ent, sv_areanodes);
 }
@@ -203,11 +222,12 @@ edict_t* SV_TestEntityPosition(edict_t* ent)
     return nullptr;
 }
 
-trace_t SV_ClipMoveToEntity(edict_t* ent, const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end)
+trace_t SV_ClipMoveToEntity(
+    edict_t* ent, const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end)
 {
     Vector3 offset, start_l, end_l;
     hull_t* hull;
-    trace_t trace{};
+    trace_t trace { };
     trace.fraction = 1.0f;
     trace.allsolid = true;
     trace.endpos = end;
@@ -247,8 +267,9 @@ static void SV_ClipToLinks(areanode_t* node, moveclip_t* clip)
         if (touch->v.solid == SOLID_TRIGGER) Common::Sys_Error("Trigger in clipping list");
         if (clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP) continue;
 
-        if (clip->boxmins.x > touch->v.absmax.x || clip->boxmins.y > touch->v.absmax.y || clip->boxmins.z > touch->v.absmax.z ||
-            clip->boxmaxs.x < touch->v.absmin.x || clip->boxmaxs.y < touch->v.absmin.y || clip->boxmaxs.z < touch->v.absmin.z) {
+        if (clip->boxmins.x > touch->v.absmax.x || clip->boxmins.y > touch->v.absmax.y
+            || clip->boxmins.z > touch->v.absmax.z || clip->boxmaxs.x < touch->v.absmin.x
+            || clip->boxmaxs.y < touch->v.absmin.y || clip->boxmaxs.z < touch->v.absmin.z) {
             continue;
         }
 
@@ -285,7 +306,8 @@ static void SV_ClipToLinks(areanode_t* node, moveclip_t* clip)
     if (clip->boxmins[node->axis] < node->dist) SV_ClipToLinks(node->children[1], clip);
 }
 
-void SV_MoveBounds(const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end, Vector3& boxmins, Vector3& boxmaxs)
+void SV_MoveBounds(const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end, Vector3& boxmins,
+    Vector3& boxmaxs)
 {
     for (int i = 0; i < 3; i++) {
         if (end[i] > start[i]) {
@@ -298,9 +320,10 @@ void SV_MoveBounds(const Vector3& start, const Vector3& mins, const Vector3& max
     }
 }
 
-trace_t SV_Move(const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end, int type, edict_t* passedict)
+trace_t SV_Move(
+    const Vector3& start, const Vector3& mins, const Vector3& maxs, const Vector3& end, int type, edict_t* passedict)
 {
-    moveclip_t clip{};
+    moveclip_t clip { };
     clip.trace = SV_ClipMoveToEntity(sv.edicts, start, mins, maxs, end);
     clip.start = start;
     clip.end = end;

@@ -15,9 +15,9 @@ byte* r_skysource = nullptr;
 int r_skymade = 0;
 int r_skydirect = 0;
 
-static std::array<byte, 128 * 131> bottomsky{};
-static std::array<byte, 128 * 131> bottommask{};
-alignas(unsigned) static std::array<byte, 128 * 256> newsky{};
+static std::array<byte, 128 * 131> bottomsky { };
+static std::array<byte, 128 * 131> bottommask { };
+alignas(unsigned) static std::array<byte, 128 * 256> newsky { };
 
 void R_InitSky(texture_t* mt)
 {
@@ -56,7 +56,8 @@ void R_MakeSky()
         int baseofs = ((y + yshift) & SKYMASK) * 131;
         for (int x = 0; x < SKYSIZE; x++) {
             int ofs = baseofs + ((x + xshift) & SKYMASK);
-            *reinterpret_cast<byte*>(pnewsky) = (*(reinterpret_cast<byte*>(pnewsky) + 128) & bottommask[ofs]) | bottomsky[ofs];
+            *reinterpret_cast<byte*>(pnewsky)
+                = (*(reinterpret_cast<byte*>(pnewsky) + 128) & bottommask[ofs]) | bottomsky[ofs];
             pnewsky = reinterpret_cast<unsigned*>(reinterpret_cast<byte*>(pnewsky) + 1);
         }
         pnewsky += 128 / sizeof(unsigned);

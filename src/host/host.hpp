@@ -11,9 +11,9 @@ struct client_t;
 //=============================================================================
 
 struct quakeparms_t {
-    const char* basedir{nullptr};
-    int argc{0};
-    char** argv{nullptr};
+    const char* basedir { nullptr };
+    int argc { 0 };
+    char** argv { nullptr };
 };
 
 namespace Host {
@@ -36,7 +36,7 @@ void Host_Shutdown();
 // down. Host_Frame catches it, so a recoverable error (a QuakeC runtime fault, a lost
 // connection, a malformed server message) returns the engine to the console instead of
 // terminating the process. Fatal errors go through Sys_Error, which never returns.
-struct HostAbort {};
+struct HostAbort { };
 
 [[noreturn]] void Host_Error(const char* error, ...);
 [[noreturn]] void Host_EndGame(const char* message, ...);

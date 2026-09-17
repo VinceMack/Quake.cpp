@@ -30,10 +30,10 @@
 namespace Render {
 
 // Core global rendering state
-refdef_t r_refdef{};
-Vector3 r_origin{}, vpn{}, vright{}, vup{};
-Vector3 base_vpn{}, base_vright{}, base_vup{};
-Vector3 r_worldmodelorg{};
+refdef_t r_refdef { };
+Vector3 r_origin { }, vpn { }, vright { }, vup { };
+Vector3 base_vpn { }, base_vright { }, base_vup { };
+Vector3 r_worldmodelorg { };
 float xcenter = 0.0f, ycenter = 0.0f;
 float xscale = 0.0f, yscale = 0.0f;
 float xscaleinv = 0.0f, yscaleinv = 0.0f;
@@ -93,7 +93,7 @@ cvar_t r_numedges = { "r_numedges", "0", false };
 void R_InitTextures()
 {
     static std::vector<byte> notexture_storage(sizeof(texture_t) + 16 * 16 + 8 * 8 + 4 * 4 + 2 * 2);
-    r_notexture_mip = new (notexture_storage.data()) texture_t{};
+    r_notexture_mip = new (notexture_storage.data()) texture_t { };
     r_notexture_mip->width = r_notexture_mip->height = 16;
     r_notexture_mip->offsets[0] = sizeof(texture_t);
     r_notexture_mip->offsets[1] = r_notexture_mip->offsets[0] + 16 * 16;
@@ -167,7 +167,7 @@ void R_NewMap()
     }
     if (r_cnumsurfs > NUMSTACKSURFACES) {
         static std::vector<surf_t> surfaces_storage;
-        surfaces_storage.assign(static_cast<size_t>(r_cnumsurfs), surf_t{});
+        surfaces_storage.assign(static_cast<size_t>(r_cnumsurfs), surf_t { });
         surfaces = surfaces_storage.data();
         surface_p = surfaces;
         surf_max = &surfaces[r_cnumsurfs];
@@ -186,7 +186,7 @@ void R_NewMap()
         auxedges = nullptr;
     } else {
         static std::vector<edge_t> edges_storage;
-        edges_storage.assign(static_cast<size_t>(r_numallocatededges), edge_t{});
+        edges_storage.assign(static_cast<size_t>(r_numallocatededges), edge_t { });
         auxedges = edges_storage.data();
     }
     r_dowarpold = false;
@@ -237,7 +237,7 @@ void R_DrawEntitiesOnList()
             modelorg = r_origin - r_entorigin;
             if (R_AliasCheckBBox()) {
                 int j = R_LightPoint(currententity->origin);
-                alight_t lighting{};
+                alight_t lighting { };
                 lighting.ambientlight = j;
                 lighting.shadelight = j;
                 lighting.plightvec = lightvec;
@@ -288,7 +288,7 @@ void R_DrawViewModel()
     if (j < 24) {
         j = 24;
     }
-    alight_t r_viewlighting{};
+    alight_t r_viewlighting { };
     r_viewlighting.ambientlight = j;
     r_viewlighting.shadelight = j;
     for (int lnum = 0; lnum < MAX_DLIGHTS; lnum++) {
@@ -374,8 +374,7 @@ void R_DrawBEntitiesOnList()
                         if ((Client::cl_dlights[k].die < Client::cl.time) || (!Client::cl_dlights[k].radius)) {
                             continue;
                         }
-                        R_MarkLights(&Client::cl_dlights[k], 1 << k,
-                            clmodel->nodes + clmodel->hulls[0].firstclipnode);
+                        R_MarkLights(&Client::cl_dlights[k], 1 << k, clmodel->nodes + clmodel->hulls[0].firstclipnode);
                     }
                 }
                 if (r_drawpolys | r_drawculledpolys) {
@@ -415,10 +414,12 @@ void R_EdgeDrawing()
     if (auxedges) {
         r_edges = auxedges;
     } else {
-        r_edges = reinterpret_cast<edge_t*>((reinterpret_cast<size_t>(&ledges[0]) + CACHE_SIZE - 1) & ~(static_cast<size_t>(CACHE_SIZE - 1)));
+        r_edges = reinterpret_cast<edge_t*>(
+            (reinterpret_cast<size_t>(&ledges[0]) + CACHE_SIZE - 1) & ~(static_cast<size_t>(CACHE_SIZE - 1)));
     }
     if (r_surfsonstack) {
-        surfaces = reinterpret_cast<surf_t*>((reinterpret_cast<size_t>(&lsurfs[0]) + CACHE_SIZE - 1) & ~(static_cast<size_t>(CACHE_SIZE - 1)));
+        surfaces = reinterpret_cast<surf_t*>(
+            (reinterpret_cast<size_t>(&lsurfs[0]) + CACHE_SIZE - 1) & ~(static_cast<size_t>(CACHE_SIZE - 1)));
         surf_max = &surfaces[r_cnumsurfs];
         surfaces--;
     }
@@ -447,7 +448,7 @@ void R_EdgeDrawing()
 
 void R_RenderView_()
 {
-    std::array<byte, WARP_WIDTH * WARP_HEIGHT> warpbuffer{};
+    std::array<byte, WARP_WIDTH * WARP_HEIGHT> warpbuffer { };
     r_warpbuffer = warpbuffer.data();
     if (r_timegraph.value || r_speeds.value || r_dspeeds.value) {
         r_time1 = static_cast<float>(Common::Sys_FloatTime());

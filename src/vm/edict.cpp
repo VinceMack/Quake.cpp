@@ -27,16 +27,19 @@ typedef struct {
 
 static gefv_cache gefvCache[GEFV_CACHESIZE] = { { nullptr, "" }, { nullptr, "" } };
 
-void ED_ClearFieldCache() {
+void ED_ClearFieldCache()
+{
     for (int i = 0; i < GEFV_CACHESIZE; i++) gefvCache[i].field[0] = 0;
 }
 
-void ED_ClearEdict(edict_t* e) {
+void ED_ClearEdict(edict_t* e)
+{
     std::memset(static_cast<void*>(&e->v), 0, static_cast<size_t>(progs->entityfields) * 4);
     e->free = false;
 }
 
-edict_t* ED_Alloc(void) {
+edict_t* ED_Alloc(void)
+{
     int i;
     edict_t* e;
 
@@ -59,7 +62,8 @@ edict_t* ED_Alloc(void) {
     return e;
 }
 
-void ED_Free(edict_t* ed) {
+void ED_Free(edict_t* ed)
+{
     Server::SV_UnlinkEdict(ed);
 
     ed->free = true;
@@ -77,7 +81,8 @@ void ED_Free(edict_t* ed) {
     ed->freetime = static_cast<float>(Server::sv.time);
 }
 
-ddef_t* ED_GlobalAtOfs(int ofs) {
+ddef_t* ED_GlobalAtOfs(int ofs)
+{
     for (int i = 0; i < progs->numglobaldefs; i++) {
         ddef_t* def = &pr_globaldefs[i];
         if (def->ofs == ofs) return def;
@@ -85,7 +90,8 @@ ddef_t* ED_GlobalAtOfs(int ofs) {
     return nullptr;
 }
 
-ddef_t* ED_FieldAtOfs(int ofs) {
+ddef_t* ED_FieldAtOfs(int ofs)
+{
     for (int i = 0; i < progs->numfielddefs; i++) {
         ddef_t* def = &pr_fielddefs[i];
         if (def->ofs == ofs) return def;
@@ -93,7 +99,8 @@ ddef_t* ED_FieldAtOfs(int ofs) {
     return nullptr;
 }
 
-ddef_t* ED_FindField(const char* name) {
+ddef_t* ED_FindField(const char* name)
+{
     for (int i = 0; i < progs->numfielddefs; i++) {
         ddef_t* def = &pr_fielddefs[i];
         if (!std::strcmp(PR_GetString(def->s_name), name)) return def;
@@ -101,7 +108,8 @@ ddef_t* ED_FindField(const char* name) {
     return nullptr;
 }
 
-ddef_t* ED_FindGlobal(char* name) {
+ddef_t* ED_FindGlobal(char* name)
+{
     for (int i = 0; i < progs->numglobaldefs; i++) {
         ddef_t* def = &pr_globaldefs[i];
         if (!std::strcmp(PR_GetString(def->s_name), name)) return def;
@@ -109,7 +117,8 @@ ddef_t* ED_FindGlobal(char* name) {
     return nullptr;
 }
 
-dfunction_t* ED_FindFunction(char* name) {
+dfunction_t* ED_FindFunction(char* name)
+{
     for (int i = 0; i < progs->numfunctions; i++) {
         dfunction_t* func = &pr_functions[i];
         if (!std::strcmp(PR_GetString(func->s_name), name)) return func;
@@ -117,7 +126,8 @@ dfunction_t* ED_FindFunction(char* name) {
     return nullptr;
 }
 
-eval_t* GetEdictFieldValue(edict_t* ed, const char* field) {
+eval_t* GetEdictFieldValue(edict_t* ed, const char* field)
+{
     ddef_t* def = nullptr;
     static int rep = 0;
 
@@ -141,7 +151,8 @@ Done:
     return (eval_t*)((char*)&ed->v + def->ofs * 4);
 }
 
-char* PR_UglyValueString(etype_t type, eval_t* val) {
+char* PR_UglyValueString(etype_t type, eval_t* val)
+{
     static char line[256];
     ddef_t* def;
     dfunction_t* f;
@@ -180,7 +191,8 @@ char* PR_UglyValueString(etype_t type, eval_t* val) {
     return line;
 }
 
-char* PR_GlobalString(int ofs) {
+char* PR_GlobalString(int ofs)
+{
     static char line[128];
     void* val = (void*)&pr_globals[ofs];
     ddef_t* def = ED_GlobalAtOfs(ofs);
@@ -198,7 +210,8 @@ char* PR_GlobalString(int ofs) {
     return line;
 }
 
-char* PR_GlobalStringNoContents(int ofs) {
+char* PR_GlobalStringNoContents(int ofs)
+{
     static char line[128];
     ddef_t* def = ED_GlobalAtOfs(ofs);
     if (!def) {
@@ -214,7 +227,8 @@ char* PR_GlobalStringNoContents(int ofs) {
     return line;
 }
 
-void ED_Print(edict_t* ed) {
+void ED_Print(edict_t* ed)
+{
     if (ed->free) {
         Console::Con_Printf("FREE\n");
         return;
@@ -243,7 +257,8 @@ void ED_Print(edict_t* ed) {
     }
 }
 
-void ED_Write(std::ostream& f, edict_t* ed) {
+void ED_Write(std::ostream& f, edict_t* ed)
+{
     f << "{\n";
     if (ed->free) {
         f << "}\n";
@@ -270,16 +285,19 @@ void ED_Write(std::ostream& f, edict_t* ed) {
     f << "}\n";
 }
 
-void ED_PrintNum(int ent) {
+void ED_PrintNum(int ent)
+{
     ED_Print(EDICT_NUM(ent));
 }
 
-void ED_PrintEdicts(void) {
+void ED_PrintEdicts(void)
+{
     Console::Con_Printf("%i entities\n", Server::sv.num_edicts);
     for (int i = 0; i < Server::sv.num_edicts; i++) ED_PrintNum(i);
 }
 
-void ED_PrintEdict_f(void) {
+void ED_PrintEdict_f(void)
+{
     int i = Common::Q_atoi(Cmd::Argv(1));
     if (i >= Server::sv.num_edicts) {
         Console::Con_Printf("Bad edict number\n");
@@ -288,7 +306,8 @@ void ED_PrintEdict_f(void) {
     ED_PrintNum(i);
 }
 
-void ED_Count(void) {
+void ED_Count(void)
+{
     int active = 0, models = 0, solid = 0, step = 0;
 
     for (int i = 0; i < Server::sv.num_edicts; i++) {
@@ -307,7 +326,8 @@ void ED_Count(void) {
     Console::Con_Printf("step      :%3i\n", step);
 }
 
-void ED_WriteGlobals(std::ostream& f) {
+void ED_WriteGlobals(std::ostream& f)
+{
     f << "{\n";
     for (int i = 0; i < progs->numglobaldefs; i++) {
         ddef_t* def = &pr_globaldefs[i];
@@ -319,12 +339,14 @@ void ED_WriteGlobals(std::ostream& f) {
 
         const char* name = PR_GetString(def->s_name);
         f << "\"" << name << "\" ";
-        f << "\"" << PR_UglyValueString(static_cast<etype_t>(type), reinterpret_cast<eval_t*>(&pr_globals[def->ofs])) << "\"\n";
+        f << "\"" << PR_UglyValueString(static_cast<etype_t>(type), reinterpret_cast<eval_t*>(&pr_globals[def->ofs]))
+          << "\"\n";
     }
     f << "}\n";
 }
 
-string_t ED_NewString(const char* source) {
+string_t ED_NewString(const char* source)
+{
     if (!source) return 0;
 
     int length = static_cast<int>(std::strlen(source)) + 1;
@@ -334,8 +356,10 @@ string_t ED_NewString(const char* source) {
     for (int i = 0; i < length; i++) {
         if (source[i] == '\\' && i < length - 1) {
             i++;
-            if (source[i] == 'n') *dest++ = '\n';
-            else *dest++ = '\\';
+            if (source[i] == 'n')
+                *dest++ = '\n';
+            else
+                *dest++ = '\\';
         } else {
             *dest++ = source[i];
         }
@@ -344,7 +368,8 @@ string_t ED_NewString(const char* source) {
     return handle;
 }
 
-static qboolean ED_ParseEpair(void* base, ddef_t* key, char* s) {
+static qboolean ED_ParseEpair(void* base, ddef_t* key, char* s)
+{
     char string[128];
     void* d = (void*)((int*)base + key->ofs);
 
@@ -395,7 +420,8 @@ static qboolean ED_ParseEpair(void* base, ddef_t* key, char* s) {
     return true;
 }
 
-void ED_ParseGlobals(char* data) {
+void ED_ParseGlobals(char* data)
+{
     char keyname[64];
 
     while (1) {
@@ -420,7 +446,8 @@ void ED_ParseGlobals(char* data) {
     }
 }
 
-char* ED_ParseEdict(char* data, edict_t* ent) {
+char* ED_ParseEdict(char* data, edict_t* ent)
+{
     qboolean anglehack, init = false;
     char keyname[256];
 
@@ -480,7 +507,8 @@ char* ED_ParseEdict(char* data, edict_t* ent) {
     return data;
 }
 
-void ED_LoadFromFile(char* data) {
+void ED_LoadFromFile(char* data)
+{
     edict_t* ent = nullptr;
     int inhibit = 0;
 
@@ -494,8 +522,10 @@ void ED_LoadFromFile(char* data) {
             Common::Sys_Error("ED_LoadFromFile: found %s when expecting {", Common::com_token);
         }
 
-        if (!ent) ent = EDICT_NUM(0);
-        else ent = ED_Alloc();
+        if (!ent)
+            ent = EDICT_NUM(0);
+        else
+            ent = ED_Alloc();
 
         data = ED_ParseEdict(data, ent);
 
@@ -505,9 +535,9 @@ void ED_LoadFromFile(char* data) {
                 inhibit++;
                 continue;
             }
-        } else if ((Host::current_skill == 0 && (static_cast<int>(ent->v.spawnflags) & SPAWNFLAG_NOT_EASY)) ||
-                   (Host::current_skill == 1 && (static_cast<int>(ent->v.spawnflags) & SPAWNFLAG_NOT_MEDIUM)) ||
-                   (Host::current_skill >= 2 && (static_cast<int>(ent->v.spawnflags) & SPAWNFLAG_NOT_HARD))) {
+        } else if ((Host::current_skill == 0 && (static_cast<int>(ent->v.spawnflags) & SPAWNFLAG_NOT_EASY))
+            || (Host::current_skill == 1 && (static_cast<int>(ent->v.spawnflags) & SPAWNFLAG_NOT_MEDIUM))
+            || (Host::current_skill >= 2 && (static_cast<int>(ent->v.spawnflags) & SPAWNFLAG_NOT_HARD))) {
             ED_Free(ent);
             inhibit++;
             continue;
@@ -535,14 +565,16 @@ void ED_LoadFromFile(char* data) {
     Console::Con_DPrintf("%i entities inhibited\n", inhibit);
 }
 
-edict_t* EDICT_NUM(int n) {
+edict_t* EDICT_NUM(int n)
+{
     if (n < 0 || n >= Server::sv.max_edicts) {
         Common::Sys_Error("EDICT_NUM: bad number %i", n);
     }
     return (edict_t*)((byte*)Server::sv.edicts + (n)*pr_edict_size);
 }
 
-int NUM_FOR_EDICT(edict_t* e) {
+int NUM_FOR_EDICT(edict_t* e)
+{
     int b = static_cast<int>((byte*)e - (byte*)Server::sv.edicts);
     b = b / pr_edict_size;
     if (b < 0 || b >= Server::sv.num_edicts) Common::Sys_Error("NUM_FOR_EDICT: bad pointer");

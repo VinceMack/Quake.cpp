@@ -12,9 +12,9 @@ namespace Render {
 
 bool insubmodel = false;
 entity_t* currententity = nullptr;
-Vector3 modelorg{}, base_modelorg{};
-Vector3 r_entorigin{};
-float entity_rotation[3][3]{};
+Vector3 modelorg { }, base_modelorg { };
+Vector3 r_entorigin { };
+float entity_rotation[3][3] { };
 mvertex_t* r_pcurrentvertbase = nullptr;
 int numbtofpolys = 0;
 btofpoly_t* pbtofpolys = nullptr;
@@ -61,8 +61,8 @@ void R_ZDrawSubmodelPolys(model_t* pmodel)
     for (int i = 0; i < numsurfaces; i++, psurf++) {
         mplane_t* pplane = psurf->plane;
         float dot = DotProduct(modelorg, pplane->normal) - pplane->dist;
-        if (((psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON)) ||
-            (!(psurf->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON))) {
+        if (((psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON))
+            || (!(psurf->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON))) {
             R_RenderPoly(psurf, 15);
         }
     }
@@ -133,7 +133,7 @@ void R_RotateBmodel()
 
 void R_RecursiveClipBPoly(bedge_t* pedges, mnode_t* pnode, msurface_t* psurf)
 {
-    bedge_t *psideedges[2]{}, *pnextedge, *ptedge;
+    bedge_t *psideedges[2] { }, *pnextedge, *ptedge;
     mplane_t *splitplane, tplane;
     mvertex_t *pvert, *plastvert, *ptvert;
 
@@ -223,8 +223,8 @@ void R_DrawSolidClippedSubmodelPolygons(model_t* pmodel)
     for (int i = 0; i < numsurfaces; i++, psurf++) {
         mplane_t* pplane = psurf->plane;
         float dot = DotProduct(modelorg, pplane->normal) - pplane->dist;
-        if (((psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON)) ||
-            (!(psurf->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON))) {
+        if (((psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON))
+            || (!(psurf->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON))) {
             pbverts = bverts;
             pbedges = bedges;
             numbverts = numbedges = 0;
@@ -262,8 +262,8 @@ void R_DrawSubmodelPolygons(model_t* pmodel, int clipflags)
     for (int i = 0; i < numsurfaces; i++, psurf++) {
         mplane_t* pplane = psurf->plane;
         float dot = DotProduct(modelorg, pplane->normal) - pplane->dist;
-        if (((psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON)) ||
-            (!(psurf->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON))) {
+        if (((psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON))
+            || (!(psurf->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON))) {
             r_currentkey = ((mleaf_t*)currententity->topnode)->key;
             R_RenderFace(psurf, clipflags);
         }
@@ -285,12 +285,14 @@ void R_RecursiveWorldNode(mnode_t* node, int clipflags)
                 continue;
             }
             int* pindex = pfrustum_indexes[i];
-            Vector3 rejectpt((float)node->minmaxs[pindex[0]], (float)node->minmaxs[pindex[1]], (float)node->minmaxs[pindex[2]]);
+            Vector3 rejectpt(
+                (float)node->minmaxs[pindex[0]], (float)node->minmaxs[pindex[1]], (float)node->minmaxs[pindex[2]]);
             double d = rejectpt.dot(view_clipplanes[i].normal) - view_clipplanes[i].dist;
             if (d <= 0) {
                 return;
             }
-            Vector3 acceptpt((float)node->minmaxs[pindex[3 + 0]], (float)node->minmaxs[pindex[3 + 1]], (float)node->minmaxs[pindex[3 + 2]]);
+            Vector3 acceptpt((float)node->minmaxs[pindex[3 + 0]], (float)node->minmaxs[pindex[3 + 1]],
+                (float)node->minmaxs[pindex[3 + 2]]);
             d = acceptpt.dot(view_clipplanes[i].normal) - view_clipplanes[i].dist;
             if (d >= 0) {
                 clipflags &= ~(1 << i);
@@ -382,7 +384,7 @@ void R_RecursiveWorldNode(mnode_t* node, int clipflags)
 
 void R_RenderWorld()
 {
-    std::array<btofpoly_t, MAX_BTOFPOLYS> btofpolys{};
+    std::array<btofpoly_t, MAX_BTOFPOLYS> btofpolys { };
     pbtofpolys = btofpolys.data();
     currententity = &Client::cl_entities[0];
     VectorCopy(r_origin, modelorg);

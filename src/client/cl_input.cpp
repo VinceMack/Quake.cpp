@@ -16,27 +16,45 @@ kbutton_t in_lookup, in_lookdown, in_moveleft, in_moveright;
 kbutton_t in_strafe, in_speed, in_use, in_jump, in_attack, in_up, in_down;
 int in_impulse = 0;
 
-static void KeyDown(kbutton_t* b) {
+static void KeyDown(kbutton_t* b)
+{
     std::string_view c = Cmd::Argv(1);
     int k = c.empty() ? -1 : Common::Q_atoi(c);
     if (k == b->down[0] || k == b->down[1]) return;
-    if (!b->down[0]) b->down[0] = k;
-    else if (!b->down[1]) b->down[1] = k;
-    else { Console::Con_Printf("Three keys down for a button!\n"); return; }
+    if (!b->down[0])
+        b->down[0] = k;
+    else if (!b->down[1])
+        b->down[1] = k;
+    else {
+        Console::Con_Printf("Three keys down for a button!\n");
+        return;
+    }
     if (!(b->state & 1)) b->state |= 3;
 }
 
-static void KeyUp(kbutton_t* b) {
+static void KeyUp(kbutton_t* b)
+{
     std::string_view c = Cmd::Argv(1);
-    if (c.empty()) { b->down[0] = b->down[1] = 0; b->state = 4; return; }
+    if (c.empty()) {
+        b->down[0] = b->down[1] = 0;
+        b->state = 4;
+        return;
+    }
     int k = Common::Q_atoi(c);
-    if (b->down[0] == k) b->down[0] = 0;
-    else if (b->down[1] == k) b->down[1] = 0;
-    else return;
-    if (!b->down[0] && !b->down[1] && (b->state & 1)) { b->state &= ~1; b->state |= 4; }
+    if (b->down[0] == k)
+        b->down[0] = 0;
+    else if (b->down[1] == k)
+        b->down[1] = 0;
+    else
+        return;
+    if (!b->down[0] && !b->down[1] && (b->state & 1)) {
+        b->state &= ~1;
+        b->state |= 4;
+    }
 }
 
-float CL_KeyState(kbutton_t* key) {
+float CL_KeyState(kbutton_t* key)
+{
     float val = 0.0f;
     const bool idown = (key->state & 2) != 0, iup = (key->state & 4) != 0, down = (key->state & 1) != 0;
     if (idown && !iup && down) val = 0.5f;
@@ -47,10 +65,13 @@ float CL_KeyState(kbutton_t* key) {
     return val;
 }
 
-void CL_AdjustAngles() {
-    float speed = static_cast<float>((in_speed.state & 1) ? Host::host_frametime * cl_anglespeedkey.value : Host::host_frametime);
+void CL_AdjustAngles()
+{
+    float speed = static_cast<float>(
+        (in_speed.state & 1) ? Host::host_frametime * cl_anglespeedkey.value : Host::host_frametime);
     if (!(in_strafe.state & 1)) {
-        cl.viewangles[YAW] = Math::anglemod(cl.viewangles[YAW] + speed * cl_yawspeed.value * (CL_KeyState(&in_left) - CL_KeyState(&in_right)));
+        cl.viewangles[YAW] = Math::anglemod(
+            cl.viewangles[YAW] + speed * cl_yawspeed.value * (CL_KeyState(&in_left) - CL_KeyState(&in_right)));
     }
     if (in_klook.state & 1) {
         View::V_StopPitchDrift();
@@ -60,18 +81,20 @@ void CL_AdjustAngles() {
     cl.viewangles[PITCH] += speed * cl_pitchspeed.value * (down - up);
     if (up || down) View::V_StopPitchDrift();
     cl.viewangles[PITCH] = std::clamp(cl.viewangles[PITCH], -70.0f, 80.0f);
-    cl.viewangles[ROLL]  = std::clamp(cl.viewangles[ROLL], -50.0f, 50.0f);
+    cl.viewangles[ROLL] = std::clamp(cl.viewangles[ROLL], -50.0f, 50.0f);
 }
 
-void CL_BaseMove(usercmd_t* cmd) {
+void CL_BaseMove(usercmd_t* cmd)
+{
     if (cls.signon != SIGNONS) return;
     CL_AdjustAngles();
-    *cmd = {};
+    *cmd = { };
     if (in_strafe.state & 1) cmd->sidemove += cl_sidespeed.value * (CL_KeyState(&in_right) - CL_KeyState(&in_left));
     cmd->sidemove += cl_sidespeed.value * (CL_KeyState(&in_moveright) - CL_KeyState(&in_moveleft));
-    cmd->upmove   += cl_upspeed.value * (CL_KeyState(&in_up) - CL_KeyState(&in_down));
+    cmd->upmove += cl_upspeed.value * (CL_KeyState(&in_up) - CL_KeyState(&in_down));
     if (!(in_klook.state & 1)) {
-        cmd->forwardmove += cl_forwardspeed.value * CL_KeyState(&in_forward) - cl_backspeed.value * CL_KeyState(&in_back);
+        cmd->forwardmove
+            += cl_forwardspeed.value * CL_KeyState(&in_forward) - cl_backspeed.value * CL_KeyState(&in_back);
     }
     if (in_speed.state & 1) {
         cmd->forwardmove *= cl_movespeedkey.value;
@@ -80,9 +103,10 @@ void CL_BaseMove(usercmd_t* cmd) {
     }
 }
 
-void CL_SendMove(usercmd_t* cmd) {
-    std::array<byte, 128> data{};
-    sizebuf_t buf{};
+void CL_SendMove(usercmd_t* cmd)
+{
+    std::array<byte, 128> data { };
+    sizebuf_t buf { };
     buf.data = data.data();
     buf.maxsize = 128;
     buf.cursize = 0;
@@ -108,23 +132,29 @@ void CL_SendMove(usercmd_t* cmd) {
     }
 }
 
-struct BtnPair { const char* name; kbutton_t* btn; };
+struct BtnPair {
+    const char* name;
+    kbutton_t* btn;
+};
 
-void CL_InitInput() {
+void CL_InitInput()
+{
     auto BindBtn = [](const char* name, kbutton_t* btn) {
         Cmd::AddCommand(("+" + std::string(name)).c_str(), [btn]() { KeyDown(btn); });
         Cmd::AddCommand(("-" + std::string(name)).c_str(), [btn]() { KeyUp(btn); });
     };
-    constexpr BtnPair btns[] = {
-        {"moveup", &in_up}, {"movedown", &in_down}, {"left", &in_left}, {"right", &in_right},
-        {"forward", &in_forward}, {"back", &in_back}, {"lookup", &in_lookup}, {"lookdown", &in_lookdown},
-        {"strafe", &in_strafe}, {"moveleft", &in_moveleft}, {"moveright", &in_moveright},
-        {"speed", &in_speed}, {"attack", &in_attack}, {"use", &in_use}, {"jump", &in_jump}, {"klook", &in_klook}
-    };
+    constexpr BtnPair btns[] = { { "moveup", &in_up }, { "movedown", &in_down }, { "left", &in_left },
+        { "right", &in_right }, { "forward", &in_forward }, { "back", &in_back }, { "lookup", &in_lookup },
+        { "lookdown", &in_lookdown }, { "strafe", &in_strafe }, { "moveleft", &in_moveleft },
+        { "moveright", &in_moveright }, { "speed", &in_speed }, { "attack", &in_attack }, { "use", &in_use },
+        { "jump", &in_jump }, { "klook", &in_klook } };
     for (auto [name, btn] : btns) BindBtn(name, btn);
     Cmd::AddCommand("impulse", []() { in_impulse = Common::Q_atoi(Cmd::Argv(1)); });
     Cmd::AddCommand("+mlook", []() { KeyDown(&in_mlook); });
-    Cmd::AddCommand("-mlook", []() { KeyUp(&in_mlook); if (!(in_mlook.state & 1) && lookspring.value) View::V_StartPitchDrift(); });
+    Cmd::AddCommand("-mlook", []() {
+        KeyUp(&in_mlook);
+        if (!(in_mlook.state & 1) && lookspring.value) View::V_StartPitchDrift();
+    });
 }
 
 } // namespace Client

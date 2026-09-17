@@ -15,7 +15,8 @@ lumpinfo_t* wad_lumps = nullptr;
 byte* wad_base = nullptr;
 static std::vector<byte> wad_data;
 
-void W_CleanupName(std::string_view in, std::span<char, 16> out) {
+void W_CleanupName(std::string_view in, std::span<char, 16> out)
+{
     size_t i = 0, len = std::min(in.length(), static_cast<size_t>(16));
     for (; i < len && in[i] != '\0'; ++i) {
         out[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(in[i])));
@@ -25,14 +26,15 @@ void W_CleanupName(std::string_view in, std::span<char, 16> out) {
     }
 }
 
-void W_LoadWadFile(std::string_view filename) {
+void W_LoadWadFile(std::string_view filename)
+{
     std::string fname(filename.data(), filename.length());
     wad_data = Common::COM_LoadFile(fname.c_str());
     if (wad_data.empty()) Common::Sys_Error("W_LoadWadFile: couldn't load %s", fname.c_str());
     wad_base = wad_data.data();
     auto* header = reinterpret_cast<wadinfo_t*>(wad_base);
-    if (header->identification[0] != 'W' || header->identification[1] != 'A' ||
-        header->identification[2] != 'D' || header->identification[3] != '2') {
+    if (header->identification[0] != 'W' || header->identification[1] != 'A' || header->identification[2] != 'D'
+        || header->identification[3] != '2') {
         Common::Sys_Error("Wad file %s doesn't have WAD2 id\n", fname.c_str());
     }
     wad_numlumps = Common::LittleLong(header->numlumps);
@@ -46,8 +48,9 @@ void W_LoadWadFile(std::string_view filename) {
     }
 }
 
-lumpinfo_t* W_GetLumpinfo(std::string_view name) {
-    std::array<char, 16> clean{};
+lumpinfo_t* W_GetLumpinfo(std::string_view name)
+{
+    std::array<char, 16> clean { };
     W_CleanupName(name, clean);
     lumpinfo_t* lump_p = wad_lumps;
     for (int i = 0; i < wad_numlumps; ++i, ++lump_p) {
@@ -57,12 +60,14 @@ lumpinfo_t* W_GetLumpinfo(std::string_view name) {
     Common::Sys_Error("W_GetLumpinfo: %s not found", name_str.c_str());
 }
 
-void* W_GetLumpName(std::string_view name) {
+void* W_GetLumpName(std::string_view name)
+{
     lumpinfo_t* lump = W_GetLumpinfo(name);
     return reinterpret_cast<void*>(wad_base + lump->filepos);
 }
 
-void SwapPic(qpic_t* pic) {
+void SwapPic(qpic_t* pic)
+{
     if (pic != nullptr) {
         pic->width = Common::LittleLong(pic->width);
         pic->height = Common::LittleLong(pic->height);

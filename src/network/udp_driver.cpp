@@ -50,7 +50,8 @@ static int net_broadcastsocket = 0;
 static struct qsockaddr broadcastaddr;
 static unsigned long myAddr;
 
-static int PartialIPAddress(const char* in, struct qsockaddr* hostaddr) {
+static int PartialIPAddress(const char* in, struct qsockaddr* hostaddr)
+{
     char buff[256];
     buff[0] = '.';
     strcpy_s(buff + 1, sizeof(buff) - 1, in);
@@ -76,7 +77,8 @@ static int PartialIPAddress(const char* in, struct qsockaddr* hostaddr) {
     return 0;
 }
 
-int UDPDriver::Init() {
+int UDPDriver::Init()
+{
     char buff[MAXHOSTNAMELEN];
     struct qsockaddr addr;
     if (Common::COM_CheckParm("-noudp")) return -1;
@@ -87,7 +89,7 @@ int UDPDriver::Init() {
 #endif
 
     gethostname(buff, MAXHOSTNAMELEN);
-    struct addrinfo hints = {}, *result = nullptr;
+    struct addrinfo hints = { }, *result = nullptr;
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     if (getaddrinfo(buff, nullptr, &hints, &result) != 0 || !result) {
@@ -117,7 +119,8 @@ int UDPDriver::Init() {
     return net_controlsocket;
 }
 
-void UDPDriver::Shutdown() {
+void UDPDriver::Shutdown()
+{
     Listen(false);
     CloseSocket(net_controlsocket);
 #ifdef _WIN32
@@ -125,7 +128,8 @@ void UDPDriver::Shutdown() {
 #endif
 }
 
-void UDPDriver::Listen(qboolean state) {
+void UDPDriver::Listen(qboolean state)
+{
     if (state) {
         if (net_acceptsocket == -1 && (net_acceptsocket = OpenSocket(net_hostport)) == -1) {
             Common::Sys_Error("UDP_Listen: Unable to open accept socket\n");
@@ -136,7 +140,8 @@ void UDPDriver::Listen(qboolean state) {
     }
 }
 
-int UDPDriver::OpenSocket(int port) {
+int UDPDriver::OpenSocket(int port)
+{
     int newsocket = static_cast<int>(socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP));
     if (newsocket == -1) return -1;
     unsigned long _true = 1;
@@ -154,7 +159,7 @@ int UDPDriver::OpenSocket(int port) {
 #endif
     int opt = 1;
     setsockopt(newsocket, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
-    struct sockaddr_in address{};
+    struct sockaddr_in address { };
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(static_cast<u_short>(port));
@@ -165,12 +170,14 @@ int UDPDriver::OpenSocket(int port) {
     return newsocket;
 }
 
-int UDPDriver::CloseSocket(int socket) {
+int UDPDriver::CloseSocket(int socket)
+{
     if (socket == net_broadcastsocket) net_broadcastsocket = 0;
     return close(socket);
 }
 
-int UDPDriver::CheckNewConnections() {
+int UDPDriver::CheckNewConnections()
+{
     if (net_acceptsocket == -1) return -1;
     unsigned long available;
     if (ioctl(net_acceptsocket, FIONREAD, &available) == -1) {
@@ -179,7 +186,8 @@ int UDPDriver::CheckNewConnections() {
     return available ? net_acceptsocket : -1;
 }
 
-int UDPDriver::Read(int socket, byte* buf, int len, struct qsockaddr* addr) {
+int UDPDriver::Read(int socket, byte* buf, int len, struct qsockaddr* addr)
+{
     socklen_t addrlen = sizeof(struct qsockaddr);
     int ret = recvfrom(socket, (char*)buf, len, 0, (struct sockaddr*)addr, &addrlen);
     if (ret == -1) {
@@ -193,7 +201,8 @@ int UDPDriver::Read(int socket, byte* buf, int len, struct qsockaddr* addr) {
     return ret;
 }
 
-int UDPDriver::Write(int socket, byte* buf, int len, struct qsockaddr* addr) {
+int UDPDriver::Write(int socket, byte* buf, int len, struct qsockaddr* addr)
+{
     int ret = sendto(socket, (const char*)buf, len, 0, (struct sockaddr*)addr, sizeof(struct qsockaddr));
     if (ret == -1) {
         int err = errno;
@@ -206,7 +215,8 @@ int UDPDriver::Write(int socket, byte* buf, int len, struct qsockaddr* addr) {
     return ret;
 }
 
-int UDPDriver::Broadcast(int socket, byte* buf, int len) {
+int UDPDriver::Broadcast(int socket, byte* buf, int len)
+{
     if (socket != net_broadcastsocket) {
         int i = 1;
         if (setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (char*)&i, sizeof(i)) < 0) return -1;
@@ -215,16 +225,17 @@ int UDPDriver::Broadcast(int socket, byte* buf, int len) {
     return Write(socket, buf, len, &broadcastaddr);
 }
 
-char* UDPDriver::AddrToString(struct qsockaddr* addr) {
+char* UDPDriver::AddrToString(struct qsockaddr* addr)
+{
     static char buffer[22];
     int haddr = ntohl(((struct sockaddr_in*)addr)->sin_addr.s_addr);
-    sprintf_s(buffer, sizeof(buffer), "%d.%d.%d.%d:%d",
-              (haddr >> 24) & 0xff, (haddr >> 16) & 0xff, (haddr >> 8) & 0xff, haddr & 0xff,
-              ntohs(((struct sockaddr_in*)addr)->sin_port));
+    sprintf_s(buffer, sizeof(buffer), "%d.%d.%d.%d:%d", (haddr >> 24) & 0xff, (haddr >> 16) & 0xff, (haddr >> 8) & 0xff,
+        haddr & 0xff, ntohs(((struct sockaddr_in*)addr)->sin_port));
     return buffer;
 }
 
-int UDPDriver::StringToAddr(const char* string, struct qsockaddr* addr) {
+int UDPDriver::StringToAddr(const char* string, struct qsockaddr* addr)
+{
     int ha1, ha2, ha3, ha4, hp;
     sscanf_s(string, "%d.%d.%d.%d:%d", &ha1, &ha2, &ha3, &ha4, &hp);
     addr->sa_family = AF_INET;
@@ -233,7 +244,8 @@ int UDPDriver::StringToAddr(const char* string, struct qsockaddr* addr) {
     return 0;
 }
 
-int UDPDriver::GetSocketAddr(int socket, struct qsockaddr* addr) {
+int UDPDriver::GetSocketAddr(int socket, struct qsockaddr* addr)
+{
     socklen_t addrlen = sizeof(struct qsockaddr);
     Common::Q_memset(addr, 0, sizeof(struct qsockaddr));
     getsockname(socket, (struct sockaddr*)addr, &addrlen);
@@ -246,9 +258,11 @@ int UDPDriver::GetSocketAddr(int socket, struct qsockaddr* addr) {
     return 0;
 }
 
-int UDPDriver::GetNameFromAddr(struct qsockaddr* addr, char* name) {
+int UDPDriver::GetNameFromAddr(struct qsockaddr* addr, char* name)
+{
     char hostname_buf[NI_MAXHOST];
-    if (getnameinfo((const sockaddr*)addr, sizeof(struct qsockaddr), hostname_buf, NI_MAXHOST, nullptr, 0, NI_NAMEREQD) == 0) {
+    if (getnameinfo((const sockaddr*)addr, sizeof(struct qsockaddr), hostname_buf, NI_MAXHOST, nullptr, 0, NI_NAMEREQD)
+        == 0) {
         Common::Q_strncpy(name, hostname_buf, NET_NAMELEN - 1);
         return 0;
     }
@@ -256,9 +270,10 @@ int UDPDriver::GetNameFromAddr(struct qsockaddr* addr, char* name) {
     return 0;
 }
 
-int UDPDriver::GetAddrFromName(const char* name, struct qsockaddr* addr) {
+int UDPDriver::GetAddrFromName(const char* name, struct qsockaddr* addr)
+{
     if (name[0] >= '0' && name[0] <= '9') return PartialIPAddress(name, addr);
-    struct addrinfo hints = {}, *result = nullptr;
+    struct addrinfo hints = { }, *result = nullptr;
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     if (getaddrinfo(name, nullptr, &hints, &result) != 0 || !result) return -1;
@@ -269,18 +284,21 @@ int UDPDriver::GetAddrFromName(const char* name, struct qsockaddr* addr) {
     return 0;
 }
 
-int UDPDriver::AddrCompare(struct qsockaddr* a1, struct qsockaddr* a2) {
+int UDPDriver::AddrCompare(struct qsockaddr* a1, struct qsockaddr* a2)
+{
     if (a1->sa_family != a2->sa_family) return -1;
     auto* s1 = (struct sockaddr_in*)a1;
     auto* s2 = (struct sockaddr_in*)a2;
     return (s1->sin_addr.s_addr != s2->sin_addr.s_addr) ? -1 : (s1->sin_port != s2->sin_port ? 1 : 0);
 }
 
-int UDPDriver::GetSocketPort(struct qsockaddr* addr) {
+int UDPDriver::GetSocketPort(struct qsockaddr* addr)
+{
     return ntohs(((struct sockaddr_in*)addr)->sin_port);
 }
 
-int UDPDriver::SetSocketPort(struct qsockaddr* addr, int port) {
+int UDPDriver::SetSocketPort(struct qsockaddr* addr, int port)
+{
     ((struct sockaddr_in*)addr)->sin_port = htons(static_cast<u_short>(port));
     return 0;
 }

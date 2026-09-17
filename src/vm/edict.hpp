@@ -176,7 +176,10 @@ void ED_Free(edict_t* ed);
 void ED_ClearEdict(edict_t* e);
 
 string_t ED_NewString(const char* source);
-inline string_t ED_NewString(std::string_view source) { return ED_NewString(source.data()); }
+inline string_t ED_NewString(std::string_view source)
+{
+    return ED_NewString(source.data());
+}
 
 void ED_Print(edict_t* ed);
 void ED_Write(std::ostream& f, edict_t* ed);
@@ -196,7 +199,10 @@ void ED_PrintEdict_f();
 void ED_Count();
 
 [[nodiscard]] eval_t* GetEdictFieldValue(edict_t* ed, const char* field);
-inline eval_t* GetEdictFieldValue(edict_t* ed, std::string_view field) { return GetEdictFieldValue(ed, field.data()); }
+inline eval_t* GetEdictFieldValue(edict_t* ed, std::string_view field)
+{
+    return GetEdictFieldValue(ed, field.data());
+}
 
 ddef_t* ED_FieldAtOfs(int ofs);
 ddef_t* ED_GlobalAtOfs(int ofs);

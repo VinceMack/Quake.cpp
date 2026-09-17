@@ -35,8 +35,8 @@ void S_ClearBuffer();
 void S_Update(const Vector3& origin, const Vector3& v_forward, const Vector3& v_right, const Vector3& v_up);
 
 [[nodiscard]] sfx_t* S_PrecacheSound(std::string_view sample);
-inline void S_BeginPrecaching() {}
-inline void S_EndPrecaching() {}
+inline void S_BeginPrecaching() { }
+inline void S_EndPrecaching() { }
 void S_LocalSound(std::string_view s);
 [[nodiscard]] sfx_t* S_FindName(std::string_view name);
 
@@ -46,13 +46,14 @@ void SND_Spatialize(channel_t* ch);
 void PushAudioCommand(const AudioCommand& cmd);
 void ExecuteAudioCommand(const AudioCommand& cmd);
 
-void S_StartSoundInternal(int entnum, int entchannel, sfx_t* sfx, const Vector3& origin, float fvol, float attenuation, int random_offset);
+void S_StartSoundInternal(
+    int entnum, int entchannel, sfx_t* sfx, const Vector3& origin, float fvol, float attenuation, int random_offset);
 void S_StaticSoundInternal(sfx_t* sfx, const Vector3& origin, float vol, float attenuation);
 void S_StopSoundInternal(int entnum, int entchannel);
 void S_StopAllSoundsInternal(bool clear);
 void S_UpdateInternal(const Vector3& origin, const Vector3& forward, const Vector3& right, const Vector3& up,
-                      float vol_val, const std::array<int, NUM_AMBIENTS>& ambient_vols,
-                      float host_frametime_val, float ambient_fade_val, bool snd_ambient_val);
+    float vol_val, const std::array<int, NUM_AMBIENTS>& ambient_vols, float host_frametime_val, float ambient_fade_val,
+    bool snd_ambient_val);
 
 void S_Play();
 void S_PlayVol();

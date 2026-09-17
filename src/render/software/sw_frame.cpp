@@ -25,10 +25,10 @@ float dp_time1 = 0.0f, dp_time2 = 0.0f, db_time1 = 0.0f, db_time2 = 0.0f, rw_tim
 float se_time1 = 0.0f, se_time2 = 0.0f, de_time1 = 0.0f, de_time2 = 0.0f, dv_time1 = 0.0f, dv_time2 = 0.0f;
 float r_time1 = 0.0f;
 
-std::array<int*, 4> pfrustum_indexes{};
-std::array<int, 4 * 6> r_frustum_indexes{};
-std::array<clipplane_t, 4> view_clipplanes{};
-std::array<mplane_t, 4> screenedge{};
+std::array<int*, 4> pfrustum_indexes { };
+std::array<int, 4 * 6> r_frustum_indexes { };
+std::array<clipplane_t, 4> view_clipplanes { };
+std::array<mplane_t, 4> screenedge { };
 
 float screenAspect = 0.0f, verticalFieldOfView = 0.0f, xOrigin = 0.0f, yOrigin = 0.0f;
 float aliasxscale = 0.0f, aliasyscale = 0.0f, aliasxcenter = 0.0f, aliasycenter = 0.0f;
@@ -82,7 +82,7 @@ void R_CheckVariables()
 
 void R_TimeRefresh_f()
 {
-    vrect_t vr{};
+    vrect_t vr { };
     int startangle = static_cast<int>(r_refdef.viewangles[1]);
     float start = static_cast<float>(Common::Sys_FloatTime());
     for (int i = 0; i < 128; i++) {
@@ -125,14 +125,13 @@ constexpr int MAX_TIMINGS = 100;
 void R_TimeGraph()
 {
     static int timex = 0;
-    static std::array<byte, MAX_TIMINGS> r_timings{};
+    static std::array<byte, MAX_TIMINGS> r_timings { };
     float r_time2 = static_cast<float>(Common::Sys_FloatTime());
     int a = static_cast<int>((r_time2 - r_time1) / 0.01f);
     r_timings[timex] = static_cast<byte>(a);
     a = timex;
-    int x = (r_refdef.vrect.width <= MAX_TIMINGS)
-        ? (r_refdef.vrect.width - 1)
-        : (r_refdef.vrect.width - (r_refdef.vrect.width - MAX_TIMINGS) / 2);
+    int x = (r_refdef.vrect.width <= MAX_TIMINGS) ? (r_refdef.vrect.width - 1)
+                                                  : (r_refdef.vrect.width - (r_refdef.vrect.width - MAX_TIMINGS) / 2);
     do {
         R_LineGraph(x, r_refdef.vrect.height - 2, r_timings[a]);
         if (x == 0) {
@@ -156,8 +155,7 @@ void R_PrintTimes()
 {
     float r_time2 = static_cast<float>(Common::Sys_FloatTime());
     float ms = static_cast<float>(1000.0f * (r_time2 - r_time1));
-    Console::Con_Printf("%5.1f ms %3i/%3i/%3i poly %3i surf\n", ms, c_faceclip,
-        r_polycount, r_drawnpolycount, c_surf);
+    Console::Con_Printf("%5.1f ms %3i/%3i/%3i poly %3i surf\n", ms, c_faceclip, r_polycount, r_drawnpolycount, c_surf);
     c_surf = 0;
 }
 
@@ -177,7 +175,8 @@ void R_PrintDSpeeds()
 
 void R_SetVrect(vrect_t* pvrectin, vrect_t* pvrect, int lineadj)
 {
-    float size = Screen::GetScreenSystem().GetViewsize().value > 100.0f ? 100.0f : Screen::GetScreenSystem().GetViewsize().value;
+    float size = Screen::GetScreenSystem().GetViewsize().value > 100.0f ? 100.0f
+                                                                        : Screen::GetScreenSystem().GetViewsize().value;
     if (Client::cl.intermission) {
         size = 100.0f;
         lineadj = 0;
@@ -232,9 +231,11 @@ void R_ViewChanged(vrect_t* pvrect, int lineadj, float aspect)
     yOrigin = r_refdef.yOrigin;
     screenAspect = r_refdef.vrect.width * pixelAspect / r_refdef.vrect.height;
     verticalFieldOfView = r_refdef.horizontalFieldOfView / screenAspect;
-    xcenter = (static_cast<float>(r_refdef.vrect.width) * static_cast<float>(XCENTERING)) + static_cast<float>(r_refdef.vrect.x) - 0.5f;
+    xcenter = (static_cast<float>(r_refdef.vrect.width) * static_cast<float>(XCENTERING))
+        + static_cast<float>(r_refdef.vrect.x) - 0.5f;
     aliasxcenter = xcenter * r_aliasuvscale;
-    ycenter = (static_cast<float>(r_refdef.vrect.height) * static_cast<float>(YCENTERING)) + static_cast<float>(r_refdef.vrect.y) - 0.5f;
+    ycenter = (static_cast<float>(r_refdef.vrect.height) * static_cast<float>(YCENTERING))
+        + static_cast<float>(r_refdef.vrect.y) - 0.5f;
     aliasycenter = ycenter * r_aliasuvscale;
     xscale = static_cast<float>(r_refdef.vrect.width) / r_refdef.horizontalFieldOfView;
     aliasxscale = xscale * r_aliasuvscale;
@@ -263,7 +264,9 @@ void R_ViewChanged(vrect_t* pvrect, int lineadj, float aspect)
     for (int i = 0; i < 4; i++) {
         Math::VectorNormalize(screenedge[i].normal);
     }
-    float res_scale = static_cast<float>(std::sqrt(static_cast<double>(r_refdef.vrect.width * r_refdef.vrect.height) / (320.0 * 152.0)) * (2.0 / r_refdef.horizontalFieldOfView));
+    float res_scale = static_cast<float>(
+        std::sqrt(static_cast<double>(r_refdef.vrect.width * r_refdef.vrect.height) / (320.0 * 152.0))
+        * (2.0 / r_refdef.horizontalFieldOfView));
     r_aliastransition = r_aliastransbase.value * res_scale;
     r_resfudge = r_aliastransadj.value * res_scale;
     r_fov_greater_than_90 = (Screen::GetScreenSystem().GetFov().value > 90.0f);
@@ -272,7 +275,7 @@ void R_ViewChanged(vrect_t* pvrect, int lineadj, float aspect)
 
 void R_SetupFrame()
 {
-    vrect_t vrect{};
+    vrect_t vrect { };
     float w, h;
     if (Client::cl.maxclients > 1) {
         Cvar::Set("r_draworder", "0");
@@ -284,16 +287,14 @@ void R_SetupFrame()
         if ((surface_p - surfaces) > r_maxsurfsseen) {
             r_maxsurfsseen = static_cast<int>(surface_p - surfaces);
         }
-        Console::Con_Printf("Used %d of %d surfs; %d max\n", surface_p - surfaces,
-            surf_max - surfaces, r_maxsurfsseen);
+        Console::Con_Printf("Used %d of %d surfs; %d max\n", surface_p - surfaces, surf_max - surfaces, r_maxsurfsseen);
     }
     if (r_numedges.value) {
         int edgecount = static_cast<int>(edge_p - r_edges);
         if (edgecount > r_maxedgesseen) {
             r_maxedgesseen = edgecount;
         }
-        Console::Con_Printf("Used %d of %d edges; %d max\n", edgecount, r_numallocatededges,
-            r_maxedgesseen);
+        Console::Con_Printf("Used %d of %d edges; %d max\n", edgecount, r_numallocatededges, r_maxedgesseen);
     }
     r_refdef.ambientlight = static_cast<int>(r_ambient.value);
     if (r_refdef.ambientlight < 0) {
@@ -315,7 +316,8 @@ void R_SetupFrame()
     r_dowarp = r_waterwarp.value && (r_viewleaf->contents <= CONTENTS_WATER);
     if ((r_dowarp != r_dowarpold) || r_viewchanged || View::lcd_x.value) {
         if (r_dowarp) {
-            if ((static_cast<int>(Vid::vid.width) <= Vid::vid.maxwarpwidth) && (static_cast<int>(Vid::vid.height) <= Vid::vid.maxwarpheight)) {
+            if ((static_cast<int>(Vid::vid.width) <= Vid::vid.maxwarpwidth)
+                && (static_cast<int>(Vid::vid.height) <= Vid::vid.maxwarpheight)) {
                 vrect.x = 0;
                 vrect.y = 0;
                 vrect.width = Vid::vid.width;
@@ -336,9 +338,10 @@ void R_SetupFrame()
                 vrect.y = 0;
                 vrect.width = static_cast<int>(w);
                 vrect.height = static_cast<int>(h);
-                R_ViewChanged(
-                    &vrect, static_cast<int>(static_cast<float>(sb_lines) * (h / static_cast<float>(Vid::vid.height))),
-                    Vid::vid.aspect * (h / w) * (static_cast<float>(Vid::vid.width) / static_cast<float>(Vid::vid.height)));
+                R_ViewChanged(&vrect,
+                    static_cast<int>(static_cast<float>(sb_lines) * (h / static_cast<float>(Vid::vid.height))),
+                    Vid::vid.aspect * (h / w)
+                        * (static_cast<float>(Vid::vid.width) / static_cast<float>(Vid::vid.height)));
             }
         } else {
             vrect.x = 0;

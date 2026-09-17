@@ -7,7 +7,7 @@
 
 namespace Render {
 
-polydesc_t r_polydesc{};
+polydesc_t r_polydesc { };
 int r_currentbkey = 0;
 int r_clipflags = 0;
 
@@ -22,8 +22,8 @@ static unsigned int cacheoffset = 0;
 static medge_t* r_pedge = nullptr;
 static bool r_leftclipped = false, r_rightclipped = false;
 static bool makeleftedge = false, makerightedge = false;
-static mvertex_t r_leftenter{}, r_leftexit{};
-static mvertex_t r_rightenter{}, r_rightexit{};
+static mvertex_t r_leftenter { }, r_leftexit { };
+static mvertex_t r_rightenter { }, r_rightexit { };
 
 void R_EmitEdge(mvertex_t* pv0, mvertex_t* pv1)
 {
@@ -263,8 +263,8 @@ void R_RenderFace(msurface_t* fa, int clipflags)
                         continue;
                     }
                 } else {
-                    if ((((size_t)edge_p - (size_t)r_edges) > r_pedge->cachededgeoffset) &&
-                        (((edge_t*)((size_t)r_edges + r_pedge->cachededgeoffset))->owner == r_pedge)) {
+                    if ((((size_t)edge_p - (size_t)r_edges) > r_pedge->cachededgeoffset)
+                        && (((edge_t*)((size_t)r_edges + r_pedge->cachededgeoffset))->owner == r_pedge)) {
                         R_EmitCachedEdge();
                         r_lastvertvalid = false;
                         continue;
@@ -273,8 +273,7 @@ void R_RenderFace(msurface_t* fa, int clipflags)
             }
             cacheoffset = static_cast<unsigned int>(reinterpret_cast<byte*>(edge_p) - reinterpret_cast<byte*>(r_edges));
             r_leftclipped = r_rightclipped = false;
-            R_ClipEdge(&r_pcurrentvertbase[r_pedge->v[0]],
-                &r_pcurrentvertbase[r_pedge->v[1]], pclip);
+            R_ClipEdge(&r_pcurrentvertbase[r_pedge->v[0]], &r_pcurrentvertbase[r_pedge->v[1]], pclip);
             r_pedge->cachededgeoffset = cacheoffset;
             if (r_leftclipped) {
                 makeleftedge = true;
@@ -293,8 +292,8 @@ void R_RenderFace(msurface_t* fa, int clipflags)
                         continue;
                     }
                 } else {
-                    if ((((size_t)edge_p - (size_t)r_edges) > r_pedge->cachededgeoffset) &&
-                        (((edge_t*)((size_t)r_edges + r_pedge->cachededgeoffset))->owner == r_pedge)) {
+                    if ((((size_t)edge_p - (size_t)r_edges) > r_pedge->cachededgeoffset)
+                        && (((edge_t*)((size_t)r_edges + r_pedge->cachededgeoffset))->owner == r_pedge)) {
                         R_EmitCachedEdge();
                         r_lastvertvalid = false;
                         continue;
@@ -303,8 +302,7 @@ void R_RenderFace(msurface_t* fa, int clipflags)
             }
             cacheoffset = static_cast<unsigned int>(reinterpret_cast<byte*>(edge_p) - reinterpret_cast<byte*>(r_edges));
             r_leftclipped = r_rightclipped = false;
-            R_ClipEdge(&r_pcurrentvertbase[r_pedge->v[1]],
-                &r_pcurrentvertbase[r_pedge->v[0]], pclip);
+            R_ClipEdge(&r_pcurrentvertbase[r_pedge->v[1]], &r_pcurrentvertbase[r_pedge->v[0]], pclip);
             r_pedge->cachededgeoffset = cacheoffset;
             if (r_leftclipped) {
                 makeleftedge = true;
@@ -460,8 +458,8 @@ void R_RenderPoly(msurface_t* fa, int clipflags)
             float dist = Vector3(verts[vertpage][i].position).dot(pclip->normal) - pclip->dist;
             if ((lastdist > 0) != (dist > 0)) {
                 float frac = dist / (dist - lastdist);
-                Vector3 interp = Vector3(verts[vertpage][i].position) +
-                    (Vector3(verts[vertpage][lastvert].position) - Vector3(verts[vertpage][i].position)) * frac;
+                Vector3 interp = Vector3(verts[vertpage][i].position)
+                    + (Vector3(verts[vertpage][lastvert].position) - Vector3(verts[vertpage][i].position)) * frac;
                 verts[newpage][newverts].position[0] = interp.x;
                 verts[newpage][newverts].position[1] = interp.y;
                 verts[newpage][newverts].position[2] = interp.z;

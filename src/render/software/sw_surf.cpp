@@ -26,10 +26,8 @@ static int r_lightwidth;
 static int r_numhblocks, r_numvblocks;
 static unsigned char *r_source, *r_sourcemax;
 
-static void (*surfmiptable[4])(void) = {
-    R_DrawSurfaceBlock8_mip0, R_DrawSurfaceBlock8_mip1,
-    R_DrawSurfaceBlock8_mip2, R_DrawSurfaceBlock8_mip3
-};
+static void (*surfmiptable[4])(void)
+    = { R_DrawSurfaceBlock8_mip0, R_DrawSurfaceBlock8_mip1, R_DrawSurfaceBlock8_mip2, R_DrawSurfaceBlock8_mip3 };
 
 static unsigned blocklights[18 * 18];
 
@@ -154,8 +152,7 @@ texture_t* R_TextureAnimation(texture_t* base)
     return base;
 }
 
-template<int Shift>
-static inline void R_DrawSurfaceBlock8_mip_T()
+template <int Shift> static inline void R_DrawSurfaceBlock8_mip_T()
 {
     constexpr int BlockCount = 1 << Shift;
     const auto* psource = reinterpret_cast<const unsigned char*>(pbasesource);
@@ -185,10 +182,22 @@ static inline void R_DrawSurfaceBlock8_mip_T()
     }
 }
 
-void R_DrawSurfaceBlock8_mip0() { R_DrawSurfaceBlock8_mip_T<4>(); }
-void R_DrawSurfaceBlock8_mip1() { R_DrawSurfaceBlock8_mip_T<3>(); }
-void R_DrawSurfaceBlock8_mip2() { R_DrawSurfaceBlock8_mip_T<2>(); }
-void R_DrawSurfaceBlock8_mip3() { R_DrawSurfaceBlock8_mip_T<1>(); }
+void R_DrawSurfaceBlock8_mip0()
+{
+    R_DrawSurfaceBlock8_mip_T<4>();
+}
+void R_DrawSurfaceBlock8_mip1()
+{
+    R_DrawSurfaceBlock8_mip_T<3>();
+}
+void R_DrawSurfaceBlock8_mip2()
+{
+    R_DrawSurfaceBlock8_mip_T<2>();
+}
+void R_DrawSurfaceBlock8_mip3()
+{
+    R_DrawSurfaceBlock8_mip_T<1>();
+}
 
 void R_DrawSurface()
 {
@@ -214,8 +223,7 @@ void R_DrawSurface()
     int soffset = r_drawsurf.surf->texturemins[0];
     int basetoffset = r_drawsurf.surf->texturemins[1];
     soffset = ((soffset >> r_drawsurf.surfmip) + (smax << 16)) % smax;
-    unsigned char* basetptr = &r_source[
-        (((basetoffset >> r_drawsurf.surfmip) + (tmax << 16)) % tmax) * twidth];
+    unsigned char* basetptr = &r_source[(((basetoffset >> r_drawsurf.surfmip) + (tmax << 16)) % tmax) * twidth];
     unsigned char* pcolumndest = r_drawsurf.surfdat;
     for (int u = 0; u < r_numhblocks; u++) {
         r_lightptr = blocklights + u;
@@ -361,12 +369,9 @@ surfcache_t* D_CacheSurface(msurface_t* surface, int mip_level)
     r_drawsurf.lightadj[2] = d_lightstylevalue[surface->styles[2]];
     r_drawsurf.lightadj[3] = d_lightstylevalue[surface->styles[3]];
     surfcache_t* cache = surface->cachespots[mip_level];
-    if (cache && !cache->dlight && surface->dlightframe != r_framecount &&
-        cache->texture == r_drawsurf.texture &&
-        cache->lightadj[0] == r_drawsurf.lightadj[0] &&
-        cache->lightadj[1] == r_drawsurf.lightadj[1] &&
-        cache->lightadj[2] == r_drawsurf.lightadj[2] &&
-        cache->lightadj[3] == r_drawsurf.lightadj[3]) {
+    if (cache && !cache->dlight && surface->dlightframe != r_framecount && cache->texture == r_drawsurf.texture
+        && cache->lightadj[0] == r_drawsurf.lightadj[0] && cache->lightadj[1] == r_drawsurf.lightadj[1]
+        && cache->lightadj[2] == r_drawsurf.lightadj[2] && cache->lightadj[3] == r_drawsurf.lightadj[3]) {
         return cache;
     }
     surfscale = 1.0f / (1 << mip_level);
@@ -375,8 +380,7 @@ surfcache_t* D_CacheSurface(msurface_t* surface, int mip_level)
     r_drawsurf.rowbytes = r_drawsurf.surfwidth;
     r_drawsurf.surfheight = surface->extents[1] >> mip_level;
     if (!cache) {
-        cache = D_SCAlloc(r_drawsurf.surfwidth,
-            r_drawsurf.surfwidth * r_drawsurf.surfheight);
+        cache = D_SCAlloc(r_drawsurf.surfwidth, r_drawsurf.surfwidth * r_drawsurf.surfheight);
         surface->cachespots[mip_level] = cache;
         cache->owner = &surface->cachespots[mip_level];
         cache->mipscale = surfscale;

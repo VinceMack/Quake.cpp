@@ -12,16 +12,25 @@
 
 namespace Cmd {
 
-CommandRegistry& GetCommandRegistry() { static CommandRegistry registry; return registry; }
+CommandRegistry& GetCommandRegistry()
+{
+    static CommandRegistry registry;
+    return registry;
+}
 
-static void Wait_f(void) { GetCommandRegistry().GetCmdWait() = true; }
+static void Wait_f(void)
+{
+    GetCommandRegistry().GetCmdWait() = true;
+}
 
-void CommandRegistry::BufferInit(void) {
+void CommandRegistry::BufferInit(void)
+{
     cmd_text_.clear();
     cmd_text_.reserve(8192);
 }
 
-void CommandRegistry::BufferAddText(std::string_view text) {
+void CommandRegistry::BufferAddText(std::string_view text)
+{
     if (cmd_text_.length() + text.length() >= 8192) {
         Console::Con_Printf("Cmd::BufferAddText: overflow\n");
         return;
@@ -29,7 +38,8 @@ void CommandRegistry::BufferAddText(std::string_view text) {
     cmd_text_.append(text.data(), text.length());
 }
 
-void CommandRegistry::BufferInsertText(std::string_view text) {
+void CommandRegistry::BufferInsertText(std::string_view text)
+{
     if (cmd_text_.length() + text.length() >= 8192) {
         Console::Con_Printf("Cmd::BufferAddText: overflow\n");
         return;
@@ -37,7 +47,8 @@ void CommandRegistry::BufferInsertText(std::string_view text) {
     cmd_text_.insert(0, text.data(), text.length());
 }
 
-void CommandRegistry::BufferExecute(void) {
+void CommandRegistry::BufferExecute(void)
+{
     while (!cmd_text_.empty()) {
         int quotes = 0;
         size_t i = 0;
@@ -47,8 +58,10 @@ void CommandRegistry::BufferExecute(void) {
             if (cmd_text_[i] == '\n') break;
         }
         std::string line = cmd_text_.substr(0, i);
-        if (i == cmd_text_.length()) cmd_text_.clear();
-        else cmd_text_.erase(0, i + 1);
+        if (i == cmd_text_.length())
+            cmd_text_.clear();
+        else
+            cmd_text_.erase(0, i + 1);
 
         ExecuteString(std::string_view(line.data(), line.length()), Source::Command);
         if (cmd_wait_) {
@@ -58,7 +71,8 @@ void CommandRegistry::BufferExecute(void) {
     }
 }
 
-static void StuffCmds_f(void) {
+static void StuffCmds_f(void)
+{
     if (Cmd::Argc() != 1) {
         Console::Con_Printf("stuffcmds : execute command line parameters\n");
         return;
@@ -87,7 +101,8 @@ static void StuffCmds_f(void) {
     if (!build.empty()) Cmd::BufferInsertText(std::string_view(build.data(), build.length()));
 }
 
-static void Exec_f(void) {
+static void Exec_f(void)
+{
     if (Cmd::Argc() != 2) {
         Console::Con_Printf("exec <filename> : execute a script file\n");
         return;
@@ -103,7 +118,8 @@ static void Exec_f(void) {
     Cmd::BufferInsertText(reinterpret_cast<const char*>(script.data()));
 }
 
-static void Echo_f(void) {
+static void Echo_f(void)
+{
     for (int i = 1; i < Cmd::Argc(); i++) {
         std::string_view arg = Cmd::Argv(i);
         Console::Con_Printf("%.*s ", static_cast<int>(arg.length()), arg.data());
@@ -111,7 +127,8 @@ static void Echo_f(void) {
     Console::Con_Printf("\n");
 }
 
-static void Alias_f(void) {
+static void Alias_f(void)
+{
     auto& registry = GetCommandRegistry();
     if (Cmd::Argc() == 1) {
         Console::Con_Printf("Current alias commands:\n");
@@ -135,7 +152,8 @@ static void Alias_f(void) {
     registry.AddAlias(alias_name, std::string_view(cmd.data(), cmd.length()));
 }
 
-void CommandRegistry::Init(void) {
+void CommandRegistry::Init(void)
+{
     AddCommand("stuffcmds", StuffCmds_f);
     AddCommand("exec", Exec_f);
     AddCommand("echo", Echo_f);
@@ -144,28 +162,37 @@ void CommandRegistry::Init(void) {
     AddCommand("wait", Wait_f);
 }
 
-void CommandRegistry::AddCommand(std::string_view cmd_name, xcommand_t function) {
+void CommandRegistry::AddCommand(std::string_view cmd_name, xcommand_t function)
+{
     if (Cvar::FindVar(cmd_name) != nullptr) {
-        Console::Con_Printf("Cmd::AddCommand: %.*s already defined as a var\n", static_cast<int>(cmd_name.length()), cmd_name.data());
+        Console::Con_Printf(
+            "Cmd::AddCommand: %.*s already defined as a var\n", static_cast<int>(cmd_name.length()), cmd_name.data());
         return;
     }
     if (Exists(cmd_name)) {
-        Console::Con_Printf("Cmd::AddCommand: %.*s already defined\n", static_cast<int>(cmd_name.length()), cmd_name.data());
+        Console::Con_Printf(
+            "Cmd::AddCommand: %.*s already defined\n", static_cast<int>(cmd_name.length()), cmd_name.data());
         return;
     }
     commands_.emplace(std::string(cmd_name.data(), cmd_name.length()), std::move(function));
 }
 
-bool CommandRegistry::Exists(std::string_view cmd_name) { return commands_.count(cmd_name) > 0; }
+bool CommandRegistry::Exists(std::string_view cmd_name)
+{
+    return commands_.count(cmd_name) > 0;
+}
 
-std::string_view CommandRegistry::CompleteCommand(std::string_view partial) {
+std::string_view CommandRegistry::CompleteCommand(std::string_view partial)
+{
     if (partial.empty()) return "";
     auto it = commands_.lower_bound(partial);
     if (it != commands_.end()) {
         std::string_view cmd_name(it->first.data(), it->first.length());
         if (cmd_name.length() >= partial.length()) {
             std::string_view prefix = cmd_name.substr(0, partial.length());
-            if (Common::Q_strcasecmp(std::string(prefix.data(), prefix.length()).c_str(), std::string(partial.data(), partial.length()).c_str()) == 0) {
+            if (Common::Q_strcasecmp(std::string(prefix.data(), prefix.length()).c_str(),
+                    std::string(partial.data(), partial.length()).c_str())
+                == 0) {
                 return cmd_name;
             }
         }
@@ -173,16 +200,24 @@ std::string_view CommandRegistry::CompleteCommand(std::string_view partial) {
     return "";
 }
 
-int CommandRegistry::Argc(void) { return static_cast<int>(cmd_argv_.size()); }
+int CommandRegistry::Argc(void)
+{
+    return static_cast<int>(cmd_argv_.size());
+}
 
-std::string_view CommandRegistry::Argv(int arg) {
+std::string_view CommandRegistry::Argv(int arg)
+{
     if (arg < 0 || static_cast<size_t>(arg) >= cmd_argv_.size()) return "";
     return std::string_view(cmd_argv_[arg].data(), cmd_argv_[arg].length());
 }
 
-std::string_view CommandRegistry::Args(void) { return cmd_args_; }
+std::string_view CommandRegistry::Args(void)
+{
+    return cmd_args_;
+}
 
-void CommandRegistry::TokenizeString(std::string_view text) {
+void CommandRegistry::TokenizeString(std::string_view text)
+{
     cmd_argv_.clear();
     cmd_args_ = "";
     if (text.empty()) return;
@@ -190,7 +225,10 @@ void CommandRegistry::TokenizeString(std::string_view text) {
     bool command_parsed = false;
     while (true) {
         while (*ptr && *ptr <= ' ' && *ptr != '\n') ptr++;
-        if (*ptr == '\n') { ptr++; break; }
+        if (*ptr == '\n') {
+            ptr++;
+            break;
+        }
         if (!*ptr) return;
         if (command_parsed && cmd_args_.empty()) cmd_args_ = std::string_view(ptr);
         const char* next_ptr = Common::COM_Parse(ptr);
@@ -201,7 +239,8 @@ void CommandRegistry::TokenizeString(std::string_view text) {
     }
 }
 
-void CommandRegistry::ExecuteString(std::string_view text, Source src) {
+void CommandRegistry::ExecuteString(std::string_view text, Source src)
+{
     state_.source = src;
     TokenizeString(text);
     if (cmd_argv_.empty()) return;
@@ -221,17 +260,53 @@ void CommandRegistry::ExecuteString(std::string_view text, Source src) {
     }
 }
 
-void BufferInit(void) { GetCommandRegistry().BufferInit(); }
-void BufferAddText(std::string_view text) { GetCommandRegistry().BufferAddText(text); }
-void BufferInsertText(std::string_view text) { GetCommandRegistry().BufferInsertText(text); }
-void BufferExecute(void) { GetCommandRegistry().BufferExecute(); }
-void Init(void) { GetCommandRegistry().Init(); }
-void AddCommand(std::string_view cmd_name, xcommand_t function) { GetCommandRegistry().AddCommand(cmd_name, function); }
-bool Exists(std::string_view cmd_name) { return GetCommandRegistry().Exists(cmd_name); }
-std::string_view CompleteCommand(std::string_view partial) { return GetCommandRegistry().CompleteCommand(partial); }
-int Argc(void) { return GetCommandRegistry().Argc(); }
-std::string_view Argv(int arg) { return GetCommandRegistry().Argv(arg); }
-std::string_view Args(void) { return GetCommandRegistry().Args(); }
-void ExecuteString(std::string_view text, Source src) { GetCommandRegistry().ExecuteString(text, src); }
+void BufferInit(void)
+{
+    GetCommandRegistry().BufferInit();
+}
+void BufferAddText(std::string_view text)
+{
+    GetCommandRegistry().BufferAddText(text);
+}
+void BufferInsertText(std::string_view text)
+{
+    GetCommandRegistry().BufferInsertText(text);
+}
+void BufferExecute(void)
+{
+    GetCommandRegistry().BufferExecute();
+}
+void Init(void)
+{
+    GetCommandRegistry().Init();
+}
+void AddCommand(std::string_view cmd_name, xcommand_t function)
+{
+    GetCommandRegistry().AddCommand(cmd_name, function);
+}
+bool Exists(std::string_view cmd_name)
+{
+    return GetCommandRegistry().Exists(cmd_name);
+}
+std::string_view CompleteCommand(std::string_view partial)
+{
+    return GetCommandRegistry().CompleteCommand(partial);
+}
+int Argc(void)
+{
+    return GetCommandRegistry().Argc();
+}
+std::string_view Argv(int arg)
+{
+    return GetCommandRegistry().Argv(arg);
+}
+std::string_view Args(void)
+{
+    return GetCommandRegistry().Args();
+}
+void ExecuteString(std::string_view text, Source src)
+{
+    GetCommandRegistry().ExecuteString(text, src);
+}
 
 } // namespace Cmd

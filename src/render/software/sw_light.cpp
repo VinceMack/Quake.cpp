@@ -5,7 +5,7 @@
 
 namespace Render {
 
-std::array<int, 256> d_lightstylevalue{};
+std::array<int, 256> d_lightstylevalue { };
 int r_dlightframecount = 0;
 
 void R_AnimateLight()

@@ -125,7 +125,7 @@ float ScreenSystem::CalcFov(float fov_x, float width, float height)
 
 void ScreenSystem::CalcRefdef()
 {
-    vrect_t vrect{};
+    vrect_t vrect { };
     fullupdate_ = 0;
     Vid::vid.recalc_refdef = 0;
     Sbar::Sbar_Changed();
@@ -142,7 +142,8 @@ void ScreenSystem::CalcRefdef()
         Cvar::Set("fov", "170");
     }
     Render::r_refdef.fov_x = fov_.value;
-    Render::r_refdef.fov_y = CalcFov(Render::r_refdef.fov_x, static_cast<float>(Render::r_refdef.vrect.width), static_cast<float>(Render::r_refdef.vrect.height));
+    Render::r_refdef.fov_y = CalcFov(Render::r_refdef.fov_x, static_cast<float>(Render::r_refdef.vrect.width),
+        static_cast<float>(Render::r_refdef.vrect.height));
     float size = Client::cl.intermission ? 120.0f : viewsize_.value;
     if (size >= 120.0f) {
         sb_lines = 0;
@@ -284,8 +285,8 @@ void ScreenSystem::SetUpToDrawConsole()
     }
     if (clearconsole_++ < Vid::vid.numpages) {
         copytop_ = 1;
-        Draw::Draw_TileClear(0, static_cast<int>(con_current_), Vid::vid.width,
-            Vid::vid.height - static_cast<int>(con_current_));
+        Draw::Draw_TileClear(
+            0, static_cast<int>(con_current_), Vid::vid.width, Vid::vid.height - static_cast<int>(con_current_));
         Sbar::Sbar_Changed();
     } else if (clearnotify_++ < Vid::vid.numpages) {
         copytop_ = 1;
@@ -320,21 +321,17 @@ struct pcx_header_t {
     uint16_t ymax = 0;
     uint16_t hres = 0;
     uint16_t vres = 0;
-    uint8_t palette[48]{};
+    uint8_t palette[48] { };
     uint8_t reserved = 0;
     uint8_t color_planes = 1;
     uint16_t bytes_per_line = 0;
     uint16_t palette_type = 2;
-    uint8_t filler[58]{};
+    uint8_t filler[58] { };
 };
 #pragma pack(pop)
 
-static void WritePCXfile(const char* filename,
-    const byte* data,
-    int width,
-    int height,
-    int rowbytes,
-    const byte* palette)
+static void WritePCXfile(
+    const char* filename, const byte* data, int width, int height, int rowbytes, const byte* palette)
 {
     std::vector<uint8_t> buffer;
     buffer.reserve(sizeof(pcx_header_t) + width * height * 2 + 1024);
@@ -389,7 +386,8 @@ void ScreenSystem::ScreenShot_f()
         Console::Con_Printf("SCR_ScreenShot_f: Couldn't create a PCX file\n");
         return;
     }
-    WritePCXfile(pcxname.c_str(), Vid::vid.buffer, Vid::vid.width, Vid::vid.height, Vid::vid.rowbytes, Host::host_basepal);
+    WritePCXfile(
+        pcxname.c_str(), Vid::vid.buffer, Vid::vid.width, Vid::vid.height, Vid::vid.rowbytes, Host::host_basepal);
     Console::Con_Printf("Wrote %s\n", pcxname.c_str());
 }
 
@@ -472,7 +470,7 @@ void ScreenSystem::UpdateScreen()
 {
     static float oldscr_viewsize = 0.0f;
     static float oldlcd_x = 0.0f;
-    vrect_t vrect{};
+    vrect_t vrect { };
     if (skipupdate_ || block_drawing_) {
         return;
     }

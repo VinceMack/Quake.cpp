@@ -13,7 +13,10 @@ extern char com_token[1024];
 extern bool com_eof;
 
 const char* COM_Parse(const char* data);
-inline char* COM_Parse(char* data) { return const_cast<char*>(COM_Parse(static_cast<const char*>(data))); }
+inline char* COM_Parse(char* data)
+{
+    return const_cast<char*>(COM_Parse(static_cast<const char*>(data)));
+}
 
 extern int com_argc;
 extern char** com_argv;
@@ -37,10 +40,15 @@ int COM_FindFile(const char* filename, int* handle, FILE** file);
 // length. Returns an empty vector if the file does not exist.
 [[nodiscard]] std::vector<byte> COM_LoadFile(const char* path);
 
-inline int COM_OpenFile(const char* filename, int* hndl) { return COM_FindFile(filename, hndl, nullptr); }
-inline int COM_FOpenFile(const char* filename, FILE** file) { return COM_FindFile(filename, nullptr, file); }
+inline int COM_OpenFile(const char* filename, int* hndl)
+{
+    return COM_FindFile(filename, hndl, nullptr);
+}
+inline int COM_FOpenFile(const char* filename, FILE** file)
+{
+    return COM_FindFile(filename, nullptr, file);
+}
 void COM_CloseFile(int h);
-
 
 void COM_AddGameDirectory(const char* dir);
 void COM_InitFilesystem(const char* basedir);

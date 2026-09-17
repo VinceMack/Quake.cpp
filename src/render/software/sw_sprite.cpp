@@ -11,11 +11,11 @@ namespace Render {
 
 void D_DrawSprite();
 
-spritedesc_t r_spritedesc{};
+spritedesc_t r_spritedesc { };
 
 static int sprite_width = 0, sprite_height = 0;
 static int clip_current = 0;
-static vec5_t clip_verts[2][MAXWORKINGVERTS]{};
+static vec5_t clip_verts[2][MAXWORKINGVERTS] { };
 
 void R_RotateSprite(float beam_len)
 {
@@ -214,8 +214,7 @@ void R_DrawSprite()
         r_spritedesc.vright.normalize();
         r_spritedesc.vpn = Vector3(-r_spritedesc.vright.y, r_spritedesc.vright.x, 0);
     } else if (psprite->type == SPR_ORIENTED) {
-        Math::AngleVectors(currententity->angles, r_spritedesc.vpn, r_spritedesc.vright,
-            r_spritedesc.vup);
+        Math::AngleVectors(currententity->angles, r_spritedesc.vpn, r_spritedesc.vright, r_spritedesc.vup);
     } else if (psprite->type == SPR_VP_PARALLEL_ORIENTED) {
         float angle = static_cast<float>(currententity->angles[ROLL] * (M_PI * 2 / 360));
         float sr = std::sin(angle);

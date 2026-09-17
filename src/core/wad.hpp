@@ -9,7 +9,14 @@
 enum class WadCompression : uint8_t { None = 0, LZSS = 1 };
 
 enum class LumpType : uint8_t {
-    None = 0, Label = 1, Lumpy = 64, Palette = 64, QTex = 65, QPic = 66, Sound = 67, MipTex = 68
+    None = 0,
+    Label = 1,
+    Lumpy = 64,
+    Palette = 64,
+    QTex = 65,
+    QPic = 66,
+    Sound = 67,
+    MipTex = 68
 };
 
 constexpr int TYP_QPIC = 66;

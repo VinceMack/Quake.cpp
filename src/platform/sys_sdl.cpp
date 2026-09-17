@@ -24,11 +24,12 @@
 namespace Host {
 qboolean isDedicated = false;
 cvar_t sys_nostdout = { "sys_nostdout", "0" };
-}
+} // namespace Host
 
 namespace Common {
 
-void Sys_Printf(const char* fmt, ...) {
+void Sys_Printf(const char* fmt, ...)
+{
     va_list argptr;
     char text[1024];
     va_start(argptr, fmt);
@@ -37,13 +38,14 @@ void Sys_Printf(const char* fmt, ...) {
     std::fprintf(stderr, "%s", text);
 }
 
-void Sys_Quit(void) {
+void Sys_Quit(void)
+{
     Host::Host_Shutdown();
     std::exit(0);
 }
 
-
-[[noreturn]] void Sys_Error(const char* error, ...) {
+[[noreturn]] void Sys_Error(const char* error, ...)
+{
     va_list argptr;
     char string[1024];
     va_start(argptr, error);
@@ -55,21 +57,25 @@ void Sys_Quit(void) {
 }
 
 constexpr size_t MAX_HANDLES = 10;
-static std::array<FILE*, MAX_HANDLES> sys_handles{};
+static std::array<FILE*, MAX_HANDLES> sys_handles { };
 
-static FILE* get_file_handle(int handle) {
-    if (handle >= 0 && static_cast<size_t>(handle) < sys_handles.size()) return sys_handles[static_cast<size_t>(handle)];
+static FILE* get_file_handle(int handle)
+{
+    if (handle >= 0 && static_cast<size_t>(handle) < sys_handles.size())
+        return sys_handles[static_cast<size_t>(handle)];
     return nullptr;
 }
 
-static int findhandle(void) {
+static int findhandle(void)
+{
     for (size_t i = 1; i < sys_handles.size(); i++) {
         if (!sys_handles[i]) return static_cast<int>(i);
     }
     Sys_Error("out of handles");
 }
 
-static int Qfilelength(FILE* f) {
+static int Qfilelength(FILE* f)
+{
     long pos = std::ftell(f);
     std::fseek(f, 0, SEEK_END);
     long end = std::ftell(f);
@@ -77,7 +83,8 @@ static int Qfilelength(FILE* f) {
     return static_cast<int>(end);
 }
 
-int Sys_FileOpenRead(const char* path, int* hndl) {
+int Sys_FileOpenRead(const char* path, int* hndl)
+{
     FILE* f = nullptr;
     int i = findhandle();
     if (fopen_s(&f, path, "rb") != 0 || !f) {
@@ -89,7 +96,8 @@ int Sys_FileOpenRead(const char* path, int* hndl) {
     return Qfilelength(f);
 }
 
-int Sys_FileOpenWrite(const char* path) {
+int Sys_FileOpenWrite(const char* path)
+{
     FILE* f = nullptr;
     int i = findhandle();
     if (fopen_s(&f, path, "wb") != 0 || !f) {
@@ -101,18 +109,21 @@ int Sys_FileOpenWrite(const char* path) {
     return i;
 }
 
-void Sys_FileClose(int handle) {
+void Sys_FileClose(int handle)
+{
     if (FILE* f = get_file_handle(handle)) {
         std::fclose(f);
         sys_handles[static_cast<size_t>(handle)] = nullptr;
     }
 }
 
-void Sys_FileSeek(int handle, int position) {
+void Sys_FileSeek(int handle, int position)
+{
     if (FILE* f = get_file_handle(handle)) std::fseek(f, position, SEEK_SET);
 }
 
-int Sys_FileRead(int handle, void* dst, int count) {
+int Sys_FileRead(int handle, void* dst, int count)
+{
     FILE* f = get_file_handle(handle);
     if (!f) return 0;
     auto* data = static_cast<char*>(dst);
@@ -127,7 +138,8 @@ int Sys_FileRead(int handle, void* dst, int count) {
     return size;
 }
 
-int Sys_FileWrite(int handle, const void* src, int count) {
+int Sys_FileWrite(int handle, const void* src, int count)
+{
     FILE* f = get_file_handle(handle);
     if (!f) return 0;
     auto* data = static_cast<const char*>(src);
@@ -142,7 +154,8 @@ int Sys_FileWrite(int handle, const void* src, int count) {
     return size;
 }
 
-bool Sys_FileExists(const char* path) {
+bool Sys_FileExists(const char* path)
+{
     FILE* f = nullptr;
     if (fopen_s(&f, path, "rb") == 0 && f) {
         std::fclose(f);
@@ -151,7 +164,8 @@ bool Sys_FileExists(const char* path) {
     return false;
 }
 
-void Sys_mkdir(const char* path) {
+void Sys_mkdir(const char* path)
+{
 #ifdef _WIN32
     _mkdir(path);
 #else
@@ -159,12 +173,16 @@ void Sys_mkdir(const char* path) {
 #endif
 }
 
-double Sys_FloatTime(void) {
+double Sys_FloatTime(void)
+{
     static const Uint64 start = SDL_GetPerformanceCounter();
     static const double frequency = static_cast<double>(SDL_GetPerformanceFrequency());
     return static_cast<double>(SDL_GetPerformanceCounter() - start) / frequency;
 }
 
-char* Sys_ConsoleInput(void) { return nullptr; }
+char* Sys_ConsoleInput(void)
+{
+    return nullptr;
+}
 
 } // namespace Common

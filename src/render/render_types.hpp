@@ -50,7 +50,7 @@ struct efrag_s {
 using efrag_t = efrag_s;
 
 struct dlight_t {
-    Vector3 origin{};
+    Vector3 origin { };
     float radius = 0.0f;
     float die = 0.0f;
     float decay = 0.0f;
@@ -61,12 +61,12 @@ struct dlight_t {
 struct entity_t {
     bool forcelink = false;
     int update_type = 0;
-    entity_state_t baseline{};
+    entity_state_t baseline { };
     double msgtime = 0.0;
-    Vector3 msg_origins[2]{};
-    Vector3 origin{};
-    Vector3 msg_angles[2]{};
-    Vector3 angles{};
+    Vector3 msg_origins[2] { };
+    Vector3 origin { };
+    Vector3 msg_angles[2] { };
+    Vector3 angles { };
     model_s* model = nullptr;
     efrag_s* efrag = nullptr;
     int frame = 0;
@@ -83,8 +83,8 @@ struct entity_t {
 using entity_s = entity_t;
 
 struct refdef_t {
-    vrect_t vrect{};
-    vrect_t aliasvrect{};
+    vrect_t vrect { };
+    vrect_t aliasvrect { };
     int vrectright = 0, vrectbottom = 0;
     int aliasvrectright = 0, aliasvrectbottom = 0;
     float vrectrightedge = 0.0f;
@@ -98,8 +98,8 @@ struct refdef_t {
     float horizontalFieldOfView = 0.0f;
     float xOrigin = 0.0f;
     float yOrigin = 0.0f;
-    Vector3 vieworg{};
-    Vector3 viewangles{};
+    Vector3 vieworg { };
+    Vector3 viewangles { };
     float fov_x = 0.0f, fov_y = 0.0f;
     int ambientlight = 0;
 };

@@ -11,21 +11,21 @@ namespace Render {
 
 inline constexpr int LIGHT_MIN = 5;
 
-affinetridesc_t r_affinetridesc{};
+affinetridesc_t r_affinetridesc { };
 void* acolormap = nullptr;
 static trivertx_t* r_apverts = nullptr;
 
-Vector3 r_plightvec{};
+Vector3 r_plightvec { };
 static int r_ambientlight = 0;
 static float r_shadelight = 0.0f;
 static float ziscale = 0.0f;
 static model_t* pmodel = nullptr;
 
-static Vector3 alias_forward{}, alias_right{}, alias_up{};
+static Vector3 alias_forward { }, alias_right { }, alias_up { };
 static maliasskindesc_t* pskindesc = nullptr;
 static int r_anumverts = 0;
 
-static float aliastransform[3][4]{};
+static float aliastransform[3][4] { };
 
 mdl_t* pmdl = nullptr;
 aliashdr_t* paliashdr = nullptr;
@@ -39,10 +39,8 @@ struct aedge_t {
     int index1;
 };
 
-static constexpr aedge_t aedges[12] = {
-    { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 }, { 4, 5 }, { 5, 6 },
-    { 6, 7 }, { 7, 4 }, { 0, 5 }, { 1, 4 }, { 2, 7 }, { 3, 6 }
-};
+static constexpr aedge_t aedges[12] = { { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 }, { 4, 5 }, { 5, 6 }, { 6, 7 }, { 7, 4 },
+    { 0, 5 }, { 1, 4 }, { 2, 7 }, { 3, 6 } };
 
 void R_InitVertexNormals()
 {
@@ -53,16 +51,22 @@ void R_InitVertexNormals()
     const float X = 0.525731112119133606f;
     const float Z = 0.850650808352039932f;
     const float verts[12][3] = {
-        {-X, 0.0f, Z}, {X, 0.0f, Z}, {-X, 0.0f, -Z}, {X, 0.0f, -Z},
-        {0.0f, Z, X}, {0.0f, Z, -X}, {0.0f, -Z, X}, {0.0f, -Z, -X},
-        {Z, X, 0.0f}, {-Z, X, 0.0f}, {Z, -X, 0.0f}, {-Z, -X, 0.0f},
+        { -X, 0.0f, Z },
+        { X, 0.0f, Z },
+        { -X, 0.0f, -Z },
+        { X, 0.0f, -Z },
+        { 0.0f, Z, X },
+        { 0.0f, Z, -X },
+        { 0.0f, -Z, X },
+        { 0.0f, -Z, -X },
+        { Z, X, 0.0f },
+        { -Z, X, 0.0f },
+        { Z, -X, 0.0f },
+        { -Z, -X, 0.0f },
     };
-    const int faces[20][3] = {
-        {0, 4, 1}, {0, 9, 4}, {9, 5, 4}, {4, 5, 8}, {4, 8, 1},
-        {8, 10, 1}, {8, 3, 10}, {5, 3, 8}, {5, 2, 3}, {2, 7, 3},
-        {7, 10, 3}, {7, 6, 10}, {7, 11, 6}, {11, 0, 6}, {0, 1, 6},
-        {6, 1, 10}, {9, 0, 11}, {9, 11, 2}, {9, 2, 5}, {7, 2, 11}
-    };
+    const int faces[20][3] = { { 0, 4, 1 }, { 0, 9, 4 }, { 9, 5, 4 }, { 4, 5, 8 }, { 4, 8, 1 }, { 8, 10, 1 },
+        { 8, 3, 10 }, { 5, 3, 8 }, { 5, 2, 3 }, { 2, 7, 3 }, { 7, 10, 3 }, { 7, 6, 10 }, { 7, 11, 6 }, { 11, 0, 6 },
+        { 0, 1, 6 }, { 6, 1, 10 }, { 9, 0, 11 }, { 9, 11, 2 }, { 9, 2, 5 }, { 7, 2, 11 } };
     const int subdiv = 4;
     float temp[400][3];
     int num_temp = 0;
@@ -290,7 +294,8 @@ void R_AliasPreparePoints()
         if (paclip_fv[0]->flags & paclip_fv[1]->flags & paclip_fv[2]->flags & (ALIAS_XY_CLIP_MASK | ALIAS_Z_CLIP)) {
             continue;
         }
-        if (!((paclip_fv[0]->flags | paclip_fv[1]->flags | paclip_fv[2]->flags) & (ALIAS_XY_CLIP_MASK | ALIAS_Z_CLIP))) {
+        if (!((paclip_fv[0]->flags | paclip_fv[1]->flags | paclip_fv[2]->flags)
+                & (ALIAS_XY_CLIP_MASK | ALIAS_Z_CLIP))) {
             r_affinetridesc.pfinalverts = pfinalverts;
             r_affinetridesc.ptriangles = ptri;
             D_PolysetDraw();
@@ -373,8 +378,10 @@ void R_AliasTransformAndProjectFinalVerts(finalvert_t* fv, stvert_t* pstverts)
     for (int i = 0; i < r_anumverts; i++, fv++, pverts++, pstverts++) {
         float zi = static_cast<float>(1.0 / (DotProduct(pverts->v, aliastransform[2]) + aliastransform[2][3]));
         fv->v[5] = static_cast<int>(zi);
-        fv->v[0] = static_cast<int>(((DotProduct(pverts->v, aliastransform[0]) + aliastransform[0][3]) * zi) + aliasxcenter);
-        fv->v[1] = static_cast<int>(((DotProduct(pverts->v, aliastransform[1]) + aliastransform[1][3]) * zi) + aliasycenter);
+        fv->v[0]
+            = static_cast<int>(((DotProduct(pverts->v, aliastransform[0]) + aliastransform[0][3]) * zi) + aliasxcenter);
+        fv->v[1]
+            = static_cast<int>(((DotProduct(pverts->v, aliastransform[1]) + aliastransform[1][3]) * zi) + aliasycenter);
         fv->v[2] = pstverts->s;
         fv->v[3] = pstverts->t;
         fv->flags = pstverts->onseam;
@@ -410,7 +417,8 @@ void R_AliasPrepareUnclippedPoints()
         D_PolysetDrawFinalVerts(fv, r_anumverts);
     }
     r_affinetridesc.pfinalverts = pfinalverts;
-    r_affinetridesc.ptriangles = reinterpret_cast<mtriangle_t*>(reinterpret_cast<byte*>(paliashdr) + paliashdr->triangles);
+    r_affinetridesc.ptriangles
+        = reinterpret_cast<mtriangle_t*>(reinterpret_cast<byte*>(paliashdr) + paliashdr->triangles);
     r_affinetridesc.numtriangles = pmdl->numtris;
     D_PolysetDraw();
 }
@@ -425,8 +433,10 @@ void R_AliasSetupSkin()
     pskindesc = reinterpret_cast<maliasskindesc_t*>(reinterpret_cast<byte*>(paliashdr) + paliashdr->skindesc) + skinnum;
     a_skinwidth = pmdl->skinwidth;
     if (pskindesc->type == aliasskintype_t::ALIAS_SKIN_GROUP) {
-        maliasskingroup_t* paliasskingroup = reinterpret_cast<maliasskingroup_t*>(reinterpret_cast<byte*>(paliashdr) + pskindesc->skin);
-        float* pskinintervals = reinterpret_cast<float*>(reinterpret_cast<byte*>(paliashdr) + paliasskingroup->intervals);
+        maliasskingroup_t* paliasskingroup
+            = reinterpret_cast<maliasskingroup_t*>(reinterpret_cast<byte*>(paliashdr) + pskindesc->skin);
+        float* pskinintervals
+            = reinterpret_cast<float*>(reinterpret_cast<byte*>(paliashdr) + paliasskingroup->intervals);
         int numskins = paliasskingroup->numskins;
         float fullskininterval = pskinintervals[numskins - 1];
         float skintime = static_cast<float>(Client::cl.time + currententity->syncbase);
@@ -478,7 +488,8 @@ void R_AliasSetupFrame()
         r_apverts = reinterpret_cast<trivertx_t*>(reinterpret_cast<byte*>(paliashdr) + paliashdr->frames[frame].frame);
         return;
     }
-    maliasgroup_t* paliasgroup = reinterpret_cast<maliasgroup_t*>(reinterpret_cast<byte*>(paliashdr) + paliashdr->frames[frame].frame);
+    maliasgroup_t* paliasgroup
+        = reinterpret_cast<maliasgroup_t*>(reinterpret_cast<byte*>(paliashdr) + paliashdr->frames[frame].frame);
     float* pintervals = reinterpret_cast<float*>(reinterpret_cast<byte*>(paliashdr) + paliasgroup->intervals);
     int numframes = paliasgroup->numframes;
     float fullinterval = pintervals[numframes - 1];

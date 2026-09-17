@@ -16,9 +16,7 @@ namespace Vid {
 
 viddef_t vid;
 
-void VID_HandlePause()
-{
-}
+void VID_HandlePause() { }
 
 #define BASEWIDTH (320 * 2)
 #define BASEHEIGHT (200 * 2)
@@ -80,9 +78,8 @@ void VID_Init(unsigned char* palette)
     if (Common::COM_CheckParm("-fullscreen")) {
         flags |= SDL_WINDOW_FULLSCREEN;
     }
-    window = SDL_CreateWindow("Quake.cpp",
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        vid.width, vid.height, flags);
+    window
+        = SDL_CreateWindow("Quake.cpp", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, vid.width, vid.height, flags);
     if (!window) {
         Common::Sys_Error("VID: Couldn't create window: %s\n", SDL_GetError());
     }

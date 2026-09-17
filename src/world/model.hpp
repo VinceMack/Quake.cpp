@@ -15,28 +15,28 @@
 //=============================================================================
 
 struct mvertex_t {
-    Vector3 position{};
+    Vector3 position { };
 };
 
 inline constexpr int SIDE_FRONT = 0, SIDE_BACK = 1, SIDE_ON = 2;
 
 struct mplane_s {
-    Vector3 normal{};
+    Vector3 normal { };
     float dist = 0.0f;
     byte type = 0;
     byte signbits = 0;
-    byte pad[2]{};
+    byte pad[2] { };
 };
 using mplane_t = mplane_s;
 
 struct texture_s {
-    char name[16]{};
+    char name[16] { };
     unsigned width = 0, height = 0;
     int anim_total = 0;
     int anim_min = 0, anim_max = 0;
     texture_s* anim_next = nullptr;
     texture_s* alternate_anims = nullptr;
-    unsigned offsets[MIPLEVELS]{};
+    unsigned offsets[MIPLEVELS] { };
 };
 using texture_t = texture_s;
 
@@ -44,12 +44,12 @@ inline constexpr int SURF_PLANEBACK = 2, SURF_DRAWSKY = 4, SURF_DRAWSPRITE = 8;
 inline constexpr int SURF_DRAWTURB = 0x10, SURF_DRAWTILED = 0x20, SURF_DRAWBACKGROUND = 0x40;
 
 struct medge_t {
-    unsigned short v[2]{};
+    unsigned short v[2] { };
     unsigned int cachededgeoffset = 0;
 };
 
 struct mtexinfo_t {
-    float vecs[2][4]{};
+    float vecs[2][4] { };
     float mipadjust = 0.0f;
     texture_t* texture = nullptr;
     int flags = 0;
@@ -66,11 +66,11 @@ struct msurface_s {
     int flags = 0;
     int firstedge = 0;
     int numedges = 0;
-    surfcache_s* cachespots[MIPLEVELS]{};
-    short texturemins[2]{};
-    short extents[2]{};
+    surfcache_s* cachespots[MIPLEVELS] { };
+    short texturemins[2] { };
+    short extents[2] { };
     mtexinfo_t* texinfo = nullptr;
-    byte styles[MAXLIGHTMAPS]{};
+    byte styles[MAXLIGHTMAPS] { };
     byte* samples = nullptr;
 };
 using msurface_t = msurface_s;
@@ -78,10 +78,10 @@ using msurface_t = msurface_s;
 struct mnode_s {
     int contents = 0;
     int visframe = 0;
-    short minmaxs[6]{};
+    short minmaxs[6] { };
     mnode_s* parent = nullptr;
     mplane_t* plane = nullptr;
-    mnode_s* children[2]{};
+    mnode_s* children[2] { };
     unsigned short firstsurface = 0;
     unsigned short numsurfaces = 0;
 };
@@ -90,14 +90,14 @@ using mnode_t = mnode_s;
 struct mleaf_s {
     int contents = 0;
     int visframe = 0;
-    short minmaxs[6]{};
+    short minmaxs[6] { };
     mnode_s* parent = nullptr;
     byte* compressed_vis = nullptr;
     efrag_s* efrags = nullptr;
     msurface_t** firstmarksurface = nullptr;
     int nummarksurfaces = 0;
     int key = 0;
-    byte ambient_sound_level[NUM_AMBIENTS]{};
+    byte ambient_sound_level[NUM_AMBIENTS] { };
 };
 using mleaf_t = mleaf_s;
 
@@ -106,8 +106,8 @@ struct hull_t {
     mplane_t* planes = nullptr;
     int firstclipnode = 0;
     int lastclipnode = 0;
-    Vector3 clip_mins{};
-    Vector3 clip_maxs{};
+    Vector3 clip_mins { };
+    Vector3 clip_maxs { };
 };
 
 struct mspriteframe_s {
@@ -115,14 +115,14 @@ struct mspriteframe_s {
     int height = 0;
     void* pcachespot = nullptr;
     float up = 0.0f, down = 0.0f, left = 0.0f, right = 0.0f;
-    byte pixels[4]{};
+    byte pixels[4] { };
 };
 using mspriteframe_t = mspriteframe_s;
 
 struct mspritegroup_t {
     int numframes = 0;
     float* intervals = nullptr;
-    mspriteframe_t* frames[1]{};
+    mspriteframe_t* frames[1] { };
 };
 
 struct mspriteframedesc_t {
@@ -137,17 +137,17 @@ struct msprite_t {
     int numframes = 0;
     float beamlength = 0.0f;
     void* cachespot = nullptr;
-    mspriteframedesc_t frames[1]{};
+    mspriteframedesc_t frames[1] { };
 };
 
 inline constexpr int MAXALIASVERTS = 2000;
 
 struct maliasframedesc_t {
     aliasframetype_t type = aliasframetype_t::ALIAS_SINGLE;
-    trivertx_t bboxmin{};
-    trivertx_t bboxmax{};
+    trivertx_t bboxmin { };
+    trivertx_t bboxmax { };
     int frame = 0;
-    char name[16]{};
+    char name[16] { };
 };
 
 struct maliasskindesc_t {
@@ -157,26 +157,26 @@ struct maliasskindesc_t {
 };
 
 struct maliasgroupframedesc_t {
-    trivertx_t bboxmin{};
-    trivertx_t bboxmax{};
+    trivertx_t bboxmin { };
+    trivertx_t bboxmax { };
     int frame = 0;
 };
 
 struct maliasgroup_t {
     int numframes = 0;
     int intervals = 0;
-    maliasgroupframedesc_t frames[1]{};
+    maliasgroupframedesc_t frames[1] { };
 };
 
 struct maliasskingroup_t {
     int numskins = 0;
     int intervals = 0;
-    maliasskindesc_t skindescs[1]{};
+    maliasskindesc_t skindescs[1] { };
 };
 
 struct mtriangle_s {
     int facesfront = 0;
-    int vertindex[3]{};
+    int vertindex[3] { };
 };
 using mtriangle_t = mtriangle_s;
 
@@ -185,14 +185,10 @@ struct aliashdr_t {
     int stverts = 0;
     int skindesc = 0;
     int triangles = 0;
-    maliasframedesc_t frames[1]{};
+    maliasframedesc_t frames[1] { };
 };
 
-enum modtype_t {
-    mod_brush,
-    mod_sprite,
-    mod_alias
-};
+enum modtype_t { mod_brush, mod_sprite, mod_alias };
 
 inline constexpr int EF_ROCKET = 1, EF_GRENADE = 2, EF_GIB = 4, EF_ROTATE = 8;
 inline constexpr int EF_TRACER = 16, EF_ZOMGIB = 32, EF_TRACER2 = 64, EF_TRACER3 = 128;
@@ -220,14 +216,14 @@ struct BrushModelData {
 };
 
 struct model_s {
-    char name[MAX_QPATH]{};
+    char name[MAX_QPATH] { };
     int needload = 0;
     modtype_t type = mod_brush;
     int numframes = 0;
     synctype_t synctype = synctype_t::ST_SYNC;
     int flags = 0;
 
-    Vector3 mins{}, maxs{};
+    Vector3 mins { }, maxs { };
     float radius = 0.0f;
 
     int firstmodelsurface = 0, nummodelsurfaces = 0;
@@ -253,7 +249,7 @@ struct model_s {
     dclipnode_t* clipnodes = nullptr;
     int nummarksurfaces = 0;
     msurface_t** marksurfaces = nullptr;
-    hull_t hulls[MAX_MAP_HULLS]{};
+    hull_t hulls[MAX_MAP_HULLS] { };
     int numtextures = 0;
     texture_t** textures = nullptr;
     byte* visdata = nullptr;

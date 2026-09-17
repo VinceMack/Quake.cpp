@@ -16,20 +16,24 @@ namespace {
 int g_checks = 0;
 int g_failures = 0;
 
-#define CHECK(condition)                                                     \
-    do {                                                                     \
-        ++g_checks;                                                          \
-        if (!(condition)) {                                                  \
-            ++g_failures;                                                    \
-            std::printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #condition); \
-        }                                                                    \
+#define CHECK(condition)                                                                                               \
+    do {                                                                                                               \
+        ++g_checks;                                                                                                    \
+        if (!(condition)) {                                                                                            \
+            ++g_failures;                                                                                              \
+            std::printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #condition);                                           \
+        }                                                                                                              \
     } while (0)
 
-bool NearlyEqual(float a, float b, float epsilon = 1e-5f) { return std::fabs(a - b) <= epsilon; }
+bool NearlyEqual(float a, float b, float epsilon = 1e-5f)
+{
+    return std::fabs(a - b) <= epsilon;
+}
 
 // COM_Init normally selects these based on the host byte order, but it also
 // mounts the game data, which the unit tests do not need.
-void SelectEndianFunctions() {
+void SelectEndianFunctions()
+{
     using namespace Common;
     if constexpr (std::endian::native == std::endian::little) {
         bigendien = false;
@@ -50,7 +54,8 @@ void SelectEndianFunctions() {
     }
 }
 
-void TestByteSwapping() {
+void TestByteSwapping()
+{
     using namespace Common;
     CHECK(ShortSwap(0x1234) == 0x3412);
     CHECK(LongSwap(0x12345678) == 0x78563412);
@@ -58,10 +63,11 @@ void TestByteSwapping() {
     CHECK(std::bit_cast<uint32_t>(FloatSwap(1.0f)) == 0x0000803Fu);
 }
 
-void TestMessageRoundTrip() {
+void TestMessageRoundTrip()
+{
     using namespace Common;
-    byte buffer[128] = {};
-    sizebuf_t sb{};
+    byte buffer[128] = { };
+    sizebuf_t sb { };
     sb.data = buffer;
     sb.maxsize = sizeof(buffer);
 
@@ -96,7 +102,8 @@ void TestMessageRoundTrip() {
     CHECK(msg_badread);
 }
 
-void TestParser() {
+void TestParser()
+{
     using namespace Common;
     const char* text = "{ \"classname\" \"worldspawn\" // trailing comment\n light 300 }";
     const char* expected[] = { "{", "classname", "worldspawn", "light", "300", "}" };
@@ -108,7 +115,8 @@ void TestParser() {
     CHECK(COM_Parse(text) == nullptr);
 }
 
-void TestNumberParsing() {
+void TestNumberParsing()
+{
     using namespace Common;
     CHECK(Q_atoi("-42") == -42);
     CHECK(Q_atoi("0x1F") == 31);
@@ -121,7 +129,8 @@ void TestNumberParsing() {
     CHECK(NearlyEqual(Q_atof("800"), 800.0f));
 }
 
-void TestCaseInsensitiveCompare() {
+void TestCaseInsensitiveCompare()
+{
     using namespace Common;
     CHECK(Q_strcasecmp("Quake", "qUAKE") == 0);
     CHECK(Q_strcasecmp("abc", "abd") < 0);
@@ -129,7 +138,8 @@ void TestCaseInsensitiveCompare() {
     CHECK(Q_strcasecmp(std::string_view("e1m1"), std::string_view("E1M1")) == 0);
 }
 
-void TestCrc() {
+void TestCrc()
+{
     using namespace Common;
     std::uint16_t crc = 0;
     CRC_Init(crc);
@@ -139,16 +149,17 @@ void TestCrc() {
     CHECK(crc == 0x29B1); // CRC-16/CCITT-FALSE check value
 }
 
-void TestVector3() {
+void TestVector3()
+{
     using namespace Math;
-    Vector3 a{ 1.0f, 2.0f, 3.0f };
-    Vector3 b{ 4.0f, 5.0f, 6.0f };
+    Vector3 a { 1.0f, 2.0f, 3.0f };
+    Vector3 b { 4.0f, 5.0f, 6.0f };
     CHECK(a.dot(b) == 32.0f);
     CHECK(a.cross(b) == Vector3(-3.0f, 6.0f, -3.0f));
     CHECK((a + b) == Vector3(5.0f, 7.0f, 9.0f));
     CHECK((b - a) == Vector3(3.0f, 3.0f, 3.0f));
     CHECK((a * 2.0f) == Vector3(2.0f, 4.0f, 6.0f));
-    Vector3 n{ 0.0f, 3.0f, 4.0f };
+    Vector3 n { 0.0f, 3.0f, 4.0f };
     CHECK(n.normalize() == 5.0f);
     CHECK(NearlyEqual(n.length(), 1.0f));
 
@@ -164,7 +175,8 @@ void TestVector3() {
 
 } // namespace
 
-int main() {
+int main()
+{
     SelectEndianFunctions();
     TestByteSwapping();
     TestMessageRoundTrip();

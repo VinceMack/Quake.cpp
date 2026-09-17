@@ -21,16 +21,16 @@
 namespace Server {
 
 static int fatbytes = 0;
-static std::array<byte, MAX_MAP_LEAFS / 8> fatpvs{};
+static std::array<byte, MAX_MAP_LEAFS / 8> fatpvs { };
 
 edict_t* sv_player = nullptr;
-static Vector3 wishdir{};
+static Vector3 wishdir { };
 static float wishspeed = 0.0f;
 static float* angles = nullptr;
 static float* origin = nullptr;
 static float* velocity = nullptr;
 static qboolean onground = false;
-static usercmd_t cmd{};
+static usercmd_t cmd { };
 
 void SV_StartParticle(const Vector3& org, const Vector3& dir, int color, int count)
 {
@@ -42,8 +42,10 @@ void SV_StartParticle(const Vector3& org, const Vector3& dir, int color, int cou
     Common::MSG_WriteCoord(&sv.datagram, org[2]);
     for (int i = 0; i < 3; ++i) {
         int v = static_cast<int>(dir[i] * 16.0f);
-        if (v > 127) v = 127;
-        else if (v < -128) v = -128;
+        if (v > 127)
+            v = 127;
+        else if (v < -128)
+            v = -128;
         Common::MSG_WriteChar(&sv.datagram, v);
     }
     Common::MSG_WriteByte(&sv.datagram, count);
@@ -53,7 +55,8 @@ void SV_StartParticle(const Vector3& org, const Vector3& dir, int color, int cou
 void SV_StartSound(edict_t* entity, int channel, const char* sample, int vol, float attenuation)
 {
     if (vol < 0 || vol > 255) Common::Sys_Error("SV_StartSound: volume = %i", vol);
-    if (attenuation < 0.0f || attenuation > 4.0f) Common::Sys_Error("SV_StartSound: attenuation = %f", static_cast<double>(attenuation));
+    if (attenuation < 0.0f || attenuation > 4.0f)
+        Common::Sys_Error("SV_StartSound: attenuation = %f", static_cast<double>(attenuation));
     if (channel < 0 || channel > 7) Common::Sys_Error("SV_StartSound: channel = %i", channel);
     if (sv.datagram.cursize > MAX_DATAGRAM - 16) return;
 
@@ -87,18 +90,21 @@ void SV_StartSound(edict_t* entity, int channel, const char* sample, int vol, fl
 
 void SV_SendServerinfo(client_t* client)
 {
-    std::array<char, 2048> message{};
+    std::array<char, 2048> message { };
 
     Common::MSG_WriteByte(&client->message, svc_print);
-    sprintf_s(message.data(), message.size(), "%c\nVERSION %4.2f SERVER (%i CRC)", 2, static_cast<double>(VERSION), VM::pr_crc);
+    sprintf_s(message.data(), message.size(), "%c\nVERSION %4.2f SERVER (%i CRC)", 2, static_cast<double>(VERSION),
+        VM::pr_crc);
     Common::MSG_WriteString(&client->message, message.data());
 
     Common::MSG_WriteByte(&client->message, svc_serverinfo);
     Common::MSG_WriteLong(&client->message, PROTOCOL_VERSION);
     Common::MSG_WriteByte(&client->message, svs.maxclients);
 
-    if (!coop.value && deathmatch.value) Common::MSG_WriteByte(&client->message, GAME_DEATHMATCH);
-    else Common::MSG_WriteByte(&client->message, GAME_COOP);
+    if (!coop.value && deathmatch.value)
+        Common::MSG_WriteByte(&client->message, GAME_DEATHMATCH);
+    else
+        Common::MSG_WriteByte(&client->message, GAME_COOP);
 
     sprintf_s(message.data(), message.size(), "%s", VM::PR_GetString(sv.edicts->v.message));
     Common::MSG_WriteString(&client->message, message.data());
@@ -136,7 +142,7 @@ void SV_ConnectClient(int clientnum)
     edict_t* ent = VM::EDICT_NUM(edictnum);
     qsocket_s* netconnection = client->netconnection;
 
-    std::array<float, NUM_SPAWN_PARMS> spawn_parms{};
+    std::array<float, NUM_SPAWN_PARMS> spawn_parms { };
     if (sv.loadgame) {
         std::copy(client->spawn_parms.begin(), client->spawn_parms.end(), spawn_parms.begin());
     }
@@ -171,9 +177,7 @@ void SV_CheckForNewClients()
         if (!ret) break;
 
         auto clients = svs.GetClients();
-        auto it = std::find_if(clients.begin(), clients.end(), [](const client_t& cl) {
-            return !cl.active;
-        });
+        auto it = std::find_if(clients.begin(), clients.end(), [](const client_t& cl) { return !cl.active; });
 
         if (it == clients.end()) Common::Sys_Error("Host_CheckForNewClients: no free clients");
 
@@ -200,8 +204,10 @@ void SV_AddToFatPVS(const Vector3& org, mnode_t* node)
 
         mplane_t* plane = node->plane;
         const float d = org.dot(plane->normal) - plane->dist;
-        if (d > 8.0f) node = node->children[0];
-        else if (d < -8.0f) node = node->children[1];
+        if (d > 8.0f)
+            node = node->children[0];
+        else if (d < -8.0f)
+            node = node->children[1];
         else {
             SV_AddToFatPVS(org, node->children[0]);
             node = node->children[1];
@@ -260,8 +266,10 @@ void SV_WriteEntitiesToClient(edict_t* clent, sizebuf_t* msg)
 
         Common::MSG_WriteByte(msg, bits | U_SIGNAL);
         if (bits & U_MOREBITS) Common::MSG_WriteByte(msg, bits >> 8);
-        if (bits & U_LONGENTITY) Common::MSG_WriteShort(msg, e);
-        else Common::MSG_WriteByte(msg, e);
+        if (bits & U_LONGENTITY)
+            Common::MSG_WriteShort(msg, e);
+        else
+            Common::MSG_WriteByte(msg, e);
 
         if (bits & U_MODEL) Common::MSG_WriteByte(msg, static_cast<int>(ent->v.modelindex));
         if (bits & U_FRAME) Common::MSG_WriteByte(msg, static_cast<int>(ent->v.frame));
@@ -294,7 +302,8 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
         Common::MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_take));
         const Vector3 center = other->v.origin + (other->v.mins + other->v.maxs) * 0.5f;
         for (int i = 0; i < 3; ++i) Common::MSG_WriteCoord(msg, center[i]);
-        ent->v.dmg_take = 0; ent->v.dmg_save = 0;
+        ent->v.dmg_take = 0;
+        ent->v.dmg_save = 0;
     }
 
     SV_SetIdealPitch();
@@ -364,8 +373,8 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
 
 qboolean SV_SendClientDatagram(client_t* client)
 {
-    std::array<byte, MAX_DATAGRAM> buf{};
-    sizebuf_t msg{};
+    std::array<byte, MAX_DATAGRAM> buf { };
+    sizebuf_t msg { };
 
     msg.data = buf.data();
     msg.maxsize = static_cast<int>(buf.size());
@@ -415,8 +424,8 @@ void SV_UpdateToReliableMessages()
 
 void SV_SendNop(client_t* client)
 {
-    std::array<byte, 4> buf{};
-    sizebuf_t msg{};
+    std::array<byte, 4> buf { };
+    sizebuf_t msg { };
 
     msg.data = buf.data();
     msg.maxsize = static_cast<int>(buf.size());
@@ -485,13 +494,11 @@ void SV_SetIdealPitch()
     const float sinval = sinf(angleval);
     const float cosval = cosf(angleval);
 
-    std::array<float, MAX_FORWARD> z{};
+    std::array<float, MAX_FORWARD> z { };
 
     int i = 0;
     for (; i < MAX_FORWARD; ++i) {
-        Vector3 top(
-            sv_player->v.origin.x + cosval * (i + 3) * 12.0f,
-            sv_player->v.origin.y + sinval * (i + 3) * 12.0f,
+        Vector3 top(sv_player->v.origin.x + cosval * (i + 3) * 12.0f, sv_player->v.origin.y + sinval * (i + 3) * 12.0f,
             sv_player->v.origin.z + sv_player->v.view_ofs.z);
 
         Vector3 bottom = top;
@@ -528,9 +535,7 @@ static void SV_UserFriction()
     const float speed = sqrtf(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
     if (!speed) return;
 
-    Vector3 start(
-        origin[0] + velocity[0] / speed * 16.0f,
-        origin[1] + velocity[1] / speed * 16.0f,
+    Vector3 start(origin[0] + velocity[0] / speed * 16.0f, origin[1] + velocity[1] / speed * 16.0f,
         origin[2] + sv_player->v.mins.z);
     Vector3 stop = start;
     stop.z -= 34.0f;
@@ -585,13 +590,15 @@ static void DropPunchAngle()
 
 static void SV_WaterMove()
 {
-    Vector3 forward{}, right{}, up{};
+    Vector3 forward { }, right { }, up { };
     Math::AngleVectors(sv_player->v.v_angle, forward, right, up);
 
     Vector3 wishvel = forward * cmd.forwardmove + right * cmd.sidemove;
 
-    if (!cmd.forwardmove && !cmd.sidemove && !cmd.upmove) wishvel.z -= 60.0f;
-    else wishvel.z += cmd.upmove;
+    if (!cmd.forwardmove && !cmd.sidemove && !cmd.upmove)
+        wishvel.z -= 60.0f;
+    else
+        wishvel.z += cmd.upmove;
 
     float w_speed = wishvel.length();
     if (w_speed > sv_maxspeed.value) {
@@ -634,7 +641,7 @@ static void SV_WaterJump()
 
 static void SV_AirMove()
 {
-    Vector3 forward{}, right{}, up{};
+    Vector3 forward { }, right { }, up { };
     Math::AngleVectors(sv_player->v.angles, forward, right, up);
 
     float fmove = cmd.forwardmove;
@@ -643,8 +650,10 @@ static void SV_AirMove()
     if (sv.time < sv_player->v.teleport_time && fmove < 0.0f) fmove = 0.0f;
 
     Vector3 wishvel = forward * fmove + right * smove;
-    if (static_cast<int>(sv_player->v.movetype) != MOVETYPE_WALK) wishvel.z = cmd.upmove;
-    else wishvel.z = 0.0f;
+    if (static_cast<int>(sv_player->v.movetype) != MOVETYPE_WALK)
+        wishvel.z = cmd.upmove;
+    else
+        wishvel.z = 0.0f;
 
     wishdir = wishvel;
     wishspeed = wishdir.normalize();
@@ -700,10 +709,11 @@ void SV_ClientThink()
 
 static void SV_ReadClientMove(usercmd_t* move)
 {
-    Host::host_client->ping_times[static_cast<size_t>(Host::host_client->num_pings % NUM_PING_TIMES)] = static_cast<float>(sv.time) - Common::MSG_ReadFloat();
+    Host::host_client->ping_times[static_cast<size_t>(Host::host_client->num_pings % NUM_PING_TIMES)]
+        = static_cast<float>(sv.time) - Common::MSG_ReadFloat();
     Host::host_client->num_pings++;
 
-    Vector3 angle{};
+    Vector3 angle { };
     angle.x = Common::MSG_ReadAngle();
     angle.y = Common::MSG_ReadAngle();
     angle.z = Common::MSG_ReadAngle();
@@ -723,11 +733,9 @@ static void SV_ReadClientMove(usercmd_t* move)
 
 static qboolean SV_ReadClientMessage()
 {
-    static constexpr std::array<std::string_view, 19> allowed_commands = {
-        "status", "god", "notarget", "fly", "name", "noclip",
-        "say", "say_team", "tell", "color", "kill", "pause",
-        "spawn", "begin", "prespawn", "kick", "ping", "give", "ban"
-    };
+    static constexpr std::array<std::string_view, 19> allowed_commands
+        = { "status", "god", "notarget", "fly", "name", "noclip", "say", "say_team", "tell", "color", "kill", "pause",
+              "spawn", "begin", "prespawn", "kick", "ping", "give", "ban" };
 
     int ret = 0;
     do {
@@ -769,7 +777,8 @@ static qboolean SV_ReadClientMessage()
 
                 const std::string_view cmd_sv(s);
                 for (const auto& allowed : allowed_commands) {
-                    if (cmd_sv.length() >= allowed.length() && Common::Q_strncasecmp(s, allowed.data(), static_cast<int>(allowed.length())) == 0) {
+                    if (cmd_sv.length() >= allowed.length()
+                        && Common::Q_strncasecmp(s, allowed.data(), static_cast<int>(allowed.length())) == 0) {
                         ret = 1;
                         break;
                     }
@@ -813,7 +822,7 @@ void SV_RunClients()
         }
 
         if (!Host::host_client->spawned) {
-            Host::host_client->cmd = usercmd_t{};
+            Host::host_client->cmd = usercmd_t { };
             continue;
         }
 

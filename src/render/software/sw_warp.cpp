@@ -8,8 +8,8 @@
 
 namespace Render {
 
-std::array<int, SIN_BUFFER_SIZE> sintable{};
-std::array<int, SIN_BUFFER_SIZE> intsintable{};
+std::array<int, SIN_BUFFER_SIZE> sintable { };
+std::array<int, SIN_BUFFER_SIZE> intsintable { };
 
 unsigned char* r_turb_pbase = nullptr;
 unsigned char* r_turb_pdest = nullptr;
@@ -41,8 +41,8 @@ void D_DrawTurbulent8Span()
 
 void D_WarpScreen()
 {
-    std::array<byte*, MAXHEIGHT + (AMP2 * 2)> rowptr{};
-    std::array<int, MAXWIDTH + (AMP2 * 2)> column{};
+    std::array<byte*, MAXHEIGHT + (AMP2 * 2)> rowptr { };
+    std::array<int, MAXWIDTH + (AMP2 * 2)> column { };
     const auto& scr_vrect = Screen::GetScreenSystem().GetVrect();
     int w = r_refdef.vrect.width;
     int h = r_refdef.vrect.height;
@@ -50,11 +50,15 @@ void D_WarpScreen()
     float hratio = static_cast<float>(h) / static_cast<float>(scr_vrect.height);
 
     for (int v = 0; v < scr_vrect.height + AMP2 * 2; v++) {
-        rowptr[v] = reinterpret_cast<byte*>(d_viewbuffer) + (r_refdef.vrect.y * screenwidth) +
-            (screenwidth * static_cast<int>(static_cast<float>(v) * hratio * static_cast<float>(h) / static_cast<float>(h + AMP2 * 2)));
+        rowptr[v] = reinterpret_cast<byte*>(d_viewbuffer) + (r_refdef.vrect.y * screenwidth)
+            + (screenwidth
+                * static_cast<int>(
+                    static_cast<float>(v) * hratio * static_cast<float>(h) / static_cast<float>(h + AMP2 * 2)));
     }
     for (int u = 0; u < scr_vrect.width + AMP2 * 2; u++) {
-        column[u] = r_refdef.vrect.x + static_cast<int>(static_cast<float>(u) * wratio * static_cast<float>(w) / static_cast<float>(w + AMP2 * 2));
+        column[u] = r_refdef.vrect.x
+            + static_cast<int>(
+                static_cast<float>(u) * wratio * static_cast<float>(w) / static_cast<float>(w + AMP2 * 2));
     }
     int* turb = intsintable.data() + (static_cast<int>(Client::cl.time * SPEED) & (CYCLE - 1));
     byte* dest = reinterpret_cast<byte*>(Vid::vid.buffer) + scr_vrect.y * Vid::vid.rowbytes + scr_vrect.x;
@@ -81,7 +85,8 @@ void Turbulent8(espan_t* pspan)
     r_turb_pbase = reinterpret_cast<unsigned char*>(cacheblock);
 
     do {
-        r_turb_pdest = reinterpret_cast<unsigned char*>(reinterpret_cast<byte*>(d_viewbuffer) + (screenwidth * pspan->v) + pspan->u);
+        r_turb_pdest = reinterpret_cast<unsigned char*>(
+            reinterpret_cast<byte*>(d_viewbuffer) + (screenwidth * pspan->v) + pspan->u);
         int count = pspan->count;
         float du = static_cast<float>(pspan->u);
         float dv = static_cast<float>(pspan->v);
@@ -163,8 +168,8 @@ void Turbulent8(espan_t* pspan)
 
 void D_Sky_uv_To_st(int u, int v, fixed16_t* s, fixed16_t* t)
 {
-    float temp = (r_refdef.vrect.width >= r_refdef.vrect.height) ?
-        static_cast<float>(r_refdef.vrect.width) : static_cast<float>(r_refdef.vrect.height);
+    float temp = (r_refdef.vrect.width >= r_refdef.vrect.height) ? static_cast<float>(r_refdef.vrect.width)
+                                                                 : static_cast<float>(r_refdef.vrect.height);
     float wu = 8192.0f * static_cast<float>(u - (static_cast<int>(Vid::vid.width) >> 1)) / temp;
     float wv = 8192.0f * static_cast<float>((static_cast<int>(Vid::vid.height) >> 1) - v) / temp;
     Vector3 end = vpn * 4096.0f + vright * wu + vup * wv;
@@ -179,7 +184,8 @@ void D_DrawSkyScans8(espan_t* pspan)
 {
     fixed16_t sstep = 0, tstep = 0;
     do {
-        unsigned char* pdest = reinterpret_cast<unsigned char*>(reinterpret_cast<byte*>(d_viewbuffer) + (screenwidth * pspan->v) + pspan->u);
+        unsigned char* pdest = reinterpret_cast<unsigned char*>(
+            reinterpret_cast<byte*>(d_viewbuffer) + (screenwidth * pspan->v) + pspan->u);
         int count = pspan->count;
         int u = pspan->u;
         int v = pspan->v;

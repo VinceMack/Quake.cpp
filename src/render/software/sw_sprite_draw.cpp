@@ -263,7 +263,7 @@ void D_DrawSprite()
     int i, nump;
     float ymin, ymax;
     emitpoint_t* pverts;
-    std::array<sspan_t, MAXHEIGHT + 1> spans{};
+    std::array<sspan_t, MAXHEIGHT + 1> spans { };
     sprite_spans = spans.data();
     ymin = 999999.9f;
     ymax = -999999.9f;
@@ -296,13 +296,9 @@ void D_DrawSprite()
     D_SpriteDrawSpans(sprite_spans);
 }
 
-void D_EndParticles()
-{
-}
+void D_EndParticles() { }
 
-void D_StartParticles()
-{
-}
+void D_StartParticles() { }
 
 void D_DrawParticle(particle_t* pparticle)
 {

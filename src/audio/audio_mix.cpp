@@ -9,7 +9,8 @@ namespace Audio {
 
 namespace {
 
-[[nodiscard]] inline short clamp_short(int val) {
+[[nodiscard]] inline short clamp_short(int val)
+{
     return static_cast<short>(std::clamp(val, -32768, 32767));
 }
 
@@ -18,7 +19,8 @@ namespace {
 std::array<portable_samplepair_t, PAINTBUFFER_SIZE> paintbuffer;
 std::array<std::array<int, 256>, 32> snd_scaletable;
 
-void S_TransferPaintBuffer(int endtime) {
+void S_TransferPaintBuffer(int endtime)
+{
     int samplebits_val = shm->samplebits.load(std::memory_order_relaxed);
     int channels_val = shm->channels.load(std::memory_order_relaxed);
     if (samplebits_val == 16 && channels_val == 2) {
@@ -61,9 +63,10 @@ void S_TransferPaintBuffer(int endtime) {
     }
 }
 
-void SND_PaintChannelFrom8(channel_t* ch, sfxcache_t* sc, int count, int offset) {
-    const int *lscale = snd_scaletable[std::min(ch->leftvol, 255) >> 3].data();
-    const int *rscale = snd_scaletable[std::min(ch->rightvol, 255) >> 3].data();
+void SND_PaintChannelFrom8(channel_t* ch, sfxcache_t* sc, int count, int offset)
+{
+    const int* lscale = snd_scaletable[std::min(ch->leftvol, 255) >> 3].data();
+    const int* rscale = snd_scaletable[std::min(ch->rightvol, 255) >> 3].data();
     auto sfx = static_cast<const unsigned char*>(sc->data) + ch->pos;
     for (int i = 0; i < count; i++) {
         paintbuffer[offset + i].left += lscale[sfx[i]];
@@ -72,7 +75,8 @@ void SND_PaintChannelFrom8(channel_t* ch, sfxcache_t* sc, int count, int offset)
     ch->pos += count;
 }
 
-void SND_PaintChannelFrom16(channel_t* ch, sfxcache_t* sc, int count, int offset) {
+void SND_PaintChannelFrom16(channel_t* ch, sfxcache_t* sc, int count, int offset)
+{
     auto samples = reinterpret_cast<const int16_t*>(sc->data) + ch->pos;
     for (int i = 0; i < count; i++) {
         paintbuffer[offset + i].left += (samples[i] * ch->leftvol) >> 8;
@@ -81,21 +85,27 @@ void SND_PaintChannelFrom16(channel_t* ch, sfxcache_t* sc, int count, int offset
     ch->pos += count;
 }
 
-void S_PaintChannels(int endtime) {
+void S_PaintChannels(int endtime)
+{
     while (paintedtime < endtime) {
         int end = std::min(endtime, paintedtime + PAINTBUFFER_SIZE);
-        paintbuffer.fill({0, 0});
+        paintbuffer.fill({ 0, 0 });
         for (int i = 0; i < total_channels; i++) {
             auto& chan = channels[i];
             if (!chan.sfx || (!chan.leftvol && !chan.rightvol)) continue;
             sfxcache_t* sc = S_SfxCache(chan.sfx);
-            if (!sc) { chan.sfx = nullptr; continue; }
+            if (!sc) {
+                chan.sfx = nullptr;
+                continue;
+            }
             int ltime = paintedtime;
             while (ltime < end) {
                 int count = std::min(chan.end, end) - ltime;
                 if (count > 0) {
-                    if (sc->width == 1) SND_PaintChannelFrom8(&chan, sc, count, ltime - paintedtime);
-                    else SND_PaintChannelFrom16(&chan, sc, count, ltime - paintedtime);
+                    if (sc->width == 1)
+                        SND_PaintChannelFrom8(&chan, sc, count, ltime - paintedtime);
+                    else
+                        SND_PaintChannelFrom16(&chan, sc, count, ltime - paintedtime);
                     ltime += count;
                 }
                 if (ltime >= chan.end) {
@@ -114,7 +124,8 @@ void S_PaintChannels(int endtime) {
     }
 }
 
-void SND_InitScaletable() {
+void SND_InitScaletable()
+{
     for (int i = 0; i < 32; i++) {
         for (int j = 0; j < 256; j++) {
             snd_scaletable[i][j] = static_cast<signed char>(j) * i * 8;

@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <cassert>
 
-
 //============================================================================
 // Foundational Type Aliases
 //============================================================================
@@ -24,10 +23,18 @@ using qboolean = bool;
 struct link_t {
     link_t *prev = nullptr, *next = nullptr;
     constexpr void clear() noexcept { prev = next = this; }
-    void remove() noexcept { if (next && prev) { next->prev = prev; prev->next = next; } }
-    void insert_before(link_t* before) noexcept {
+    void remove() noexcept
+    {
+        if (next && prev) {
+            next->prev = prev;
+            prev->next = next;
+        }
+    }
+    void insert_before(link_t* before) noexcept
+    {
         if (!before) return;
-        next = before; prev = before->prev;
+        next = before;
+        prev = before->prev;
         if (prev) prev->next = this;
         before->prev = this;
     }
@@ -37,9 +44,18 @@ struct link_t {
 
 namespace Common {
 
-inline void ClearLink(link_t* l) { if (l) l->clear(); }
-inline void RemoveLink(link_t* l) { if (l) l->remove(); }
-inline void InsertLinkBefore(link_t* l, link_t* before) { if (l) l->insert_before(before); }
+inline void ClearLink(link_t* l)
+{
+    if (l) l->clear();
+}
+inline void RemoveLink(link_t* l)
+{
+    if (l) l->remove();
+}
+inline void InsertLinkBefore(link_t* l, link_t* before)
+{
+    if (l) l->insert_before(before);
+}
 
 } // namespace Common
 
@@ -65,4 +81,3 @@ inline constexpr int MAX_STYLESTRING = 64;
 inline constexpr int MAX_SCOREBOARD = 16;
 inline constexpr int MAX_SCOREBOARDNAME = 32;
 inline constexpr int MAX_CL_STATS = 32;
-

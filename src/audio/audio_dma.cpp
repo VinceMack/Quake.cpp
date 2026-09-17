@@ -15,9 +15,10 @@ int snd_inited = 0;
 static constexpr int desired_speed = 11025;
 static constexpr int desired_bits = 16;
 
-void paint_audio(void*, Uint8* stream, int len) {
+void paint_audio(void*, Uint8* stream, int len)
+{
     if (shm) {
-        AudioCommand cmd{};
+        AudioCommand cmd { };
         while (command_queue.Pop(cmd)) ExecuteAudioCommand(cmd);
         shm->buffer.store(stream, std::memory_order_release);
         int samplebits_val = shm->samplebits.load(std::memory_order_relaxed);
@@ -28,8 +29,9 @@ void paint_audio(void*, Uint8* stream, int len) {
     }
 }
 
-bool SNDDMA_Init() {
-    SDL_AudioSpec desired{};
+bool SNDDMA_Init()
+{
+    SDL_AudioSpec desired { };
     desired.freq = desired_speed;
     desired.channels = 2;
     desired.samples = 512;
@@ -50,12 +52,14 @@ bool SNDDMA_Init() {
     }
     SDL_PauseAudio(0);
     shm = &the_shm;
-    shm->Reset(static_cast<int>(desired.format & 0xFF), desired.freq, desired.channels, desired.samples * desired.channels);
+    shm->Reset(
+        static_cast<int>(desired.format & 0xFF), desired.freq, desired.channels, desired.samples * desired.channels);
     snd_inited = 1;
     return true;
 }
 
-void SNDDMA_Shutdown() {
+void SNDDMA_Shutdown()
+{
     if (snd_inited) {
         SDL_CloseAudio();
         snd_inited = 0;

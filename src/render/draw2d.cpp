@@ -110,10 +110,11 @@ void Draw_String(int x, int y, std::string_view str)
     }
 }
 
-template<bool Trans, bool Translate>
+template <bool Trans, bool Translate>
 static inline void Draw_Pic_Impl(int x, int y, qpic_t* pic, const byte* translation = nullptr)
 {
-    if (x < 0 || (unsigned)(x + pic->width) > Vid::vid.width || y < 0 || (unsigned)(y + pic->height) > Vid::vid.height) {
+    if (x < 0 || (unsigned)(x + pic->width) > Vid::vid.width || y < 0
+        || (unsigned)(y + pic->height) > Vid::vid.height) {
         Common::Sys_Error("Draw_Pic: bad coordinates");
     }
     const byte* source = pic->data;
@@ -181,10 +182,14 @@ void Draw_ConsoleBackground(int lines)
             int f = 0;
             const int fstep = 320 * 0x10000 / Vid::vid.conwidth;
             for (int x = 0; x < (int)Vid::vid.conwidth; x += 4) {
-                dest[x] = src[f >> 16]; f += fstep;
-                dest[x + 1] = src[f >> 16]; f += fstep;
-                dest[x + 2] = src[f >> 16]; f += fstep;
-                dest[x + 3] = src[f >> 16]; f += fstep;
+                dest[x] = src[f >> 16];
+                f += fstep;
+                dest[x + 1] = src[f >> 16];
+                f += fstep;
+                dest[x + 2] = src[f >> 16];
+                f += fstep;
+                dest[x + 3] = src[f >> 16];
+                f += fstep;
             }
         }
     }
@@ -204,20 +209,24 @@ void Draw_TileClear(int x, int y, int w, int h)
     r_rectdesc.rect.y = y;
     r_rectdesc.rect.width = w;
     r_rectdesc.rect.height = h;
-    vrect_t vr{};
+    vrect_t vr { };
     vr.y = r_rectdesc.rect.y;
     int height = r_rectdesc.rect.height;
     int tileoffsety = vr.y % r_rectdesc.height;
     while (height > 0) {
         vr.x = r_rectdesc.rect.x;
         int width = r_rectdesc.rect.width;
-        if (tileoffsety != 0) vr.height = r_rectdesc.height - tileoffsety;
-        else vr.height = r_rectdesc.height;
+        if (tileoffsety != 0)
+            vr.height = r_rectdesc.height - tileoffsety;
+        else
+            vr.height = r_rectdesc.height;
         if (vr.height > height) vr.height = height;
         int tileoffsetx = vr.x % r_rectdesc.width;
         while (width > 0) {
-            if (tileoffsetx != 0) vr.width = r_rectdesc.width - tileoffsetx;
-            else vr.width = r_rectdesc.width;
+            if (tileoffsetx != 0)
+                vr.width = r_rectdesc.width - tileoffsetx;
+            else
+                vr.width = r_rectdesc.width;
             if (vr.width > width) vr.width = width;
             const byte* psrc = r_rectdesc.ptexbytes + (tileoffsety * r_rectdesc.rowbytes) + tileoffsetx;
             R_DrawRect8(&vr, r_rectdesc.rowbytes, psrc);

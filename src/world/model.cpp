@@ -21,7 +21,7 @@
 namespace Model {
 
 static model_t* loadmodel = nullptr;
-static char loadname[32] = {}; // for hunk tags
+static char loadname[32] = { }; // for hunk tags
 
 void Mod_LoadSpriteModel(model_t* mod, void* buffer);
 void Mod_LoadBrushModel(model_t* mod, void* buffer);
@@ -149,7 +149,7 @@ model_t* Mod_FindName(const char* name)
     if (mod_numknown == MAX_MOD_KNOWN) {
         if (avail) {
             mod = avail;
-            *mod = model_t{};
+            *mod = model_t { };
         } else {
             Common::Sys_Error("mod_numknown == MAX_MOD_KNOWN");
         }
@@ -478,8 +478,8 @@ void Mod_LoadTexinfo(lump_t* l)
 
 void CalcSurfaceExtents(msurface_t* s)
 {
-    float mins[2] = {999999.0f, 999999.0f};
-    float maxs[2] = {-99999.0f, -99999.0f};
+    float mins[2] = { 999999.0f, 999999.0f };
+    float maxs[2] = { -99999.0f, -99999.0f };
     mtexinfo_t* tex = s->texinfo;
     for (int i = 0; i < s->numedges; i++) {
         int e = loadmodel->surfedges[s->firstedge + i];
@@ -490,7 +490,8 @@ void CalcSurfaceExtents(msurface_t* s)
             v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
         }
         for (int j = 0; j < 2; j++) {
-            float val = v->position[0] * tex->vecs[j][0] + v->position[1] * tex->vecs[j][1] + v->position[2] * tex->vecs[j][2] + tex->vecs[j][3];
+            float val = v->position[0] * tex->vecs[j][0] + v->position[1] * tex->vecs[j][1]
+                + v->position[2] * tex->vecs[j][2] + tex->vecs[j][3];
             if (val < mins[j]) {
                 mins[j] = val;
             }
@@ -778,8 +779,7 @@ void Mod_LoadBrushModel(model_t* mod, void* buffer)
     int version = Common::LittleLong(header->version);
     if (version != BSPVERSION) {
         Common::Sys_Error(
-            "Mod_LoadBrushModel: %s has wrong version number (%i should be %i)",
-            mod->name, version, BSPVERSION);
+            "Mod_LoadBrushModel: %s has wrong version number (%i should be %i)", mod->name, version, BSPVERSION);
     }
     // swap all the lumps
     mod_base = reinterpret_cast<byte*>(header);
@@ -839,19 +839,24 @@ namespace {
 // into its cache), so the finished block can live anywhere.
 class AliasArena {
 public:
-    explicit AliasArena(size_t capacity) : buffer_(capacity) {}
+    explicit AliasArena(size_t capacity)
+        : buffer_(capacity)
+    { }
 
-    void* Alloc(size_t size) {
+    void* Alloc(size_t size)
+    {
         size = Align(size);
         if (used_ + size > buffer_.size()) {
-            Common::Sys_Error("Mod_LoadAliasModel: %s needs more memory than Mod_AliasModelMemorySize computed", loadname);
+            Common::Sys_Error(
+                "Mod_LoadAliasModel: %s needs more memory than Mod_AliasModelMemorySize computed", loadname);
         }
         void* p = buffer_.data() + used_;
         used_ += size;
         return p;
     }
 
-    std::vector<byte> Finish() {
+    std::vector<byte> Finish()
+    {
         if (used_ != buffer_.size()) {
             Common::Sys_Error("Mod_LoadAliasModel: %s used %zu of %zu arena bytes", loadname, used_, buffer_.size());
         }
@@ -876,7 +881,8 @@ size_t Mod_AliasModelMemorySize(const mdl_t* pinmodel)
     const int numframes = Common::LittleLong(pinmodel->numframes);
     const int numverts = Common::LittleLong(pinmodel->numverts);
     const int numtris = Common::LittleLong(pinmodel->numtris);
-    const size_t skinsize = static_cast<size_t>(Common::LittleLong(pinmodel->skinheight)) * Common::LittleLong(pinmodel->skinwidth);
+    const size_t skinsize
+        = static_cast<size_t>(Common::LittleLong(pinmodel->skinheight)) * Common::LittleLong(pinmodel->skinwidth);
     const size_t vertbytes = static_cast<size_t>(numverts) * sizeof(trivertx_t);
 
     size_t total = aligned(sizeof(aliashdr_t) + (numframes - 1) * sizeof(aliashdr_t::frames[0]) + sizeof(mdl_t)
@@ -885,7 +891,8 @@ size_t Mod_AliasModelMemorySize(const mdl_t* pinmodel)
 
     const byte* p = reinterpret_cast<const byte*>(pinmodel + 1);
     for (int i = 0; i < numskins; i++) {
-        const auto type = static_cast<aliasskintype_t>(Common::LittleLong(static_cast<int>(reinterpret_cast<const daliasskintype_t*>(p)->type)));
+        const auto type = static_cast<aliasskintype_t>(
+            Common::LittleLong(static_cast<int>(reinterpret_cast<const daliasskintype_t*>(p)->type)));
         p += sizeof(daliasskintype_t);
         if (type == aliasskintype_t::ALIAS_SKIN_SINGLE) {
             total += aligned(skinsize);
@@ -902,7 +909,8 @@ size_t Mod_AliasModelMemorySize(const mdl_t* pinmodel)
     }
     p += numverts * sizeof(stvert_t) + numtris * sizeof(dtriangle_t);
     for (int i = 0; i < numframes; i++) {
-        const auto type = static_cast<aliasframetype_t>(Common::LittleLong(static_cast<int>(reinterpret_cast<const daliasframetype_t*>(p)->type)));
+        const auto type = static_cast<aliasframetype_t>(
+            Common::LittleLong(static_cast<int>(reinterpret_cast<const daliasframetype_t*>(p)->type)));
         p += sizeof(daliasframetype_t);
         const size_t framebytes = sizeof(daliasframe_t) + vertbytes;
         if (type == aliasframetype_t::ALIAS_SINGLE) {
@@ -923,13 +931,8 @@ size_t Mod_AliasModelMemorySize(const mdl_t* pinmodel)
 
 } // namespace
 
-void* Mod_LoadAliasFrame(void* pin,
-    int* pframeindex,
-    int numv,
-    trivertx_t* pbboxmin,
-    trivertx_t* pbboxmax,
-    aliashdr_t* pheader,
-    char* name)
+void* Mod_LoadAliasFrame(
+    void* pin, int* pframeindex, int numv, trivertx_t* pbboxmin, trivertx_t* pbboxmax, aliashdr_t* pheader, char* name)
 {
     daliasframe_t* pdaliasframe = reinterpret_cast<daliasframe_t*>(pin);
     strcpy_s(name, 16, pdaliasframe->name);
@@ -953,18 +956,13 @@ void* Mod_LoadAliasFrame(void* pin,
     return reinterpret_cast<void*>(pinframe);
 }
 
-void* Mod_LoadAliasGroup(void* pin,
-    int* pframeindex,
-    int numv,
-    trivertx_t* pbboxmin,
-    trivertx_t* pbboxmax,
-    aliashdr_t* pheader,
-    char* name)
+void* Mod_LoadAliasGroup(
+    void* pin, int* pframeindex, int numv, trivertx_t* pbboxmin, trivertx_t* pbboxmax, aliashdr_t* pheader, char* name)
 {
     daliasgroup_t* pingroup = reinterpret_cast<daliasgroup_t*>(pin);
     int numframes = Common::LittleLong(pingroup->numframes);
-    maliasgroup_t* paliasgroup = reinterpret_cast<maliasgroup_t*>(alias_arena->Alloc(
-        sizeof(maliasgroup_t) + (numframes - 1) * sizeof(paliasgroup->frames[0])));
+    maliasgroup_t* paliasgroup = reinterpret_cast<maliasgroup_t*>(
+        alias_arena->Alloc(sizeof(maliasgroup_t) + (numframes - 1) * sizeof(paliasgroup->frames[0])));
     paliasgroup->numframes = numframes;
     for (int i = 0; i < 3; i++) {
         // these are byte values, so we don't have to worry about endianness
@@ -974,7 +972,8 @@ void* Mod_LoadAliasGroup(void* pin,
     *pframeindex = static_cast<int>(reinterpret_cast<byte*>(paliasgroup) - reinterpret_cast<byte*>(pheader));
     daliasinterval_t* pin_intervals = reinterpret_cast<daliasinterval_t*>(pingroup + 1);
     float* poutintervals = reinterpret_cast<float*>(alias_arena->Alloc(numframes * sizeof(float)));
-    paliasgroup->intervals = static_cast<int>(reinterpret_cast<byte*>(poutintervals) - reinterpret_cast<byte*>(pheader));
+    paliasgroup->intervals
+        = static_cast<int>(reinterpret_cast<byte*>(poutintervals) - reinterpret_cast<byte*>(pheader));
     for (int i = 0; i < numframes; i++) {
         *poutintervals = Common::LittleFloat(pin_intervals->interval);
         if (*poutintervals <= 0.0) {
@@ -985,17 +984,13 @@ void* Mod_LoadAliasGroup(void* pin,
     }
     void* ptemp = reinterpret_cast<void*>(pin_intervals);
     for (int i = 0; i < numframes; i++) {
-        ptemp = Mod_LoadAliasFrame(ptemp, &paliasgroup->frames[i].frame, numv,
-            &paliasgroup->frames[i].bboxmin,
+        ptemp = Mod_LoadAliasFrame(ptemp, &paliasgroup->frames[i].frame, numv, &paliasgroup->frames[i].bboxmin,
             &paliasgroup->frames[i].bboxmax, pheader, name);
     }
     return ptemp;
 }
 
-void* Mod_LoadAliasSkin(void* pin,
-    int* pskinindex,
-    int skinsize,
-    aliashdr_t* pheader)
+void* Mod_LoadAliasSkin(void* pin, int* pskinindex, int skinsize, aliashdr_t* pheader)
 {
     byte* pskin = reinterpret_cast<byte*>(alias_arena->Alloc(skinsize));
     byte* pinskin = reinterpret_cast<byte*>(pin);
@@ -1005,20 +1000,18 @@ void* Mod_LoadAliasSkin(void* pin,
     return reinterpret_cast<void*>(pinskin);
 }
 
-void* Mod_LoadAliasSkinGroup(void* pin,
-    int* pskinindex,
-    int skinsize,
-    aliashdr_t* pheader)
+void* Mod_LoadAliasSkinGroup(void* pin, int* pskinindex, int skinsize, aliashdr_t* pheader)
 {
     daliasskingroup_t* pinskingroup = reinterpret_cast<daliasskingroup_t*>(pin);
     int numskins = Common::LittleLong(pinskingroup->numskins);
-    maliasskingroup_t* paliasskingroup = reinterpret_cast<maliasskingroup_t*>(alias_arena->Alloc(
-        sizeof(maliasskingroup_t) + (numskins - 1) * sizeof(paliasskingroup->skindescs[0])));
+    maliasskingroup_t* paliasskingroup = reinterpret_cast<maliasskingroup_t*>(
+        alias_arena->Alloc(sizeof(maliasskingroup_t) + (numskins - 1) * sizeof(paliasskingroup->skindescs[0])));
     paliasskingroup->numskins = numskins;
     *pskinindex = static_cast<int>(reinterpret_cast<byte*>(paliasskingroup) - reinterpret_cast<byte*>(pheader));
     daliasskininterval_t* pinskinintervals = reinterpret_cast<daliasskininterval_t*>(pinskingroup + 1);
     float* poutskinintervals = reinterpret_cast<float*>(alias_arena->Alloc(numskins * sizeof(float)));
-    paliasskingroup->intervals = static_cast<int>(reinterpret_cast<byte*>(poutskinintervals) - reinterpret_cast<byte*>(pheader));
+    paliasskingroup->intervals
+        = static_cast<int>(reinterpret_cast<byte*>(poutskinintervals) - reinterpret_cast<byte*>(pheader));
     for (int i = 0; i < numskins; i++) {
         *poutskinintervals = Common::LittleFloat(pinskinintervals->interval);
         if (*poutskinintervals <= 0) {
@@ -1029,8 +1022,7 @@ void* Mod_LoadAliasSkinGroup(void* pin,
     }
     void* ptemp = reinterpret_cast<void*>(pinskinintervals);
     for (int i = 0; i < numskins; i++) {
-        ptemp = Mod_LoadAliasSkin(ptemp, &paliasskingroup->skindescs[i].skin,
-            skinsize, pheader);
+        ptemp = Mod_LoadAliasSkin(ptemp, &paliasskingroup->skindescs[i].skin, skinsize, pheader);
     }
     return ptemp;
 }
@@ -1040,8 +1032,7 @@ void Mod_LoadAliasModel(model_t* mod, void* buffer)
     mdl_t* pinmodel = reinterpret_cast<mdl_t*>(buffer);
     int version = Common::LittleLong(pinmodel->version);
     if (version != ALIAS_VERSION) {
-        Common::Sys_Error("%s has wrong version number (%i should be %i)", mod->name,
-            version, ALIAS_VERSION);
+        Common::Sys_Error("%s has wrong version number (%i should be %i)", mod->name, version, ALIAS_VERSION);
     }
     AliasArena arena(Mod_AliasModelMemorySize(pinmodel));
     alias_arena = &arena;
@@ -1049,9 +1040,12 @@ void Mod_LoadAliasModel(model_t* mod, void* buffer)
     // allocate space for a working header, plus all the data except the frames,
     // skin and group info
     //
-    int size = sizeof(aliashdr_t) + (Common::LittleLong(pinmodel->numframes) - 1) * sizeof(aliashdr_t::frames[0]) + sizeof(mdl_t) + Common::LittleLong(pinmodel->numverts) * sizeof(stvert_t) + Common::LittleLong(pinmodel->numtris) * sizeof(mtriangle_t);
+    int size = sizeof(aliashdr_t) + (Common::LittleLong(pinmodel->numframes) - 1) * sizeof(aliashdr_t::frames[0])
+        + sizeof(mdl_t) + Common::LittleLong(pinmodel->numverts) * sizeof(stvert_t)
+        + Common::LittleLong(pinmodel->numtris) * sizeof(mtriangle_t);
     aliashdr_t* pheader = reinterpret_cast<aliashdr_t*>(alias_arena->Alloc(size));
-    mdl_t* pmodel = reinterpret_cast<mdl_t*>(reinterpret_cast<byte*>(&pheader[1]) + (Common::LittleLong(pinmodel->numframes) - 1) * sizeof(pheader->frames[0]));
+    mdl_t* pmodel = reinterpret_cast<mdl_t*>(reinterpret_cast<byte*>(&pheader[1])
+        + (Common::LittleLong(pinmodel->numframes) - 1) * sizeof(pheader->frames[0]));
     mod->flags = Common::LittleLong(pinmodel->flags);
     //
     // endian-adjust and copy the data, starting with the alias model header
@@ -1097,17 +1091,18 @@ void Mod_LoadAliasModel(model_t* mod, void* buffer)
         Common::Sys_Error("Mod_LoadAliasModel: Invalid # of skins: %d\n", numskins);
     }
     daliasskintype_t* pskintype = reinterpret_cast<daliasskintype_t*>(&pinmodel[1]);
-    maliasskindesc_t* pskindesc = reinterpret_cast<maliasskindesc_t*>(alias_arena->Alloc(numskins * sizeof(maliasskindesc_t)));
+    maliasskindesc_t* pskindesc
+        = reinterpret_cast<maliasskindesc_t*>(alias_arena->Alloc(numskins * sizeof(maliasskindesc_t)));
     pheader->skindesc = static_cast<int>(reinterpret_cast<byte*>(pskindesc) - reinterpret_cast<byte*>(pheader));
     for (int i = 0; i < numskins; i++) {
         aliasskintype_t skintype = static_cast<aliasskintype_t>(Common::LittleLong(static_cast<int>(pskintype->type)));
         pskindesc[i].type = skintype;
         if (skintype == aliasskintype_t::ALIAS_SKIN_SINGLE) {
-            pskintype = reinterpret_cast<daliasskintype_t*>(Mod_LoadAliasSkin(
-                pskintype + 1, &pskindesc[i].skin, skinsize, pheader));
+            pskintype = reinterpret_cast<daliasskintype_t*>(
+                Mod_LoadAliasSkin(pskintype + 1, &pskindesc[i].skin, skinsize, pheader));
         } else {
-            pskintype = reinterpret_cast<daliasskintype_t*>(Mod_LoadAliasSkinGroup(
-                pskintype + 1, &pskindesc[i].skin, skinsize, pheader));
+            pskintype = reinterpret_cast<daliasskintype_t*>(
+                Mod_LoadAliasSkinGroup(pskintype + 1, &pskindesc[i].skin, skinsize, pheader));
         }
     }
     //
@@ -1142,18 +1137,17 @@ void Mod_LoadAliasModel(model_t* mod, void* buffer)
     }
     daliasframetype_t* pframetype = reinterpret_cast<daliasframetype_t*>(&pintriangles[pmodel->numtris]);
     for (int i = 0; i < numframes; i++) {
-        aliasframetype_t frametype = static_cast<aliasframetype_t>(Common::LittleLong(static_cast<int>(pframetype->type)));
+        aliasframetype_t frametype
+            = static_cast<aliasframetype_t>(Common::LittleLong(static_cast<int>(pframetype->type)));
         pheader->frames[i].type = frametype;
         if (frametype == aliasframetype_t::ALIAS_SINGLE) {
-            pframetype = reinterpret_cast<daliasframetype_t*>(Mod_LoadAliasFrame(
-                pframetype + 1, &pheader->frames[i].frame, pmodel->numverts,
-                &pheader->frames[i].bboxmin, &pheader->frames[i].bboxmax, pheader,
-                pheader->frames[i].name));
+            pframetype = reinterpret_cast<daliasframetype_t*>(
+                Mod_LoadAliasFrame(pframetype + 1, &pheader->frames[i].frame, pmodel->numverts,
+                    &pheader->frames[i].bboxmin, &pheader->frames[i].bboxmax, pheader, pheader->frames[i].name));
         } else {
-            pframetype = reinterpret_cast<daliasframetype_t*>(Mod_LoadAliasGroup(
-                pframetype + 1, &pheader->frames[i].frame, pmodel->numverts,
-                &pheader->frames[i].bboxmin, &pheader->frames[i].bboxmax, pheader,
-                pheader->frames[i].name));
+            pframetype = reinterpret_cast<daliasframetype_t*>(
+                Mod_LoadAliasGroup(pframetype + 1, &pheader->frames[i].frame, pmodel->numverts,
+                    &pheader->frames[i].bboxmin, &pheader->frames[i].bboxmax, pheader, pheader->frames[i].name));
         }
     }
     mod->type = mod_alias;
@@ -1232,9 +1226,8 @@ void Mod_LoadSpriteModel(model_t* mod, void* buffer)
     dsprite_t* pin = reinterpret_cast<dsprite_t*>(buffer);
     int version = Common::LittleLong(pin->version);
     if (version != SPRITE_VERSION) {
-        Common::Sys_Error(
-            "%s has wrong version number "
-            "(%i should be %i)",
+        Common::Sys_Error("%s has wrong version number "
+                          "(%i should be %i)",
             mod->name, version, SPRITE_VERSION);
     }
     int numframes = Common::LittleLong(pin->numframes);
@@ -1266,14 +1259,15 @@ void Mod_LoadSpriteModel(model_t* mod, void* buffer)
     mod->flags = 0;
     dspriteframetype_t* pframetype = reinterpret_cast<dspriteframetype_t*>(pin + 1);
     for (int i = 0; i < numframes; i++) {
-        spriteframetype_t frametype = static_cast<spriteframetype_t>(Common::LittleLong(static_cast<int>(pframetype->type)));
+        spriteframetype_t frametype
+            = static_cast<spriteframetype_t>(Common::LittleLong(static_cast<int>(pframetype->type)));
         psprite->frames[i].type = frametype;
         if (frametype == spriteframetype_t::SPR_SINGLE) {
-            pframetype = reinterpret_cast<dspriteframetype_t*>(Mod_LoadSpriteFrame(
-                pframetype + 1, &psprite->frames[i].frameptr));
+            pframetype = reinterpret_cast<dspriteframetype_t*>(
+                Mod_LoadSpriteFrame(pframetype + 1, &psprite->frames[i].frameptr));
         } else {
-            pframetype = reinterpret_cast<dspriteframetype_t*>(Mod_LoadSpriteGroup(
-                pframetype + 1, &psprite->frames[i].frameptr));
+            pframetype = reinterpret_cast<dspriteframetype_t*>(
+                Mod_LoadSpriteGroup(pframetype + 1, &psprite->frames[i].frameptr));
         }
     }
     mod->type = mod_sprite;

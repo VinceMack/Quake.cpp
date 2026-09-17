@@ -13,11 +13,11 @@ void R_DrawCulledPolys();
 
 surf_t *surfaces = nullptr, *surface_p = nullptr, *surf_max = nullptr;
 edge_t *r_edges = nullptr, *edge_p = nullptr, *edge_max = nullptr;
-std::array<edge_t*, MAXHEIGHT> newedges{};
-std::array<edge_t*, MAXHEIGHT> removeedges{};
+std::array<edge_t*, MAXHEIGHT> newedges { };
+std::array<edge_t*, MAXHEIGHT> removeedges { };
 
-edge_t edge_head{}, edge_tail{}, edge_aftertail{};
-static edge_t edge_sentinel{};
+edge_t edge_head { }, edge_tail { }, edge_aftertail { };
+static edge_t edge_sentinel { };
 
 static espan_t *span_p = nullptr, *max_span_p = nullptr;
 static int current_iv = 0;
@@ -32,7 +32,7 @@ void R_BeginEdgeFrame()
 {
     edge_p = r_edges;
     edge_max = &r_edges[r_numallocatededges];
-    surface_p = &surfaces[2]; // background is surface 1, surface 0 is a dummy
+    surface_p = &surfaces[2];    // background is surface 1, surface 0 is a dummy
     surfaces[1].spans = nullptr; // no background spans yet
     surfaces[1].flags = SURF_DRAWBACKGROUND;
 
@@ -181,18 +181,19 @@ void R_LeadingEdgeBackwards(edge_t* edge)
         }
         goto gotposition;
 
-    newtop: {
-        int iu = static_cast<int>(edge->u >> 20);
-        if (iu > surf2->last_u) {
-            espan_t* span = span_p++;
-            span->u = surf2->last_u;
-            span->count = iu - span->u;
-            span->v = current_iv;
-            span->pnext = surf2->spans;
-            surf2->spans = span;
+    newtop:
+        {
+            int iu = static_cast<int>(edge->u >> 20);
+            if (iu > surf2->last_u) {
+                espan_t* span = span_p++;
+                span->u = surf2->last_u;
+                span->count = iu - span->u;
+                span->v = current_iv;
+                span->pnext = surf2->spans;
+                surf2->spans = span;
+            }
+            surf->last_u = iu;
         }
-        surf->last_u = iu;
-    }
 
     gotposition:
         surf->next = surf2;
@@ -277,18 +278,19 @@ void R_LeadingEdge(edge_t* edge)
             }
             goto gotposition;
 
-        newtop: {
-            int iu = static_cast<int>(edge->u >> 20);
-            if (iu > surf2->last_u) {
-                espan_t* span = span_p++;
-                span->u = surf2->last_u;
-                span->count = iu - span->u;
-                span->v = current_iv;
-                span->pnext = surf2->spans;
-                surf2->spans = span;
+        newtop:
+            {
+                int iu = static_cast<int>(edge->u >> 20);
+                if (iu > surf2->last_u) {
+                    espan_t* span = span_p++;
+                    span->u = surf2->last_u;
+                    span->count = iu - span->u;
+                    span->v = current_iv;
+                    span->pnext = surf2->spans;
+                    surf2->spans = span;
+                }
+                surf->last_u = iu;
             }
-            surf->last_u = iu;
-        }
 
         gotposition:
             surf->next = surf2;

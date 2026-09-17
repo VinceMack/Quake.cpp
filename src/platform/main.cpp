@@ -14,7 +14,8 @@ namespace {
 // Runs exactly `frames` frames at the fixed server tick rate, prints a hash of the
 // resulting game state, and exits. Used by tests/regression.py to detect behavioral
 // drift; see docs/testing.md.
-void RunFixedFrames(int frames) {
+void RunFixedFrames(int frames)
+{
     const float step = Host::sys_ticrate.value;
     for (int i = 0; i < frames; ++i) {
         Host::Host_Frame(step);
@@ -25,10 +26,11 @@ void RunFixedFrames(int frames) {
 
 } // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     std::signal(SIGFPE, SIG_IGN);
 
-    quakeparms_t parms{};
+    quakeparms_t parms { };
     parms.basedir = ".";
 
     Common::COM_InitArgv(argc, argv);

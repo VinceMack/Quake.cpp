@@ -32,23 +32,26 @@ float* pr_globals = nullptr;
 int pr_edict_size = 0;
 unsigned short pr_crc = 0;
 
-std::array<int, 8> type_size = {
-    1, static_cast<int>(sizeof(string_t) / 4), 1, 3, 1, 1, static_cast<int>(sizeof(func_t) / 4), static_cast<int>(sizeof(void*) / 4)
-};
+std::array<int, 8> type_size = { 1, static_cast<int>(sizeof(string_t) / 4), 1, 3, 1, 1,
+    static_cast<int>(sizeof(func_t) / 4), static_cast<int>(sizeof(void*) / 4) };
 
-static string_t PR_FindString(const char* str) {
+static string_t PR_FindString(const char* str)
+{
     for (size_t slot_index = 0; slot_index < pr_knownstrings.size(); slot_index++) {
         if (pr_knownstrings[slot_index] == str) return static_cast<string_t>(slot_index);
     }
     return static_cast<string_t>(pr_knownstrings.size());
 }
 
-static void PR_SetStringAt(int slot_index, const char* str) {
-    if (static_cast<size_t>(slot_index) >= pr_knownstrings.size()) pr_knownstrings.resize(static_cast<size_t>(slot_index) + 1, nullptr);
+static void PR_SetStringAt(int slot_index, const char* str)
+{
+    if (static_cast<size_t>(slot_index) >= pr_knownstrings.size())
+        pr_knownstrings.resize(static_cast<size_t>(slot_index) + 1, nullptr);
     pr_knownstrings[static_cast<size_t>(slot_index)] = str;
 }
 
-string_t PR_SetString(const char* str) {
+string_t PR_SetString(const char* str)
+{
     if (!str) return 0;
     if (str >= pr_strings && str <= &pr_strings[pr_stringssize - 2]) {
         return static_cast<string_t>(str - pr_strings);
@@ -59,7 +62,8 @@ string_t PR_SetString(const char* str) {
     return -(slot_index + 1);
 }
 
-char* PR_GetString(string_t handle) {
+char* PR_GetString(string_t handle)
+{
     if (handle >= 0 && handle < pr_stringssize) return &pr_strings[handle];
     const int numknown = static_cast<int>(pr_knownstrings.size());
     if (handle < -numknown || handle >= pr_stringssize) {
@@ -67,12 +71,14 @@ char* PR_GetString(string_t handle) {
     }
 
     int index = -1 - handle;
-    if (pr_knownstrings[static_cast<size_t>(index)]) return const_cast<char*>(pr_knownstrings[static_cast<size_t>(index)]);
+    if (pr_knownstrings[static_cast<size_t>(index)])
+        return const_cast<char*>(pr_knownstrings[static_cast<size_t>(index)]);
 
     Host::Host_Error("PR_GetString: attempt to access missing string %d\n", handle);
 }
 
-string_t PR_CreateString(int size, char** out_ptr) {
+string_t PR_CreateString(int size, char** out_ptr)
+{
     if (size <= 0) return 0;
 
     string_t slot_index = PR_FindString(nullptr);
@@ -85,7 +91,8 @@ string_t PR_CreateString(int size, char** out_ptr) {
     return -(slot_index + 1);
 }
 
-char* PR_ValueString(etype_t type, eval_t* val) {
+char* PR_ValueString(etype_t type, eval_t* val)
+{
     static char line[256];
     ddef_t* def;
     dfunction_t* f;
@@ -127,7 +134,8 @@ char* PR_ValueString(etype_t type, eval_t* val) {
     return line;
 }
 
-void PR_Profile_f(void) {
+void PR_Profile_f(void)
+{
     dfunction_t *f, *best;
     int max, num = 0, i;
 
@@ -149,7 +157,8 @@ void PR_Profile_f(void) {
     } while (best);
 }
 
-void PR_LoadProgs(void) {
+void PR_LoadProgs(void)
+{
     int i;
     ED_ClearFieldCache();
     PR_ResetExecutionState();

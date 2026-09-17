@@ -31,8 +31,10 @@ void SV_CheckVelocity(edict_t* ent)
             ent->v.origin[i] = 0.0f;
         }
 
-        if (ent->v.velocity[i] > sv_maxvelocity.value) ent->v.velocity[i] = sv_maxvelocity.value;
-        else if (ent->v.velocity[i] < -sv_maxvelocity.value) ent->v.velocity[i] = -sv_maxvelocity.value;
+        if (ent->v.velocity[i] > sv_maxvelocity.value)
+            ent->v.velocity[i] = sv_maxvelocity.value;
+        else if (ent->v.velocity[i] < -sv_maxvelocity.value)
+            ent->v.velocity[i] = -sv_maxvelocity.value;
     }
 }
 
@@ -100,7 +102,7 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
     Vector3 original_velocity = ent->v.velocity;
     Vector3 primal_velocity = ent->v.velocity;
     int numplanes = 0;
-    std::array<Vector3, MAX_CLIP_PLANES> planes{};
+    std::array<Vector3, MAX_CLIP_PLANES> planes { };
 
     float time_left = time;
 
@@ -150,7 +152,7 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
         planes[static_cast<size_t>(numplanes++)] = trace.plane.normal;
 
         int i = 0;
-        Vector3 new_velocity{};
+        Vector3 new_velocity { };
         for (; i < numplanes; ++i) {
             ClipVelocity(original_velocity, planes[static_cast<size_t>(i)], new_velocity, 1.0f);
             int j = 0;
@@ -196,7 +198,7 @@ void SV_AddGravity(edict_t* ent)
 trace_t SV_PushEntity(edict_t* ent, const Vector3& push)
 {
     const Vector3 end = ent->v.origin + push;
-    trace_t trace{};
+    trace_t trace { };
 
     if (ent->v.movetype == MOVETYPE_FLYMISSILE) {
         trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_MISSILE, ent);
@@ -231,17 +233,19 @@ void SV_PushMove(edict_t* pusher, float movetime)
     SV_LinkEdict(pusher, false);
 
     int num_moved = 0;
-    std::array<edict_t*, MAX_EDICTS> moved_edict{};
-    std::array<Vector3, MAX_EDICTS> moved_from{};
+    std::array<edict_t*, MAX_EDICTS> moved_edict { };
+    std::array<Vector3, MAX_EDICTS> moved_from { };
 
     edict_t* check = NEXT_EDICT(sv.edicts);
     for (int e = 1; e < sv.num_edicts; ++e, check = NEXT_EDICT(check)) {
         if (check->free) continue;
-        if (check->v.movetype == MOVETYPE_PUSH || check->v.movetype == MOVETYPE_NONE || check->v.movetype == MOVETYPE_NOCLIP) continue;
+        if (check->v.movetype == MOVETYPE_PUSH || check->v.movetype == MOVETYPE_NONE
+            || check->v.movetype == MOVETYPE_NOCLIP)
+            continue;
 
         if (!((static_cast<int>(check->v.flags) & FL_ONGROUND) && PROG_TO_EDICT(check->v.groundentity) == pusher)) {
-            if (check->v.absmin.x >= maxs.x || check->v.absmin.y >= maxs.y || check->v.absmin.z >= maxs.z ||
-                check->v.absmax.x <= mins.x || check->v.absmax.y <= mins.y || check->v.absmax.z <= mins.z) {
+            if (check->v.absmin.x >= maxs.x || check->v.absmin.y >= maxs.y || check->v.absmin.z >= maxs.z
+                || check->v.absmax.x <= mins.x || check->v.absmax.y <= mins.y || check->v.absmax.z <= mins.z) {
                 continue;
             }
             if (!SV_TestEntityPosition(check)) continue;
@@ -408,14 +412,38 @@ int SV_TryUnstick(edict_t* ent, const Vector3& oldvel)
 
     for (i = 0; i < 8; i++) {
         switch (i) {
-        case 0: dir.x = 2; dir.y = 0; break;
-        case 1: dir.x = 0; dir.y = 2; break;
-        case 2: dir.x = -2; dir.y = 0; break;
-        case 3: dir.x = 0; dir.y = -2; break;
-        case 4: dir.x = 2; dir.y = 2; break;
-        case 5: dir.x = -2; dir.y = 2; break;
-        case 6: dir.x = 2; dir.y = -2; break;
-        case 7: dir.x = -2; dir.y = -2; break;
+        case 0:
+            dir.x = 2;
+            dir.y = 0;
+            break;
+        case 1:
+            dir.x = 0;
+            dir.y = 2;
+            break;
+        case 2:
+            dir.x = -2;
+            dir.y = 0;
+            break;
+        case 3:
+            dir.x = 0;
+            dir.y = -2;
+            break;
+        case 4:
+            dir.x = 2;
+            dir.y = 2;
+            break;
+        case 5:
+            dir.x = -2;
+            dir.y = 2;
+            break;
+        case 6:
+            dir.x = 2;
+            dir.y = -2;
+            break;
+        case 7:
+            dir.x = -2;
+            dir.y = -2;
+            break;
         }
 
         SV_PushEntity(ent, dir);
@@ -662,7 +690,7 @@ bool SV_CheckBottom(edict_t* ent)
 {
     Vector3 mins = ent->v.origin + ent->v.mins;
     Vector3 maxs = ent->v.origin + ent->v.maxs;
-    Vector3 start{}, stop{};
+    Vector3 start { }, stop { };
 
     start.z = mins.z - 1.0f;
     for (int x = 0; x <= 1; ++x) {
@@ -818,20 +846,26 @@ constexpr float DI_NODIR = -1.0f;
 
 void SV_NewChaseDir(edict_t* actor, edict_t* enemy, float dist)
 {
-    std::array<float, 3> d{0.0f, DI_NODIR, DI_NODIR};
+    std::array<float, 3> d { 0.0f, DI_NODIR, DI_NODIR };
 
     const float olddir = Math::anglemod(static_cast<float>(static_cast<int>(actor->v.ideal_yaw / 45.0f) * 45));
     const float turnaround = Math::anglemod(olddir - 180.0f);
 
     const float deltax = enemy->v.origin[0] - actor->v.origin[0];
     const float deltay = enemy->v.origin[1] - actor->v.origin[1];
-    if (deltax > 10.0f) d[1] = 0.0f;
-    else if (deltax < -10.0f) d[1] = 180.0f;
-    else d[1] = DI_NODIR;
+    if (deltax > 10.0f)
+        d[1] = 0.0f;
+    else if (deltax < -10.0f)
+        d[1] = 180.0f;
+    else
+        d[1] = DI_NODIR;
 
-    if (deltay < -10.0f) d[2] = 270.0f;
-    else if (deltay > 10.0f) d[2] = 90.0f;
-    else d[2] = DI_NODIR;
+    if (deltay < -10.0f)
+        d[2] = 270.0f;
+    else if (deltay > 10.0f)
+        d[2] = 90.0f;
+    else
+        d[2] = DI_NODIR;
 
     if (d[1] != DI_NODIR && d[2] != DI_NODIR) {
         const float tdir = (d[1] == 0.0f) ? ((d[2] == 90.0f) ? 45.0f : 315.0f) : ((d[2] == 90.0f) ? 135.0f : 215.0f);

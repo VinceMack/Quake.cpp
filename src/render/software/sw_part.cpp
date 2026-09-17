@@ -27,8 +27,8 @@ static particle_t* free_particles = nullptr;
 static std::vector<particle_t> particles;
 static int r_numparticles = 0;
 
-std::array<std::array<float, 3>, NUMVERTEXNORMALS> r_avertexnormals{};
-static std::array<Vector3, NUMVERTEXNORMALS> avelocities{};
+std::array<std::array<float, 3>, NUMVERTEXNORMALS> r_avertexnormals { };
+static std::array<Vector3, NUMVERTEXNORMALS> avelocities { };
 static float beamlength = 16.0f;
 
 Vector3 r_pright, r_pup, r_ppn;
@@ -76,7 +76,8 @@ void R_EntityParticles(entity_t* ent)
         p->die = static_cast<float>(Client::cl.time + 0.01);
         p->color = static_cast<float>(0x6f);
         p->type = ptype_t::Explode;
-        p->org = ent->origin + Vector3(r_avertexnormals[i][0], r_avertexnormals[i][1], r_avertexnormals[i][2]) * dist + forward * beamlength;
+        p->org = ent->origin + Vector3(r_avertexnormals[i][0], r_avertexnormals[i][1], r_avertexnormals[i][2]) * dist
+            + forward * beamlength;
     }
 }
 
@@ -151,8 +152,11 @@ void R_ParticleExplosion(const Vector3& org)
         p->color = static_cast<float>(ramp1[0]);
         p->ramp = static_cast<float>(rand() & 3);
         p->type = (i & 1) ? ptype_t::Explode : ptype_t::Explode2;
-        p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
-        p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
+        p->org = org
+            + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16),
+                static_cast<float>((rand() % 32) - 16));
+        p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256),
+            static_cast<float>((rand() % 512) - 256));
     }
 }
 
@@ -165,8 +169,11 @@ void R_ParticleExplosion2(const Vector3& org, int colorStart, int colorLength)
         p->die = static_cast<float>(Client::cl.time + 0.3);
         p->color = static_cast<float>(colorStart + (colorMod++ % colorLength));
         p->type = ptype_t::Blob;
-        p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
-        p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
+        p->org = org
+            + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16),
+                static_cast<float>((rand() % 32) - 16));
+        p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256),
+            static_cast<float>((rand() % 512) - 256));
     }
 }
 
@@ -183,8 +190,11 @@ void R_BlobExplosion(const Vector3& org)
             p->type = ptype_t::Blob2;
             p->color = static_cast<float>(150 + rand() % 6);
         }
-        p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
-        p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
+        p->org = org
+            + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16),
+                static_cast<float>((rand() % 32) - 16));
+        p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256),
+            static_cast<float>((rand() % 512) - 256));
     }
 }
 
@@ -198,13 +208,18 @@ void R_RunParticleEffect(const Vector3& org, const Vector3& dir, int color, int 
             p->color = static_cast<float>(ramp1[0]);
             p->ramp = static_cast<float>(rand() & 3);
             p->type = (i & 1) ? ptype_t::Explode : ptype_t::Explode2;
-            p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
-            p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
+            p->org = org
+                + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16),
+                    static_cast<float>((rand() % 32) - 16));
+            p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256),
+                static_cast<float>((rand() % 512) - 256));
         } else {
             p->die = static_cast<float>(Client::cl.time + 0.1 * (rand() % 5));
             p->color = static_cast<float>((color & ~7) + (rand() & 7));
             p->type = ptype_t::SlowGrav;
-            p->org = org + Vector3(static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8));
+            p->org = org
+                + Vector3(static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8),
+                    static_cast<float>((rand() & 15) - 8));
             p->vel = dir * 15;
         }
     }
@@ -238,7 +253,9 @@ void R_TeleportSplash(const Vector3& org)
                 p->color = static_cast<float>(7 + (rand() & 7));
                 p->type = ptype_t::SlowGrav;
                 Vector3 dir(static_cast<float>(j * 8), static_cast<float>(i * 8), static_cast<float>(k * 8));
-                p->org = org + Vector3(static_cast<float>(i + (rand() & 3)), static_cast<float>(j + (rand() & 3)), static_cast<float>(k + (rand() & 3)));
+                p->org = org
+                    + Vector3(static_cast<float>(i + (rand() & 3)), static_cast<float>(j + (rand() & 3)),
+                        static_cast<float>(k + (rand() & 3)));
                 dir.normalize();
                 p->vel = dir * static_cast<float>(50 + (rand() & 63));
             }
@@ -269,18 +286,24 @@ void R_RocketTrail(Vector3 start, const Vector3& end, int type)
             p->ramp = static_cast<float>(rand() & 3);
             p->color = static_cast<float>(ramp3[(int)p->ramp]);
             p->type = ptype_t::Fire;
-            p->org = start + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3));
+            p->org = start
+                + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3),
+                    static_cast<float>((rand() % 6) - 3));
             break;
         case 1: // smoke smoke
             p->ramp = static_cast<float>((rand() & 3) + 2);
             p->color = static_cast<float>(ramp3[(int)p->ramp]);
             p->type = ptype_t::Fire;
-            p->org = start + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3));
+            p->org = start
+                + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3),
+                    static_cast<float>((rand() % 6) - 3));
             break;
         case 2: // blood
             p->type = ptype_t::Grav;
             p->color = static_cast<float>(67 + (rand() & 3));
-            p->org = start + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3));
+            p->org = start
+                + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3),
+                    static_cast<float>((rand() % 6) - 3));
             break;
         case 3:
         case 5: // tracer
@@ -306,14 +329,18 @@ void R_RocketTrail(Vector3 start, const Vector3& end, int type)
         case 4: // slight blood
             p->type = ptype_t::Grav;
             p->color = static_cast<float>(67 + (rand() & 3));
-            p->org = start + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3));
+            p->org = start
+                + Vector3(static_cast<float>((rand() % 6) - 3), static_cast<float>((rand() % 6) - 3),
+                    static_cast<float>((rand() % 6) - 3));
             len -= 3;
             break;
         case 6: // voor trail
             p->color = static_cast<float>(9 * 16 + 8 + (rand() & 3));
             p->type = ptype_t::Static;
             p->die = static_cast<float>(Client::cl.time + 0.3);
-            p->org = start + Vector3(static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8));
+            p->org = start
+                + Vector3(static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8),
+                    static_cast<float>((rand() & 15) - 8));
             break;
         }
         start += vec;

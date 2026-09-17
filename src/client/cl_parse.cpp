@@ -26,18 +26,16 @@
 
 namespace Client {
 
-constexpr auto svc_strings = std::array{
-    "svc_bad", "svc_nop", "svc_disconnect", "svc_updatestat", "svc_version", "svc_setview",
-    "svc_sound", "svc_time", "svc_print", "svc_stufftext", "svc_setangle", "svc_serverinfo",
-    "svc_lightstyle", "svc_updatename", "svc_updatefrags", "svc_clientdata", "svc_stopsound",
-    "svc_updatecolors", "svc_particle", "svc_damage", "svc_spawnstatic", "OBSOLETE svc_spawnbinary",
-    "svc_spawnbaseline", "svc_temp_entity", "svc_setpause", "svc_signonnum", "svc_centerprint",
-    "svc_killedmonster", "svc_foundsecret", "svc_spawnstaticsound", "svc_intermission",
-    "svc_finale", "svc_cdtrack", "svc_sellscreen", "svc_cutscene"
-};
-static std::array<int, 16> bitcounts{};
+constexpr auto svc_strings = std::array { "svc_bad", "svc_nop", "svc_disconnect", "svc_updatestat", "svc_version",
+    "svc_setview", "svc_sound", "svc_time", "svc_print", "svc_stufftext", "svc_setangle", "svc_serverinfo",
+    "svc_lightstyle", "svc_updatename", "svc_updatefrags", "svc_clientdata", "svc_stopsound", "svc_updatecolors",
+    "svc_particle", "svc_damage", "svc_spawnstatic", "OBSOLETE svc_spawnbinary", "svc_spawnbaseline", "svc_temp_entity",
+    "svc_setpause", "svc_signonnum", "svc_centerprint", "svc_killedmonster", "svc_foundsecret", "svc_spawnstaticsound",
+    "svc_intermission", "svc_finale", "svc_cdtrack", "svc_sellscreen", "svc_cutscene" };
+static std::array<int, 16> bitcounts { };
 
-void CL_ParseStartSoundPacket() {
+void CL_ParseStartSoundPacket()
+{
     int packet_vol = Audio::DEFAULT_SOUND_PACKET_VOLUME;
     float attenuation = Audio::DEFAULT_SOUND_PACKET_ATTENUATION;
     const int field_mask = Common::MSG_ReadByte();
@@ -48,27 +46,36 @@ void CL_ParseStartSoundPacket() {
     const int ent = channel >> 3;
     channel &= 7;
     if (ent > MAX_EDICTS) Host::Host_Error("CL_ParseStartSoundPacket: ent = %i", ent);
-    const Vector3 pos{ Common::MSG_ReadCoord(), Common::MSG_ReadCoord(), Common::MSG_ReadCoord() };
+    const Vector3 pos { Common::MSG_ReadCoord(), Common::MSG_ReadCoord(), Common::MSG_ReadCoord() };
     S_StartSound(ent, channel, cl.sound_precache[sound_num], pos, packet_vol / 255.0f, attenuation);
 }
 
-void CL_KeepaliveMessage() {
+void CL_KeepaliveMessage()
+{
     if (Server::sv.active || cls.demoplayback) return;
     sizebuf_t old = Net::net_message;
     std::array<byte, 8192> olddata;
-    std::copy_n(Net::net_message.data, std::min(static_cast<int>(olddata.size()), Net::net_message.cursize), olddata.begin());
+    std::copy_n(
+        Net::net_message.data, std::min(static_cast<int>(olddata.size()), Net::net_message.cursize), olddata.begin());
     int ret;
     do {
         ret = CL_GetMessage();
         switch (ret) {
-        default: Host::Host_Error("CL_KeepaliveMessage: CL_GetMessage failed");
-        case 0: break;
-        case 1: Host::Host_Error("CL_KeepaliveMessage: received a message"); break;
-        case 2: if (Common::MSG_ReadByte() != svc_nop) Host::Host_Error("CL_KeepaliveMessage: datagram wasn't a nop"); break;
+        default:
+            Host::Host_Error("CL_KeepaliveMessage: CL_GetMessage failed");
+        case 0:
+            break;
+        case 1:
+            Host::Host_Error("CL_KeepaliveMessage: received a message");
+            break;
+        case 2:
+            if (Common::MSG_ReadByte() != svc_nop) Host::Host_Error("CL_KeepaliveMessage: datagram wasn't a nop");
+            break;
         }
     } while (ret);
     Net::net_message = old;
-    std::copy_n(olddata.begin(), std::min(static_cast<int>(olddata.size()), Net::net_message.cursize), Net::net_message.data);
+    std::copy_n(
+        olddata.begin(), std::min(static_cast<int>(olddata.size()), Net::net_message.cursize), Net::net_message.data);
     const float time = static_cast<float>(Common::Sys_FloatTime());
     static float lastmsg = 0.0f;
     if (time - lastmsg < 5.0f) return;
@@ -79,21 +86,30 @@ void CL_KeepaliveMessage() {
     Common::SZ_Clear(&cls.message);
 }
 
-void CL_ParseServerInfo() {
+void CL_ParseServerInfo()
+{
     Console::Con_DPrintf("Serverinfo packet received.\n");
     CL_ClearState();
-    if (Common::MSG_ReadLong() != PROTOCOL_VERSION) { Console::Con_Printf("Server version mismatch"); return; }
+    if (Common::MSG_ReadLong() != PROTOCOL_VERSION) {
+        Console::Con_Printf("Server version mismatch");
+        return;
+    }
     cl.maxclients = Common::MSG_ReadByte();
-    if (cl.maxclients < 1 || cl.maxclients > MAX_SCOREBOARD) { Console::Con_Printf("Bad maxclients (%u)\n", cl.maxclients); return; }
-    cl.scores_storage.assign(static_cast<size_t>(cl.maxclients), scoreboard_t{});
+    if (cl.maxclients < 1 || cl.maxclients > MAX_SCOREBOARD) {
+        Console::Con_Printf("Bad maxclients (%u)\n", cl.maxclients);
+        return;
+    }
+    cl.scores_storage.assign(static_cast<size_t>(cl.maxclients), scoreboard_t { });
     cl.scores = cl.scores_storage.data();
     cl.gametype = Common::MSG_ReadByte();
     const char* str = Common::MSG_ReadString();
     strncpy_s(cl.levelname.data(), cl.levelname.size(), str, _TRUNCATE);
-    Console::Con_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n%c%s\n", 2, str);
+    Console::Con_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36"
+                        "\36\36\36\36\36\36\37\n\n%c%s\n",
+        2, str);
 
-    std::array<std::string, MAX_MODELS> model_names{};
-    std::array<std::string, MAX_SOUNDS> sound_names{};
+    std::array<std::string, MAX_MODELS> model_names { };
+    std::array<std::string, MAX_SOUNDS> sound_names { };
     cl.model_precache.fill(nullptr);
     cl.sound_precache.fill(nullptr);
 
@@ -109,7 +125,10 @@ void CL_ParseServerInfo() {
 
     for (int idx = 1; idx < nummodels; ++idx) {
         cl.model_precache[idx] = Model::Mod_ForName(model_names[idx].c_str(), false);
-        if (!cl.model_precache[idx]) { Console::Con_Printf("Model %s not found\n", model_names[idx].c_str()); return; }
+        if (!cl.model_precache[idx]) {
+            Console::Con_Printf("Model %s not found\n", model_names[idx].c_str());
+            return;
+        }
         CL_KeepaliveMessage();
     }
     Audio::S_BeginPrecaching();
@@ -124,12 +143,18 @@ void CL_ParseServerInfo() {
     Host::noclip_anglehack = false;
 }
 
-void CL_ParseUpdate(int bits) {
-    if (cls.signon == SIGNONS - 1) { cls.signon = SIGNONS; CL_SignonReply(); }
+void CL_ParseUpdate(int bits)
+{
+    if (cls.signon == SIGNONS - 1) {
+        cls.signon = SIGNONS;
+        CL_SignonReply();
+    }
     if (bits & U_MOREBITS) bits |= (Common::MSG_ReadByte() << 8);
     int num = (bits & U_LONGENTITY) ? Common::MSG_ReadShort() : Common::MSG_ReadByte();
     entity_t* ent = CL_EntityNum(num);
-    for (int i = 0; i < 16; ++i) { if (bits & (1 << i)) bitcounts[i]++; }
+    for (int i = 0; i < 16; ++i) {
+        if (bits & (1 << i)) bitcounts[i]++;
+    }
     const bool forcelink = (ent->msgtime != cl.mtime[1]);
     ent->msgtime = cl.mtime[0];
 
@@ -138,7 +163,9 @@ void CL_ParseUpdate(int bits) {
     model_t* model = cl.model_precache[modnum];
     if (model != ent->model) {
         ent->model = model;
-        if (model) ent->syncbase = (model->synctype == synctype_t::ST_RAND) ? (static_cast<float>(rand() & 0x7fff) / 0x7fff) : 0.0f;
+        if (model)
+            ent->syncbase
+                = (model->synctype == synctype_t::ST_RAND) ? (static_cast<float>(rand() & 0x7fff) / 0x7fff) : 0.0f;
     }
     ent->frame = (bits & U_FRAME) ? Common::MSG_ReadByte() : ent->baseline.frame;
     int colormap_idx = (bits & U_COLORMAP) ? Common::MSG_ReadByte() : ent->baseline.colormap;
@@ -150,37 +177,42 @@ void CL_ParseUpdate(int bits) {
     ent->msg_angles[1] = ent->msg_angles[0];
 
     ent->msg_origins[0][0] = (bits & U_ORIGIN1) ? Common::MSG_ReadCoord() : ent->baseline.origin[0];
-    ent->msg_angles[0][0]  = (bits & U_ANGLE1)  ? Common::MSG_ReadAngle() : ent->baseline.angles[0];
+    ent->msg_angles[0][0] = (bits & U_ANGLE1) ? Common::MSG_ReadAngle() : ent->baseline.angles[0];
     ent->msg_origins[0][1] = (bits & U_ORIGIN2) ? Common::MSG_ReadCoord() : ent->baseline.origin[1];
-    ent->msg_angles[0][1]  = (bits & U_ANGLE2)  ? Common::MSG_ReadAngle() : ent->baseline.angles[1];
+    ent->msg_angles[0][1] = (bits & U_ANGLE2) ? Common::MSG_ReadAngle() : ent->baseline.angles[1];
     ent->msg_origins[0][2] = (bits & U_ORIGIN3) ? Common::MSG_ReadCoord() : ent->baseline.origin[2];
-    ent->msg_angles[0][2]  = (bits & U_ANGLE3)  ? Common::MSG_ReadAngle() : ent->baseline.angles[2];
+    ent->msg_angles[0][2] = (bits & U_ANGLE3) ? Common::MSG_ReadAngle() : ent->baseline.angles[2];
 
     if (bits & U_NOLERP) ent->forcelink = true;
     if (forcelink || ent->forcelink) {
-        ent->msg_origins[1] = ent->msg_origins[0]; ent->origin = ent->msg_origins[0];
-        ent->msg_angles[1]  = ent->msg_angles[0];  ent->angles = ent->msg_angles[0];
+        ent->msg_origins[1] = ent->msg_origins[0];
+        ent->origin = ent->msg_origins[0];
+        ent->msg_angles[1] = ent->msg_angles[0];
+        ent->angles = ent->msg_angles[0];
         ent->forcelink = true;
     }
 }
 
-void CL_ParseBaseline(entity_t* ent) {
+void CL_ParseBaseline(entity_t* ent)
+{
     ent->baseline.modelindex = Common::MSG_ReadByte();
     ent->baseline.frame = Common::MSG_ReadByte();
-    ent->baseline.colormap   = Common::MSG_ReadByte();
-    ent->baseline.skin  = Common::MSG_ReadByte();
+    ent->baseline.colormap = Common::MSG_ReadByte();
+    ent->baseline.skin = Common::MSG_ReadByte();
     for (int i = 0; i < 3; ++i) {
         ent->baseline.origin[i] = Common::MSG_ReadCoord();
         ent->baseline.angles[i] = Common::MSG_ReadAngle();
     }
 }
 
-void CL_ParseClientdata(int bits) {
-    cl.viewheight = (bits & SU_VIEWHEIGHT) ? static_cast<float>(Common::MSG_ReadChar()) : static_cast<float>(DEFAULT_VIEWHEIGHT);
+void CL_ParseClientdata(int bits)
+{
+    cl.viewheight
+        = (bits & SU_VIEWHEIGHT) ? static_cast<float>(Common::MSG_ReadChar()) : static_cast<float>(DEFAULT_VIEWHEIGHT);
     cl.idealpitch = (bits & SU_IDEALPITCH) ? static_cast<float>(Common::MSG_ReadChar()) : 0.0f;
     cl.mvelocity[1] = cl.mvelocity[0];
     for (int i = 0; i < 3; ++i) {
-        cl.punchangle[i]   = (bits & (SU_PUNCH1 << i))    ? static_cast<float>(Common::MSG_ReadChar()) : 0.0f;
+        cl.punchangle[i] = (bits & (SU_PUNCH1 << i)) ? static_cast<float>(Common::MSG_ReadChar()) : 0.0f;
         cl.mvelocity[0][i] = (bits & (SU_VELOCITY1 << i)) ? static_cast<float>(Common::MSG_ReadChar() * 16) : 0.0f;
     }
     const int i = Common::MSG_ReadLong();
@@ -209,21 +241,27 @@ void CL_ParseClientdata(int bits) {
     UpdateStat(STAT_ACTIVEWEAPON, Common::standard_quake ? active_weapon_val : (1 << active_weapon_val));
 }
 
-void CL_NewTranslation(int slot) {
+void CL_NewTranslation(int slot)
+{
     if (slot > cl.maxclients) Common::Sys_Error("CL_NewTranslation: slot > cl.maxclients");
     byte* dest = cl.scores[slot].translations.data();
     const byte* source = Vid::vid.colormap;
     std::copy_n(Vid::vid.colormap, cl.scores[slot].translations.size(), dest);
     const int top = cl.scores[slot].colors & 0xf0, bottom = (cl.scores[slot].colors & 15) << 4;
     for (int i = 0; i < VID_GRADES; ++i, dest += 256, source += 256) {
-        if (top < 128) std::copy_n(source + top, 16, dest + TOP_RANGE);
-        else for (int j = 0; j < 16; ++j) dest[TOP_RANGE + j] = source[top + 15 - j];
-        if (bottom < 128) std::copy_n(source + bottom, 16, dest + BOTTOM_RANGE);
-        else for (int j = 0; j < 16; ++j) dest[BOTTOM_RANGE + j] = source[bottom + 15 - j];
+        if (top < 128)
+            std::copy_n(source + top, 16, dest + TOP_RANGE);
+        else
+            for (int j = 0; j < 16; ++j) dest[TOP_RANGE + j] = source[top + 15 - j];
+        if (bottom < 128)
+            std::copy_n(source + bottom, 16, dest + BOTTOM_RANGE);
+        else
+            for (int j = 0; j < 16; ++j) dest[BOTTOM_RANGE + j] = source[bottom + 15 - j];
     }
 }
 
-void CL_ParseStatic() {
+void CL_ParseStatic()
+{
     if (cl.num_statics >= MAX_STATIC_ENTITIES) Host::Host_Error("Too many static entities");
     entity_t* ent = &cl_static_entities[cl.num_statics++];
     CL_ParseBaseline(ent);
@@ -237,30 +275,45 @@ void CL_ParseStatic() {
     Render::R_AddEfrags(ent);
 }
 
-void CL_ParseStaticSound() {
-    const Vector3 org{ Common::MSG_ReadCoord(), Common::MSG_ReadCoord(), Common::MSG_ReadCoord() };
+void CL_ParseStaticSound()
+{
+    const Vector3 org { Common::MSG_ReadCoord(), Common::MSG_ReadCoord(), Common::MSG_ReadCoord() };
     const int sound_num = Common::MSG_ReadByte(), vol = Common::MSG_ReadByte(), atten = Common::MSG_ReadByte();
     S_StaticSound(cl.sound_precache[sound_num], org, static_cast<float>(vol), static_cast<float>(atten));
 }
 
-#define SHOWNET(x) if (cl_shownet.value == 2) Console::Con_Printf("%3i:%s\n", Common::msg_readcount - 1, x);
+#define SHOWNET(x)                                                                                                     \
+    if (cl_shownet.value == 2) Console::Con_Printf("%3i:%s\n", Common::msg_readcount - 1, x);
 
-void CL_ParseServerMessage() {
-    if (cl_shownet.value == 1) Console::Con_Printf("%i ", Net::net_message.cursize);
-    else if (cl_shownet.value == 2) Console::Con_Printf("------------------\n");
+void CL_ParseServerMessage()
+{
+    if (cl_shownet.value == 1)
+        Console::Con_Printf("%i ", Net::net_message.cursize);
+    else if (cl_shownet.value == 2)
+        Console::Con_Printf("------------------\n");
     cl.onground = false;
     Common::MSG_BeginReading();
 
     while (true) {
         if (Common::msg_badread) Host::Host_Error("CL_ParseServerMessage: Bad server message");
         const int cmd = Common::MSG_ReadByte();
-        if (cmd == -1) { SHOWNET("END OF MESSAGE"); return; }
-        if (cmd & 128) { SHOWNET("fast update"); CL_ParseUpdate(cmd & 127); continue; }
+        if (cmd == -1) {
+            SHOWNET("END OF MESSAGE");
+            return;
+        }
+        if (cmd & 128) {
+            SHOWNET("fast update");
+            CL_ParseUpdate(cmd & 127);
+            continue;
+        }
         SHOWNET(svc_strings[cmd]);
 
         switch (cmd) {
-        default: Host::Host_Error("CL_ParseServerMessage: Illegible server message\n"); break;
-        case svc_nop: break;
+        default:
+            Host::Host_Error("CL_ParseServerMessage: Illegible server message\n");
+            break;
+        case svc_nop:
+            break;
         case svc_time:
             cl.mtime[1] = cl.mtime[0];
             cl.mtime[0] = Common::MSG_ReadFloat();
@@ -269,7 +322,8 @@ void CL_ParseServerMessage() {
             CL_ParseClientdata(Common::MSG_ReadShort());
             break;
         case svc_version:
-            if (Common::MSG_ReadLong() != PROTOCOL_VERSION) Host::Host_Error("CL_ParseServerMessage: Server version mismatch\n");
+            if (Common::MSG_ReadLong() != PROTOCOL_VERSION)
+                Host::Host_Error("CL_ParseServerMessage: Server version mismatch\n");
             break;
         case svc_disconnect:
             Host::Host_EndGame("Server disconnected\n");

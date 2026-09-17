@@ -20,27 +20,28 @@
 
 namespace Client {
 
-cvar_t cl_name          = { "_cl_name", "player", true, {}, {}, {} };
-cvar_t cl_color         = { "_cl_color", "0", true, {}, {}, {} };
-cvar_t cl_shownet       = { "cl_shownet", "0", {}, {}, {}, {} };
-cvar_t cl_nolerp        = { "cl_nolerp", "0", {}, {}, {}, {} };
-cvar_t lookspring       = { "lookspring", "0", true, {}, {}, {} };
-cvar_t lookstrafe       = { "lookstrafe", "0", true, {}, {}, {} };
-cvar_t sensitivity      = { "sensitivity", "3", true, {}, {}, {} };
-cvar_t m_pitch          = { "m_pitch", "0.022", true, {}, {}, {} };
-cvar_t m_yaw            = { "m_yaw", "0.022", true, {}, {}, {} };
-cvar_t m_forward        = { "m_forward", "1", true, {}, {}, {} };
-cvar_t m_side           = { "m_side", "0.8", true, {}, {}, {} };
-cvar_t cl_upspeed       = { "cl_upspeed", "200", {}, {}, {}, {} };
-cvar_t cl_forwardspeed  = { "cl_forwardspeed", "200", true, {}, {}, {} };
-cvar_t cl_backspeed     = { "cl_backspeed", "200", true, {}, {}, {} };
-cvar_t cl_sidespeed     = { "cl_sidespeed", "350", {}, {}, {}, {} };
-cvar_t cl_movespeedkey  = { "cl_movespeedkey", "2.0", {}, {}, {}, {} };
-cvar_t cl_yawspeed      = { "cl_yawspeed", "140", {}, {}, {}, {} };
-cvar_t cl_pitchspeed    = { "cl_pitchspeed", "150", {}, {}, {}, {} };
-cvar_t cl_anglespeedkey = { "cl_anglespeedkey", "1.5", {}, {}, {}, {} };
+cvar_t cl_name = { "_cl_name", "player", true, { }, { }, { } };
+cvar_t cl_color = { "_cl_color", "0", true, { }, { }, { } };
+cvar_t cl_shownet = { "cl_shownet", "0", { }, { }, { }, { } };
+cvar_t cl_nolerp = { "cl_nolerp", "0", { }, { }, { }, { } };
+cvar_t lookspring = { "lookspring", "0", true, { }, { }, { } };
+cvar_t lookstrafe = { "lookstrafe", "0", true, { }, { }, { } };
+cvar_t sensitivity = { "sensitivity", "3", true, { }, { }, { } };
+cvar_t m_pitch = { "m_pitch", "0.022", true, { }, { }, { } };
+cvar_t m_yaw = { "m_yaw", "0.022", true, { }, { }, { } };
+cvar_t m_forward = { "m_forward", "1", true, { }, { }, { } };
+cvar_t m_side = { "m_side", "0.8", true, { }, { }, { } };
+cvar_t cl_upspeed = { "cl_upspeed", "200", { }, { }, { }, { } };
+cvar_t cl_forwardspeed = { "cl_forwardspeed", "200", true, { }, { }, { } };
+cvar_t cl_backspeed = { "cl_backspeed", "200", true, { }, { }, { } };
+cvar_t cl_sidespeed = { "cl_sidespeed", "350", { }, { }, { }, { } };
+cvar_t cl_movespeedkey = { "cl_movespeedkey", "2.0", { }, { }, { }, { } };
+cvar_t cl_yawspeed = { "cl_yawspeed", "140", { }, { }, { }, { } };
+cvar_t cl_pitchspeed = { "cl_pitchspeed", "150", { }, { }, { }, { } };
+cvar_t cl_anglespeedkey = { "cl_anglespeedkey", "1.5", { }, { }, { }, { } };
 
-ClientSubsystem& GetClientSubsystem() noexcept {
+ClientSubsystem& GetClientSubsystem() noexcept
+{
     static ClientSubsystem subsystem;
     return subsystem;
 }
@@ -48,7 +49,8 @@ ClientSubsystem& GetClientSubsystem() noexcept {
 int cl_numvisedicts = 0;
 entity_t* cl_visedicts[MAX_VISEDICTS];
 
-entity_t* CL_EntityNum(int num) {
+entity_t* CL_EntityNum(int num)
+{
     if (num >= MAX_EDICTS) Host::Host_Error("CL_EntityNum: %i is an invalid number", num);
     while (cl.num_entities <= num) {
         cl_entities[cl.num_entities].colormap = Vid::vid.colormap;
@@ -57,26 +59,29 @@ entity_t* CL_EntityNum(int num) {
     return &cl_entities[num];
 }
 
-void CL_ClearState() {
+void CL_ClearState()
+{
     if (!Server::sv.active) Host::Host_ClearMemory();
-    cl = {};
+    cl = { };
     Common::SZ_Clear(&cls.message);
-    cl_efrags.fill({});
-    cl_entities.fill({});
-    cl_static_entities.fill({});
-    cl_lightstyle.fill({});
-    cl_temp_entities.fill({});
-    cl_beams.fill({});
-    cl_dlights.fill({});
+    cl_efrags.fill({ });
+    cl_entities.fill({ });
+    cl_static_entities.fill({ });
+    cl_lightstyle.fill({ });
+    cl_temp_entities.fill({ });
+    cl_beams.fill({ });
+    cl_dlights.fill({ });
 
     cl.free_efrags = cl_efrags.data();
     for (size_t i = 0; i < MAX_EFRAGS - 1; ++i) cl.free_efrags[i].entnext = &cl.free_efrags[i + 1];
     cl.free_efrags[MAX_EFRAGS - 1].entnext = nullptr;
 }
 
-void CL_Disconnect() {
+void CL_Disconnect()
+{
     Audio::S_StopAllSounds(true);
-    if (cls.demoplayback) CL_StopPlayback();
+    if (cls.demoplayback)
+        CL_StopPlayback();
     else if (cls.state == ca_connected) {
         if (cls.demorecording) CL_Stop_f();
         Console::Con_DPrintf("Sending clc_disconnect\n");
@@ -92,12 +97,14 @@ void CL_Disconnect() {
     cls.signon = 0;
 }
 
-void CL_Disconnect_f() {
+void CL_Disconnect_f()
+{
     CL_Disconnect();
     if (Server::sv.active) Host::Host_ShutdownServer(false);
 }
 
-void CL_EstablishConnection(const char* host) {
+void CL_EstablishConnection(const char* host)
+{
     if (cls.state == ca_dedicated || cls.demoplayback) return;
     CL_Disconnect();
     cls.netcon = Net::NET_Connect(host);
@@ -108,7 +115,8 @@ void CL_EstablishConnection(const char* host) {
     cls.signon = 0;
 }
 
-void CL_SignonReply() {
+void CL_SignonReply()
+{
     Console::Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
     auto WriteCmd = [](const char* cmd) {
         Common::MSG_WriteByte(&cls.message, clc_stringcmd);
@@ -120,7 +128,8 @@ void CL_SignonReply() {
         break;
     case 2:
         WriteCmd(Common::va("name \"%s\"\n", cl_name.string.c_str()));
-        WriteCmd(Common::va("color %i %i\n", static_cast<int>(cl_color.value) >> 4, static_cast<int>(cl_color.value) & 15));
+        WriteCmd(
+            Common::va("color %i %i\n", static_cast<int>(cl_color.value) >> 4, static_cast<int>(cl_color.value) & 15));
         WriteCmd(("spawn " + std::string(cls.spawnparms.data())).c_str());
         break;
     case 3:
@@ -132,18 +141,22 @@ void CL_SignonReply() {
     }
 }
 
-void CL_PrintEntities_f() {
+void CL_PrintEntities_f()
+{
     int i = 0;
     for (const auto& ent : std::span(cl_entities.data(), cl.num_entities)) {
         Console::Con_Printf("%3i:", i++);
-        if (!ent.model) { Console::Con_Printf("EMPTY\n"); continue; }
-        Console::Con_Printf("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n",
-            ent.model->name, ent.frame, ent.origin[0], ent.origin[1], ent.origin[2],
-            ent.angles[0], ent.angles[1], ent.angles[2]);
+        if (!ent.model) {
+            Console::Con_Printf("EMPTY\n");
+            continue;
+        }
+        Console::Con_Printf("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n", ent.model->name, ent.frame,
+            ent.origin[0], ent.origin[1], ent.origin[2], ent.angles[0], ent.angles[1], ent.angles[2]);
     }
 }
 
-static float CL_LerpPoint() {
+static float CL_LerpPoint()
+{
     float f = static_cast<float>(cl.mtime[0] - cl.mtime[1]);
     if (!f || cl_nolerp.value || cls.timedemo || Server::sv.active) {
         cl.time = cl.mtime[0];
@@ -164,15 +177,18 @@ static float CL_LerpPoint() {
     return frac;
 }
 
-void CL_RelinkEntities() {
+void CL_RelinkEntities()
+{
     const float frac = CL_LerpPoint();
     cl_numvisedicts = 0;
     cl.velocity = cl.mvelocity[1] + (cl.mvelocity[0] - cl.mvelocity[1]) * frac;
     if (cls.demoplayback) {
         for (int j = 0; j < 3; ++j) {
             float d = cl.mviewangles[0][j] - cl.mviewangles[1][j];
-            if (d > 180.0f) d -= 360.0f;
-            else if (d < -180.0f) d += 360.0f;
+            if (d > 180.0f)
+                d -= 360.0f;
+            else if (d < -180.0f)
+                d += 360.0f;
             cl.viewangles[j] = cl.mviewangles[1][j] + frac * d;
         }
     }
@@ -203,8 +219,10 @@ void CL_RelinkEntities() {
             ent.origin = ent.msg_origins[1] + delta * f;
             for (int j = 0; j < 3; ++j) {
                 float d = ent.msg_angles[0][j] - ent.msg_angles[1][j];
-                if (d > 180.0f) d -= 360.0f;
-                else if (d < -180.0f) d += 360.0f;
+                if (d > 180.0f)
+                    d -= 360.0f;
+                else if (d < -180.0f)
+                    d += 360.0f;
                 ent.angles[j] = ent.msg_angles[1][j] + f * d;
             }
         }
@@ -230,10 +248,8 @@ void CL_RelinkEntities() {
         if (ent.effects & EF_BRIGHTLIGHT) AddLight(400.0f, 0.001f);
         if (ent.effects & EF_DIMLIGHT) AddLight(200.0f, 0.001f, 0.0f);
 
-        constexpr auto trail_map = std::array<std::pair<int, int>, 7>{{
-            { EF_GIB, 2 }, { EF_ZOMGIB, 4 }, { EF_TRACER, 3 }, { EF_TRACER2, 5 },
-            { EF_GRENADE, 1 }, { EF_TRACER3, 6 }, { EF_ROCKET, 0 }
-        }};
+        constexpr auto trail_map = std::array<std::pair<int, int>, 7> { { { EF_GIB, 2 }, { EF_ZOMGIB, 4 },
+            { EF_TRACER, 3 }, { EF_TRACER2, 5 }, { EF_GRENADE, 1 }, { EF_TRACER3, 6 }, { EF_ROCKET, 0 } } };
         for (auto [flag, type] : trail_map) {
             if (ent.model->flags & flag) {
                 Render::R_RocketTrail(oldorg, ent.origin, type);
@@ -256,7 +272,8 @@ void CL_RelinkEntities() {
     }
 }
 
-int CL_ReadFromServer() {
+int CL_ReadFromServer()
+{
     cl.oldtime = cl.time;
     cl.time += Host::host_frametime;
     int ret;
@@ -274,10 +291,11 @@ int CL_ReadFromServer() {
     return 0;
 }
 
-void CL_SendCmd() {
+void CL_SendCmd()
+{
     if (cls.state != ca_connected) return;
     if (cls.signon == SIGNONS) {
-        usercmd_t cmd{};
+        usercmd_t cmd { };
         CL_BaseMove(&cmd);
         Input::IN_Move(&cmd);
         CL_SendMove(&cmd);
@@ -291,25 +309,29 @@ void CL_SendCmd() {
         Console::Con_DPrintf("CL_WriteToServer: can't send\n");
         return;
     }
-    if (Net::NET_SendMessage(cls.netcon, &cls.message) == -1) Host::Host_Error("CL_WriteToServer: lost server connection");
+    if (Net::NET_SendMessage(cls.netcon, &cls.message) == -1)
+        Host::Host_Error("CL_WriteToServer: lost server connection");
     Common::SZ_Clear(&cls.message);
 }
 
-struct CmdPair { const char* name; void (*fn)(); };
+struct CmdPair {
+    const char* name;
+    void (*fn)();
+};
 
-void CL_Init() {
+void CL_Init()
+{
     Common::SZ_Init(&cls.message, cls.message_buf);
     CL_InitInput();
     CL_InitTEnts();
-    for (auto* c : { &cl_name, &cl_color, &cl_upspeed, &cl_forwardspeed, &cl_backspeed, &cl_sidespeed,
-                    &cl_movespeedkey, &cl_yawspeed, &cl_pitchspeed, &cl_anglespeedkey, &cl_shownet,
-                    &cl_nolerp, &lookspring, &lookstrafe, &sensitivity, &m_pitch, &m_yaw, &m_forward, &m_side }) {
+    for (auto* c : { &cl_name, &cl_color, &cl_upspeed, &cl_forwardspeed, &cl_backspeed, &cl_sidespeed, &cl_movespeedkey,
+             &cl_yawspeed, &cl_pitchspeed, &cl_anglespeedkey, &cl_shownet, &cl_nolerp, &lookspring, &lookstrafe,
+             &sensitivity, &m_pitch, &m_yaw, &m_forward, &m_side }) {
         Cvar::Register(c);
     }
-    constexpr CmdPair cmds[] = {
-        {"entities", CL_PrintEntities_f}, {"disconnect", CL_Disconnect_f}, {"record", CL_Record_f},
-        {"stop", CL_Stop_f}, {"playdemo", CL_PlayDemo_f}, {"timedemo", CL_TimeDemo_f}
-    };
+    constexpr CmdPair cmds[]
+        = { { "entities", CL_PrintEntities_f }, { "disconnect", CL_Disconnect_f }, { "record", CL_Record_f },
+              { "stop", CL_Stop_f }, { "playdemo", CL_PlayDemo_f }, { "timedemo", CL_TimeDemo_f } };
     for (auto [name, fn] : cmds) Cmd::AddCommand(name, fn);
 }
 
@@ -319,7 +341,8 @@ namespace Cmd {
 
 // Sends the current console command to the server as a clc_stringcmd. Declared in
 // core/cmd.hpp; defined here because it needs the client's connection state.
-void ForwardToServer(void) {
+void ForwardToServer(void)
+{
     if (Client::cls.state != ca_connected) {
         std::string_view cmd_name = Argv(0);
         Console::Con_Printf("Can't \"%.*s\", not connected\n", static_cast<int>(cmd_name.length()), cmd_name.data());

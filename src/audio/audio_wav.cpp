@@ -14,8 +14,8 @@ namespace Audio {
 
 namespace {
 
-template <typename T>
-[[nodiscard]] constexpr T byteswap(T val) {
+template <typename T> [[nodiscard]] constexpr T byteswap(T val)
+{
     if constexpr (sizeof(T) == 2) {
         return static_cast<T>(__builtin_bswap16(static_cast<uint16_t>(val)));
     } else if constexpr (sizeof(T) == 4) {
@@ -27,9 +27,10 @@ template <typename T>
 
 struct WavParser {
     std::span<const byte> data;
-    size_t iff_offset{0}, chunk_offset{0}, chunk_len{0};
+    size_t iff_offset { 0 }, chunk_offset { 0 }, chunk_len { 0 };
 
-    uint16_t ReadU16(size_t& off) const {
+    uint16_t ReadU16(size_t& off) const
+    {
         uint16_t v = 0;
         if (off + 2 <= data.size()) {
             std::memcpy(&v, &data[off], 2);
@@ -38,7 +39,8 @@ struct WavParser {
         return v;
     }
 
-    uint32_t ReadU32(size_t& off) const {
+    uint32_t ReadU32(size_t& off) const
+    {
         uint32_t v = 0;
         if (off + 4 <= data.size()) {
             std::memcpy(&v, &data[off], 4);
@@ -47,7 +49,8 @@ struct WavParser {
         return v;
     }
 
-    bool FindChunk(std::string_view tag, bool restart = true) {
+    bool FindChunk(std::string_view tag, bool restart = true)
+    {
         size_t search_off = restart ? iff_offset : chunk_offset + 8 + ((chunk_len + 1) & ~1);
         while (search_off + 8 <= data.size()) {
             size_t off = search_off + 4;
@@ -65,12 +68,13 @@ struct WavParser {
 
 } // anonymous namespace
 
-wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data) {
-    wavinfo_t info{};
+wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data)
+{
+    wavinfo_t info { };
     if (wav_data.empty()) return info;
-    WavParser parser{wav_data};
-    if (!parser.FindChunk("RIFF") || parser.chunk_offset + 12 > wav_data.size() ||
-        std::string_view(reinterpret_cast<const char*>(&wav_data[parser.chunk_offset + 8]), 4) != "WAVE") {
+    WavParser parser { wav_data };
+    if (!parser.FindChunk("RIFF") || parser.chunk_offset + 12 > wav_data.size()
+        || std::string_view(reinterpret_cast<const char*>(&wav_data[parser.chunk_offset + 8]), 4) != "WAVE") {
         Console::Con_Printf("Missing or malformed RIFF/WAVE chunk\n");
         return info;
     }
@@ -117,7 +121,8 @@ wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data) {
     return info;
 }
 
-void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data) {
+void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data)
+{
     sfxcache_t* sc = S_SfxCache(sfx);
     if (!sc) return;
     float stepscale = static_cast<float>(inrate) / shm->speed.load();
@@ -156,7 +161,8 @@ void ResampleSfx(sfx_t* sfx, int inrate, int inwidth, byte* data) {
     }
 }
 
-sfxcache_t* S_LoadSound(sfx_t* s) {
+sfxcache_t* S_LoadSound(sfx_t* s)
+{
     if (sfxcache_t* sc = S_SfxCache(s)) return sc;
     std::array<char, MAX_QPATH + 16> namebuffer;
     std::snprintf(namebuffer.data(), namebuffer.size(), "sound/%s", s->name);
@@ -174,7 +180,11 @@ sfxcache_t* S_LoadSound(sfx_t* s) {
     int len = static_cast<int>(info.samples / stepscale) * info.width * info.channels;
     s->data.assign(static_cast<size_t>(len) + sizeof(sfxcache_t), 0);
     sfxcache_t* sc = S_SfxCache(s);
-    *sc = { .length = info.samples, .loopstart = info.loopstart, .speed = info.rate, .width = info.width, .stereo = info.channels };
+    *sc = { .length = info.samples,
+        .loopstart = info.loopstart,
+        .speed = info.rate,
+        .width = info.width,
+        .stereo = info.channels };
     ResampleSfx(s, sc->speed, sc->width, file.data() + info.dataofs);
     return sc;
 }

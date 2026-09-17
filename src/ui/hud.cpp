@@ -29,20 +29,20 @@ namespace Sbar {
 int sb_updates; // if >= vid.numpages, no update needed
 
 inline constexpr int STAT_MINUS = 10; // num frame for '-' stats digit
-std::array<std::array<qpic_t*, 11>, 2> sb_nums{};
+std::array<std::array<qpic_t*, 11>, 2> sb_nums { };
 qpic_t* sb_colon = nullptr;
 qpic_t* sb_slash = nullptr;
 qpic_t* sb_ibar = nullptr;
 qpic_t* sb_sbar = nullptr;
 qpic_t* sb_scorebar = nullptr;
 
-std::array<std::array<qpic_t*, 8>, 7> sb_weapons{}; // 0 is active, 1 is owned, 2-5 are flashes
-std::array<qpic_t*, 4> sb_ammo{};
-std::array<qpic_t*, 4> sb_sigil{};
-std::array<qpic_t*, 3> sb_armor{};
-std::array<qpic_t*, 32> sb_items{};
+std::array<std::array<qpic_t*, 8>, 7> sb_weapons { }; // 0 is active, 1 is owned, 2-5 are flashes
+std::array<qpic_t*, 4> sb_ammo { };
+std::array<qpic_t*, 4> sb_sigil { };
+std::array<qpic_t*, 3> sb_armor { };
+std::array<qpic_t*, 32> sb_items { };
 
-std::array<std::array<qpic_t*, 2>, 7> sb_faces{}; // 0 is gibbed, 1 is dead, 2-6 are alive
+std::array<std::array<qpic_t*, 2>, 7> sb_faces { }; // 0 is gibbed, 1 is dead, 2-6 are alive
 // 0 is static, 1 is temporary animation
 qpic_t* sb_face_invis = nullptr;
 qpic_t* sb_face_quad = nullptr;
@@ -51,19 +51,18 @@ qpic_t* sb_face_invis_invuln = nullptr;
 
 bool sb_showscores = false;
 
-std::array<qpic_t*, 2> rsb_invbar{};
-std::array<qpic_t*, 5> rsb_weapons{};
-std::array<qpic_t*, 2> rsb_items{};
-std::array<qpic_t*, 3> rsb_ammo{};
+std::array<qpic_t*, 2> rsb_invbar { };
+std::array<qpic_t*, 5> rsb_weapons { };
+std::array<qpic_t*, 2> rsb_items { };
+std::array<qpic_t*, 3> rsb_ammo { };
 qpic_t* rsb_teambord = nullptr; // PGM 01/19/97 - team color border
 
 //MED 01/04/97 added two more weapons + 3 alternates for grenade launcher
-std::array<std::array<qpic_t*, 5>, 7> hsb_weapons{}; // 0 is active, 1 is owned, 2-5 are flashes
+std::array<std::array<qpic_t*, 5>, 7> hsb_weapons { }; // 0 is active, 1 is owned, 2-5 are flashes
 //MED 01/04/97 added array to simplify weapon parsing
-constexpr std::array<int, 4> hipweapons = { HIT_LASER_CANNON_BIT, HIT_MJOLNIR_BIT, 4,
-    HIT_PROXIMITY_GUN_BIT };
+constexpr std::array<int, 4> hipweapons = { HIT_LASER_CANNON_BIT, HIT_MJOLNIR_BIT, 4, HIT_PROXIMITY_GUN_BIT };
 //MED 01/04/97 added hipnotic items array
-std::array<qpic_t*, 2> hsb_items{};
+std::array<qpic_t*, 2> hsb_items { };
 
 void Sbar_MiniDeathmatchOverlay();
 void Sbar_DeathmatchOverlay();
@@ -202,8 +201,7 @@ void Sbar_Init()
 void Sbar_DrawPic(int x, int y, qpic_t* pic)
 {
     if (Client::cl.gametype == GAME_DEATHMATCH) {
-        Draw::Draw_Pic(x , y + (Vid::vid.height - SBAR_HEIGHT),
-            pic);
+        Draw::Draw_Pic(x, y + (Vid::vid.height - SBAR_HEIGHT), pic);
     } else {
         Draw::Draw_Pic(x + ((Vid::vid.width - 320) >> 1), y + (Vid::vid.height - SBAR_HEIGHT), pic);
     }
@@ -212,33 +210,27 @@ void Sbar_DrawPic(int x, int y, qpic_t* pic)
 void Sbar_DrawTransPic(int x, int y, qpic_t* pic)
 {
     if (Client::cl.gametype == GAME_DEATHMATCH) {
-        Draw::Draw_TransPic(x ,
-            y + (Vid::vid.height - SBAR_HEIGHT), pic);
+        Draw::Draw_TransPic(x, y + (Vid::vid.height - SBAR_HEIGHT), pic);
     } else {
-        Draw::Draw_TransPic(x + ((Vid::vid.width - 320) >> 1), y + (Vid::vid.height - SBAR_HEIGHT),
-            pic);
+        Draw::Draw_TransPic(x + ((Vid::vid.width - 320) >> 1), y + (Vid::vid.height - SBAR_HEIGHT), pic);
     }
 }
 
 void Sbar_DrawCharacter(int x, int y, int num)
 {
     if (Client::cl.gametype == GAME_DEATHMATCH) {
-        Draw::Draw_Character(x + 4,
-            y + Vid::vid.height - SBAR_HEIGHT, num);
+        Draw::Draw_Character(x + 4, y + Vid::vid.height - SBAR_HEIGHT, num);
     } else {
-        Draw::Draw_Character(x + ((Vid::vid.width - 320) >> 1) + 4,
-            y + Vid::vid.height - SBAR_HEIGHT, num);
+        Draw::Draw_Character(x + ((Vid::vid.width - 320) >> 1) + 4, y + Vid::vid.height - SBAR_HEIGHT, num);
     }
 }
 
 void Sbar_DrawString(int x, int y, std::string_view str)
 {
     if (Client::cl.gametype == GAME_DEATHMATCH) {
-        Draw::Draw_String(x , y + Vid::vid.height - SBAR_HEIGHT,
-            str);
+        Draw::Draw_String(x, y + Vid::vid.height - SBAR_HEIGHT, str);
     } else {
-        Draw::Draw_String(x + ((Vid::vid.width - 320) >> 1), y + Vid::vid.height - SBAR_HEIGHT,
-            str);
+        Draw::Draw_String(x + ((Vid::vid.width - 320) >> 1), y + Vid::vid.height - SBAR_HEIGHT, str);
     }
 }
 
@@ -273,7 +265,7 @@ void Sbar_DrawNum(int x, int y, int num, int digits, int color)
         ptr++;
     }
 }
-std::array<int, MAX_SCOREBOARD> fragsort{};
+std::array<int, MAX_SCOREBOARD> fragsort { };
 int scoreboardlines = 0;
 
 void Sbar_SortFrags()
@@ -286,9 +278,8 @@ void Sbar_SortFrags()
             scoreboardlines++;
         }
     }
-    std::sort(fragsort.begin(), fragsort.begin() + scoreboardlines, [](int a, int b) {
-        return Client::cl.scores[a].frags > Client::cl.scores[b].frags;
-    });
+    std::sort(fragsort.begin(), fragsort.begin() + scoreboardlines,
+        [](int a, int b) { return Client::cl.scores[a].frags > Client::cl.scores[b].frags; });
 }
 
 int Sbar_ColorForMap(int m)
@@ -301,11 +292,11 @@ void Sbar_SoloScoreboard(void)
     char str[80];
     int minutes, seconds, tens, units;
     int l;
-    sprintf_s(str, sizeof(str), "Monsters:%3i /%3i", Client::cl.stats[STAT_MONSTERS],
-        Client::cl.stats[STAT_TOTALMONSTERS]);
+    sprintf_s(
+        str, sizeof(str), "Monsters:%3i /%3i", Client::cl.stats[STAT_MONSTERS], Client::cl.stats[STAT_TOTALMONSTERS]);
     Sbar_DrawString(8, 4, str);
-    sprintf_s(str, sizeof(str), "Secrets :%3i /%3i", Client::cl.stats[STAT_SECRETS],
-        Client::cl.stats[STAT_TOTALSECRETS]);
+    sprintf_s(
+        str, sizeof(str), "Secrets :%3i /%3i", Client::cl.stats[STAT_SECRETS], Client::cl.stats[STAT_TOTALSECRETS]);
     Sbar_DrawString(8, 12, str);
     // time
     minutes = static_cast<int>(Client::cl.time / 60);
@@ -648,8 +639,7 @@ void Sbar_Draw()
             Sbar_DrawPic(0, 0, Draw::draw_disc);
         } else {
             if (Common::rogue) {
-                Sbar_DrawNum(24, 0, Client::cl.stats[STAT_ARMOR], 3,
-                    Client::cl.stats[STAT_ARMOR] <= 25);
+                Sbar_DrawNum(24, 0, Client::cl.stats[STAT_ARMOR], 3, Client::cl.stats[STAT_ARMOR] <= 25);
                 if (Client::cl.items & RIT_ARMOR3) {
                     Sbar_DrawPic(0, 0, sb_armor[2]);
                 } else if (Client::cl.items & RIT_ARMOR2) {
@@ -658,8 +648,7 @@ void Sbar_Draw()
                     Sbar_DrawPic(0, 0, sb_armor[0]);
                 }
             } else {
-                Sbar_DrawNum(24, 0, Client::cl.stats[STAT_ARMOR], 3,
-                    Client::cl.stats[STAT_ARMOR] <= 25);
+                Sbar_DrawNum(24, 0, Client::cl.stats[STAT_ARMOR], 3, Client::cl.stats[STAT_ARMOR] <= 25);
                 if (Client::cl.items & IT_ARMOR3) {
                     Sbar_DrawPic(0, 0, sb_armor[2]);
                 } else if (Client::cl.items & IT_ARMOR2) {

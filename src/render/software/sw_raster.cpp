@@ -19,19 +19,19 @@ cvar_t d_subdiv16 = { "d_subdiv16", "1", false, false, 0.0f, nullptr };
 cvar_t d_mipcap = { "d_mipcap", "0", false, false, 0.0f, nullptr };
 cvar_t d_mipscale = { "d_mipscale", "1", false, false, 0.0f, nullptr };
 int d_minmip = 0;
-std::array<float, 3> d_scalemip{};
+std::array<float, 3> d_scalemip { };
 constexpr std::array<float, 3> basemip = { 1.0f, 0.5f * 0.8f, 0.25f * 0.8f };
 void (*d_drawspans)(espan_t* pspan) = nullptr;
 
 int d_vrectx = 0, d_vrecty = 0, d_vrectright_particle = 0, d_vrectbottom_particle = 0;
 int d_y_aspect_shift = 0, d_pix_min = 0, d_pix_max = 0, d_pix_shift = 0;
-std::array<int, MAXHEIGHT> d_scantable{};
-std::array<short*, MAXHEIGHT> zspantable{};
+std::array<int, MAXHEIGHT> d_scantable { };
+std::array<short*, MAXHEIGHT> zspantable { };
 
 int miplevel = 0;
 float scale_for_mip = 0.0f;
 int ubasestep = 0, errorterm = 0, erroradjustup = 0, erroradjustdown = 0;
-Vector3 transformed_modelorg{};
+Vector3 transformed_modelorg { };
 
 float d_sdivzstepu = 0.0f, d_tdivzstepu = 0.0f, d_zistepu = 0.0f;
 float d_sdivzstepv = 0.0f, d_tdivzstepv = 0.0f, d_zistepv = 0.0f;
@@ -55,9 +55,7 @@ void D_Init()
     r_aliasuvscale = 1.0;
 }
 
-void D_TurnZOn()
-{
-}
+void D_TurnZOn() { }
 
 void D_SetupFrame()
 {
@@ -129,9 +127,7 @@ void D_ViewChanged()
     }
 }
 
-void D_DrawPoly()
-{
-}
+void D_DrawPoly() { }
 
 int D_MipLevelForScale(float scale)
 {
@@ -201,8 +197,10 @@ void D_CalcGradients(msurface_t* pface)
     d_tdivzorigin = p_taxis.z * mipscale - xcenter * d_tdivzstepu - ycenter * d_tdivzstepv;
     p_temp1 = transformed_modelorg * mipscale;
     t = 0x10000 * mipscale;
-    sadjust = static_cast<fixed16_t>(p_temp1.dot(p_saxis) * 0x10000 + 0.5f - ((pface->texturemins[0] << 16) >> miplevel) + pface->texinfo->vecs[0][3] * t);
-    tadjust = static_cast<fixed16_t>(p_temp1.dot(p_taxis) * 0x10000 + 0.5f - ((pface->texturemins[1] << 16) >> miplevel) + pface->texinfo->vecs[1][3] * t);
+    sadjust = static_cast<fixed16_t>(p_temp1.dot(p_saxis) * 0x10000 + 0.5f - ((pface->texturemins[0] << 16) >> miplevel)
+        + pface->texinfo->vecs[0][3] * t);
+    tadjust = static_cast<fixed16_t>(p_temp1.dot(p_taxis) * 0x10000 + 0.5f - ((pface->texturemins[1] << 16) >> miplevel)
+        + pface->texinfo->vecs[1][3] * t);
     bbextents = ((pface->extents[0] << 16) >> miplevel) - 1;
     bbextentt = ((pface->extents[1] << 16) >> miplevel) - 1;
 }
@@ -252,7 +250,8 @@ void D_DrawSurfaces()
             } else if (s->flags & SURF_DRAWTURB) {
                 pface = reinterpret_cast<msurface_t*>(s->data);
                 miplevel = 0;
-                cacheblock = reinterpret_cast<pixel_t*>(reinterpret_cast<byte*>(pface->texinfo->texture) + pface->texinfo->texture->offsets[0]);
+                cacheblock = reinterpret_cast<pixel_t*>(
+                    reinterpret_cast<byte*>(pface->texinfo->texture) + pface->texinfo->texture->offsets[0]);
                 cachewidth = 64;
                 if (s->insubmodel) {
                     currententity = s->entity;
@@ -315,7 +314,8 @@ void D_DrawSpans8(espan_t* pspan)
     tdivz8stepu = d_tdivzstepu * 8;
     zi8stepu = d_zistepu * 8;
     do {
-        pdest = reinterpret_cast<unsigned char*>(reinterpret_cast<byte*>(d_viewbuffer) + (screenwidth * pspan->v) + pspan->u);
+        pdest = reinterpret_cast<unsigned char*>(
+            reinterpret_cast<byte*>(d_viewbuffer) + (screenwidth * pspan->v) + pspan->u);
         count = pspan->count;
         du = static_cast<float>(pspan->u);
         dv = static_cast<float>(pspan->v);

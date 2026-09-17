@@ -49,15 +49,15 @@ struct qsocket_s {
     unsigned int sendSequence = 0;
     unsigned int unreliableSendSequence = 0;
     int sendMessageLength = 0;
-    std::array<byte, NET_MAXMESSAGE> sendMessage{};
+    std::array<byte, NET_MAXMESSAGE> sendMessage { };
 
     unsigned int receiveSequence = 0;
     unsigned int unreliableReceiveSequence = 0;
     int receiveMessageLength = 0;
-    std::array<byte, NET_MAXMESSAGE> receiveMessage{};
+    std::array<byte, NET_MAXMESSAGE> receiveMessage { };
 
-    struct qsockaddr addr{};
-    char address[NET_NAMELEN]{};
+    struct qsockaddr addr { };
+    char address[NET_NAMELEN] { };
 };
 using qsocket_t = struct qsocket_s;
 
@@ -77,8 +77,8 @@ public:
     virtual void SetControlSocket(int sock) { controlSock = sock; }
 
     virtual int Init() { return 0; }
-    virtual void Listen(qboolean) {}
-    virtual void SearchForHosts(qboolean) {}
+    virtual void Listen(qboolean) { }
+    virtual void SearchForHosts(qboolean) { }
     virtual qsocket_t* Connect(const char*) { return nullptr; }
     virtual qsocket_t* CheckNewConnections() { return nullptr; }
     virtual int GetMessage(qsocket_t*) { return 0; }
@@ -86,8 +86,8 @@ public:
     virtual int SendUnreliableMessage(qsocket_t*, sizebuf_t*) { return 0; }
     virtual qboolean CanSendMessage(qsocket_t*) { return false; }
     virtual qboolean CanSendUnreliableMessage() { return true; }
-    virtual void Close(qsocket_t*) {}
-    virtual void Shutdown() {}
+    virtual void Close(qsocket_t*) { }
+    virtual void Shutdown() { }
 
 protected:
     qboolean initialized = false;
@@ -104,8 +104,8 @@ public:
     virtual void SetControlSocket(int sock) { controlSock = sock; }
 
     virtual int Init() { return 0; }
-    virtual void Shutdown() {}
-    virtual void Listen(qboolean) {}
+    virtual void Shutdown() { }
+    virtual void Listen(qboolean) { }
     virtual int OpenSocket(int) { return -1; }
     virtual int CloseSocket(int) { return -1; }
     virtual int Connect(int, struct qsockaddr*) { return 0; }
@@ -197,8 +197,14 @@ extern qboolean slistSilent;
 extern qboolean slistLocal;
 
 // Driver accessor helpers
-inline NetLanDriver& LANFunc(int level) { return *net_landrivers[level]; }
-inline NetDriver& DriverFunc(int level) { return *net_drivers[level]; }
+inline NetLanDriver& LANFunc(int level)
+{
+    return *net_landrivers[level];
+}
+inline NetDriver& DriverFunc(int level)
+{
+    return *net_drivers[level];
+}
 
 // Socket lifecycle and timer prototypes
 qsocket_t* NET_NewQSocket();

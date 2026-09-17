@@ -37,9 +37,10 @@ public:
     void SetNotifyLines(int val) noexcept { notifylines_ = val; }
 
 private:
-    bool initialized_{false}, forcedup_{false}, debuglog_{false};
-    int totallines_{0}, backscroll_{0}, notifylines_{0}, linewidth_{0}, current_{0}, x_{0}, vislines_{0};
-    float cursorspeed_{4.0f};
+    bool initialized_ { false }, forcedup_ { false }, debuglog_ { false };
+    int totallines_ { 0 }, backscroll_ { 0 }, notifylines_ { 0 }, linewidth_ { 0 }, current_ { 0 }, x_ { 0 },
+        vislines_ { 0 };
+    float cursorspeed_ { 4.0f };
     std::vector<char> text_;
     std::vector<float> times_;
 

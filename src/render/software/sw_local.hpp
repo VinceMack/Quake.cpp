@@ -22,14 +22,14 @@ inline constexpr double YCENTERING = 0.5;
 struct surfcache_s {
     surfcache_s* next = nullptr;
     surfcache_s** owner = nullptr;
-    int lightadj[MAXLIGHTMAPS]{};
+    int lightadj[MAXLIGHTMAPS] { };
     int dlight = 0;
     int size = 0;
     unsigned width = 0;
     unsigned height = 0;
     float mipscale = 0.0f;
     texture_s* texture = nullptr;
-    byte data[4]{};
+    byte data[4] { };
 };
 using surfcache_t = surfcache_s;
 
@@ -44,8 +44,10 @@ struct espan_t {
 };
 
 inline constexpr int MAXVERTS = 16, MAXWORKINGVERTS = MAXVERTS + 4, MAXHEIGHT = 2160, MAXWIDTH = 3840;
-inline constexpr int MAXDIMENSION = (MAXHEIGHT > MAXWIDTH) ? MAXHEIGHT : MAXWIDTH, CYCLE = 256, SIN_BUFFER_SIZE = MAXDIMENSION + CYCLE, INFINITE_DISTANCE = 0x10000;
-inline constexpr int NUMSTACKEDGES = 2400, MINEDGES = NUMSTACKEDGES, NUMSTACKSURFACES = 800, MINSURFACES = NUMSTACKSURFACES, MAXSPANS = 8000;
+inline constexpr int MAXDIMENSION = (MAXHEIGHT > MAXWIDTH) ? MAXHEIGHT : MAXWIDTH, CYCLE = 256,
+                     SIN_BUFFER_SIZE = MAXDIMENSION + CYCLE, INFINITE_DISTANCE = 0x10000;
+inline constexpr int NUMSTACKEDGES = 2400, MINEDGES = NUMSTACKEDGES, NUMSTACKSURFACES = 800,
+                     MINSURFACES = NUMSTACKSURFACES, MAXSPANS = 8000;
 
 struct surf_t {
     surf_t* next = nullptr;
@@ -58,9 +60,9 @@ struct surf_t {
     void* data = nullptr;
     entity_t* entity = nullptr;
     float nearzi = 0.0f;
-    qboolean insubmodel = {};
+    qboolean insubmodel = { };
     float d_ziorigin = 0.0f, d_zistepu = 0.0f, d_zistepv = 0.0f;
-    std::array<int, 2> pad{};
+    std::array<int, 2> pad { };
 };
 
 inline constexpr int ALIAS_LEFT_CLIP = 0x0001, ALIAS_TOP_CLIP = 0x0002, ALIAS_RIGHT_CLIP = 0x0004;
@@ -72,7 +74,7 @@ struct edge_t {
     int64_t u_step = 0;
     edge_t* prev = nullptr;
     edge_t* next = nullptr;
-    std::array<unsigned short, 2> surfs{};
+    std::array<unsigned short, 2> surfs { };
     edge_t* nextremove = nullptr;
     float nearzi = 0.0f;
     medge_t* owner = nullptr;
@@ -85,12 +87,12 @@ struct alight_t {
 };
 
 struct bedge_t {
-    std::array<mvertex_t*, 2> v{};
+    std::array<mvertex_t*, 2> v { };
     bedge_t* pnext = nullptr;
 };
 
 struct auxvert_t {
-    std::array<float, 3> fv{};
+    std::array<float, 3> fv { };
 };
 
 inline constexpr int WARP_WIDTH = 320;
@@ -105,15 +107,13 @@ struct emitpoint_t {
     float zi = 0.0f;
 };
 
-enum class ptype_t {
-    Static, Grav, SlowGrav, Fire, Explode, Explode2, Blob, Blob2
-};
+enum class ptype_t { Static, Grav, SlowGrav, Fire, Explode, Explode2, Blob, Blob2 };
 
 struct particle_t {
-    Vector3 org{};
+    Vector3 org { };
     float color = 0.0f;
     particle_t* next = nullptr;
-    Vector3 vel{};
+    Vector3 vel { };
     float ramp = 0.0f;
     float die = 0.0f;
     ptype_t type = ptype_t::Static;
@@ -137,7 +137,7 @@ struct polydesc_t {
 };
 
 struct finalvert_t {
-    std::array<int, 6> v{};
+    std::array<int, 6> v { };
     int flags = 0;
     float reserved = 0.0f;
 };
@@ -165,7 +165,7 @@ struct spritedesc_t {
     int nump = 0;
     emitpoint_t* pverts = nullptr;
     mspriteframe_t* pspriteframe = nullptr;
-    Vector3 vup{}, vright{}, vpn{};
+    Vector3 vup { }, vright { }, vpn { };
     float nearzi = 0.0f;
 };
 
@@ -184,12 +184,12 @@ inline constexpr int MAX_BTOFPOLYS = 5000;
 inline constexpr double BACKFACE_EPSILON = 0.01;
 
 struct clipplane_t {
-    Vector3 normal{};
+    Vector3 normal { };
     float dist = 0.0f;
     clipplane_t* next = nullptr;
     uint8_t leftedge = 0;
     uint8_t rightedge = 0;
-    std::array<uint8_t, 2> reserved{};
+    std::array<uint8_t, 2> reserved { };
 };
 
 inline constexpr int SKYSHIFT = 7;
@@ -208,7 +208,7 @@ struct drawsurf_t {
     pixel_t* surfdat = nullptr;
     int rowbytes = 0;
     msurface_t* surf = nullptr;
-    std::array<fixed8_t, MAXLIGHTMAPS> lightadj{};
+    std::array<fixed8_t, MAXLIGHTMAPS> lightadj { };
     texture_t* texture = nullptr;
     int surfmip = 0;
     int surfwidth = 0;
@@ -375,4 +375,3 @@ extern int r_sstepx, r_tstepx, r_lstepy, r_sstepy, r_tstepy;
 extern int r_zistepx, r_zistepy;
 
 } // namespace Render
-

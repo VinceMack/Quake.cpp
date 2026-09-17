@@ -30,7 +30,7 @@ qboolean tcpipAvailable = false;
 int net_hostport = 0;
 int DEFAULTnet_hostport = 26000;
 
-char my_tcpip_address[NET_NAMELEN]{};
+char my_tcpip_address[NET_NAMELEN] { };
 
 sizebuf_t net_message;
 int net_activeconnections = 0;
@@ -49,17 +49,19 @@ static qboolean listening = false;
 static double slistStartTime = 0.0;
 static int slistLastShown = 0;
 static std::vector<std::unique_ptr<qsocket_t>> socket_pool;
-static std::array<byte, NET_MAXMESSAGE> net_message_buf{};
+static std::array<byte, NET_MAXMESSAGE> net_message_buf { };
 
-cvar_t net_messagetimeout = { "net_messagetimeout", "300", {}, {}, {}, {} };
-cvar_t hostname = { "hostname", "UNNAMED", {}, {}, {}, {} };
+cvar_t net_messagetimeout = { "net_messagetimeout", "300", { }, { }, { }, { } };
+cvar_t hostname = { "hostname", "UNNAMED", { }, { }, { }, { } };
 
-double SetNetTime() {
+double SetNetTime()
+{
     net_time = Common::Sys_FloatTime();
     return net_time;
 }
 
-qsocket_t* NET_NewQSocket() {
+qsocket_t* NET_NewQSocket()
+{
     if (!net_freeSockets || net_activeconnections >= Server::svs.maxclients) return nullptr;
 
     qsocket_t* sock = net_freeSockets;
@@ -80,7 +82,8 @@ qsocket_t* NET_NewQSocket() {
     return sock;
 }
 
-void NET_FreeQSocket(qsocket_t* sock) {
+void NET_FreeQSocket(qsocket_t* sock)
+{
     if (sock == net_activeSockets) {
         net_activeSockets = net_activeSockets->next;
     } else {
@@ -98,7 +101,8 @@ void NET_FreeQSocket(qsocket_t* sock) {
     sock->disconnected = true;
 }
 
-static void NET_Listen_f() {
+static void NET_Listen_f()
+{
     if (Cmd::Argc() != 2) {
         Console::Con_Printf("\"listen\" is \"%u\"\n", listening ? 1 : 0);
         return;
@@ -109,7 +113,8 @@ static void NET_Listen_f() {
     }
 }
 
-static void MaxPlayers_f() {
+static void MaxPlayers_f()
+{
     if (Cmd::Argc() != 2) {
         Console::Con_Printf("\"maxplayers\" is \"%u\"\n", Server::svs.maxclients);
         return;
@@ -130,7 +135,8 @@ static void MaxPlayers_f() {
     Cvar::Set("deathmatch", (n == 1) ? "0" : "1");
 }
 
-static void NET_Port_f() {
+static void NET_Port_f()
+{
     if (Cmd::Argc() != 2) {
         Console::Con_Printf("\"port\" is \"%u\"\n", net_hostport);
         return;
@@ -147,16 +153,19 @@ static void NET_Port_f() {
     }
 }
 
-static void PrintSlistHeader() {
+static void PrintSlistHeader()
+{
     Console::Con_Printf("Server          Map             Users\n--------------- --------------- -----\n");
     slistLastShown = 0;
 }
 
-static void PrintSlist() {
+static void PrintSlist()
+{
     int n;
     for (n = slistLastShown; n < hostCacheCount; n++) {
         if (hostcache[n].maxusers) {
-            Console::Con_Printf("%-15.15s %-15.15s %2u/%2u\n", hostcache[n].name, hostcache[n].map, hostcache[n].users, hostcache[n].maxusers);
+            Console::Con_Printf("%-15.15s %-15.15s %2u/%2u\n", hostcache[n].name, hostcache[n].map, hostcache[n].users,
+                hostcache[n].maxusers);
         } else {
             Console::Con_Printf("%-15.15s %-15.15s\n", hostcache[n].name, hostcache[n].map);
         }
@@ -164,7 +173,8 @@ static void PrintSlist() {
     slistLastShown = n;
 }
 
-static void PrintSlistTrailer() {
+static void PrintSlistTrailer()
+{
     Console::Con_Printf(hostCacheCount ? "== end list ==\n\n" : "No Quake servers found.\n\n");
 }
 
@@ -173,7 +183,8 @@ static void Slist_Poll();
 static PollProcedure slistSendProcedure = { nullptr, 0.0, Slist_Send };
 static PollProcedure slistPollProcedure = { nullptr, 0.0, Slist_Poll };
 
-void NET_Slist_f() {
+void NET_Slist_f()
+{
     if (slistInProgress) return;
     if (!slistSilent) {
         Console::Con_Printf("Looking for Quake servers...\n");
@@ -186,7 +197,8 @@ void NET_Slist_f() {
     hostCacheCount = 0;
 }
 
-static void Slist_Send() {
+static void Slist_Send()
+{
     for (net_driverlevel = 0; net_driverlevel < net_numdrivers; net_driverlevel++) {
         if (!slistLocal && net_driverlevel == 0) continue;
         if (DriverFunc(net_driverlevel).IsInitialized()) DriverFunc(net_driverlevel).SearchForHosts(true);
@@ -194,7 +206,8 @@ static void Slist_Send() {
     if ((Common::Sys_FloatTime() - slistStartTime) < 0.5) SchedulePollProcedure(&slistSendProcedure, 0.75);
 }
 
-static void Slist_Poll() {
+static void Slist_Poll()
+{
     for (net_driverlevel = 0; net_driverlevel < net_numdrivers; net_driverlevel++) {
         if (!slistLocal && net_driverlevel == 0) continue;
         if (DriverFunc(net_driverlevel).IsInitialized()) DriverFunc(net_driverlevel).SearchForHosts(false);
@@ -209,7 +222,8 @@ static void Slist_Poll() {
     slistLocal = true;
 }
 
-qsocket_t* NET_Connect(const char* host) {
+qsocket_t* NET_Connect(const char* host)
+{
     SetNetTime();
     if (host && *host == 0) host = nullptr;
     int numdrivers = net_numdrivers;
@@ -263,7 +277,8 @@ JustDoIt:
     return nullptr;
 }
 
-qsocket_t* NET_CheckNewConnections() {
+qsocket_t* NET_CheckNewConnections()
+{
     SetNetTime();
     for (net_driverlevel = 0; net_driverlevel < net_numdrivers; net_driverlevel++) {
         if (!DriverFunc(net_driverlevel).IsInitialized() || (net_driverlevel && !listening)) continue;
@@ -273,14 +288,16 @@ qsocket_t* NET_CheckNewConnections() {
     return nullptr;
 }
 
-void NET_Close(qsocket_t* sock) {
+void NET_Close(qsocket_t* sock)
+{
     if (!sock || sock->disconnected) return;
     SetNetTime();
     DriverFunc(sock->driver).Close(sock);
     NET_FreeQSocket(sock);
 }
 
-int NET_GetMessage(qsocket_t* sock) {
+int NET_GetMessage(qsocket_t* sock)
+{
     if (!sock) return -1;
     if (sock->disconnected) {
         Console::Con_Printf("NET_GetMessage: disconnected socket\n");
@@ -294,13 +311,16 @@ int NET_GetMessage(qsocket_t* sock) {
     }
     if (ret > 0 && sock->driver) {
         sock->lastMessageTime = net_time;
-        if (ret == 1) messagesReceived++;
-        else if (ret == 2) unreliableMessagesReceived++;
+        if (ret == 1)
+            messagesReceived++;
+        else if (ret == 2)
+            unreliableMessagesReceived++;
     }
     return ret;
 }
 
-int NET_SendMessage(qsocket_t* sock, sizebuf_t* data) {
+int NET_SendMessage(qsocket_t* sock, sizebuf_t* data)
+{
     if (!sock) return -1;
     if (sock->disconnected) {
         Console::Con_Printf("NET_SendMessage: disconnected socket\n");
@@ -312,7 +332,8 @@ int NET_SendMessage(qsocket_t* sock, sizebuf_t* data) {
     return r;
 }
 
-int NET_SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data) {
+int NET_SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data)
+{
     if (!sock) return -1;
     if (sock->disconnected) {
         Console::Con_Printf("NET_SendMessage: disconnected socket\n");
@@ -324,14 +345,16 @@ int NET_SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data) {
     return r;
 }
 
-qboolean NET_CanSendMessage(qsocket_t* sock) {
+qboolean NET_CanSendMessage(qsocket_t* sock)
+{
     if (!sock || sock->disconnected) return false;
     SetNetTime();
     int r = DriverFunc(sock->driver).CanSendMessage(sock);
     return r;
 }
 
-int NET_SendToAll(sizebuf_t* data, int blocktime) {
+int NET_SendToAll(sizebuf_t* data, int blocktime)
+{
     qboolean state1[MAX_SCOREBOARD], state2[MAX_SCOREBOARD];
     int count = 0;
 
@@ -381,7 +404,8 @@ int NET_SendToAll(sizebuf_t* data, int blocktime) {
     return count;
 }
 
-void NET_Init() {
+void NET_Init()
+{
     net_drivers.clear();
     net_drivers.push_back(std::make_unique<LoopbackDriver>());
     net_drivers.push_back(std::make_unique<DatagramDriver>());
@@ -394,8 +418,10 @@ void NET_Init() {
     int i = Common::COM_CheckParm("-port");
     if (!i) i = Common::COM_CheckParm("-udpport");
     if (i) {
-        if (i < Common::com_argc - 1) DEFAULTnet_hostport = Common::Q_atoi(Common::com_argv[i + 1]);
-        else Common::Sys_Error("NET_Init: you must specify a number after -port");
+        if (i < Common::com_argc - 1)
+            DEFAULTnet_hostport = Common::Q_atoi(Common::com_argv[i + 1]);
+        else
+            Common::Sys_Error("NET_Init: you must specify a number after -port");
     }
     net_hostport = DEFAULTnet_hostport;
     if (Common::COM_CheckParm("-listen") || Client::cls.state == ca_dedicated) listening = true;
@@ -434,7 +460,8 @@ void NET_Init() {
     if (*my_tcpip_address) Console::Con_DPrintf("TCP/IP address %s\n", my_tcpip_address);
 }
 
-void NET_Shutdown() {
+void NET_Shutdown()
+{
     SetNetTime();
     for (qsocket_t* sock = net_activeSockets; sock; sock = sock->next) NET_Close(sock);
     for (net_driverlevel = 0; net_driverlevel < net_numdrivers; net_driverlevel++) {
@@ -447,7 +474,8 @@ void NET_Shutdown() {
 
 static PollProcedure* pollProcedureList = nullptr;
 
-void NET_Poll() {
+void NET_Poll()
+{
     SetNetTime();
     while (pollProcedureList && pollProcedureList->nextTime <= net_time) {
         PollProcedure* pp = pollProcedureList;
@@ -457,9 +485,11 @@ void NET_Poll() {
     }
 }
 
-void SchedulePollProcedure(PollProcedure* pp, double timeOffset) {
+void SchedulePollProcedure(PollProcedure* pp, double timeOffset)
+{
     pp->nextTime = net_time + timeOffset;
-    if (pollProcedureList == pp) pollProcedureList = pp->next;
+    if (pollProcedureList == pp)
+        pollProcedureList = pp->next;
     else if (pollProcedureList) {
         for (PollProcedure* p = pollProcedureList; p->next; p = p->next) {
             if (p->next == pp) {

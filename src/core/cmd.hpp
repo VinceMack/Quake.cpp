@@ -15,12 +15,14 @@ using xcommand_t = std::function<void()>;
 
 enum class Source { Client, Command };
 
-struct State { Source source = Source::Command; };
+struct State {
+    Source source = Source::Command;
+};
 
 struct CaseInsensitiveLess {
     using is_transparent = void;
-    template <typename T, typename U>
-    bool operator()(const T& lhs, const U& rhs) const {
+    template <typename T, typename U> bool operator()(const T& lhs, const U& rhs) const
+    {
         std::string_view a(lhs.data(), lhs.size()), b(rhs.data(), rhs.size());
         return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end(), [](char x, char y) {
             return std::tolower(static_cast<unsigned char>(x)) < std::tolower(static_cast<unsigned char>(y));
@@ -51,7 +53,8 @@ public:
     std::map<std::string, std::string, CaseInsensitiveLess>& GetAliases() { return aliases_; }
     bool& GetCmdWait() { return cmd_wait_; }
 
-    void AddAlias(std::string_view name, std::string_view value) {
+    void AddAlias(std::string_view name, std::string_view value)
+    {
         aliases_[std::string(name.data(), name.length())] = std::string(value.data(), value.length());
     }
 

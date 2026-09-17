@@ -80,7 +80,7 @@ private:
     cvar_t showpause_ = { "showpause", "1", false, false, 0.0f, nullptr };
     cvar_t printspeed_ = { "scr_printspeed", "8", false, false, 0.0f, nullptr };
 
-    vrect_t vrect_{};
+    vrect_t vrect_ { };
 
     float con_current_ = 0.0f;
     float conlines_ = 0.0f;
@@ -108,7 +108,7 @@ private:
     qboolean drawdialog_ = false;
 
     std::string centerstring_;
-    std::string_view notifystring_{};
+    std::string_view notifystring_ { };
 
     qpic_t* ram_pic_ = nullptr;
     qpic_t* net_pic_ = nullptr;

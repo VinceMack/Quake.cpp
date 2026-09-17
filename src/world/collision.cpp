@@ -73,7 +73,8 @@ int HullPointContents(hull_t* hull, int num, const Vector3& p)
 
 constexpr double DIST_EPSILON = 0.03125;
 
-qboolean RecursiveHullCheck(hull_t* hull, int num, float p1f, float p2f, const Vector3& p1, const Vector3& p2, trace_t* trace)
+qboolean RecursiveHullCheck(
+    hull_t* hull, int num, float p1f, float p2f, const Vector3& p1, const Vector3& p2, trace_t* trace)
 {
     dclipnode_t* node;
     mplane_t* plane;
@@ -84,8 +85,10 @@ qboolean RecursiveHullCheck(hull_t* hull, int num, float p1f, float p2f, const V
     if (num < 0) {
         if (num != CONTENTS_SOLID) {
             trace->allsolid = false;
-            if (num == CONTENTS_EMPTY) trace->inopen = true;
-            else trace->inwater = true;
+            if (num == CONTENTS_EMPTY)
+                trace->inopen = true;
+            else
+                trace->inwater = true;
         } else {
             trace->startsolid = true;
         }
@@ -110,8 +113,10 @@ qboolean RecursiveHullCheck(hull_t* hull, int num, float p1f, float p2f, const V
     if (t1 >= 0 && t2 >= 0) return RecursiveHullCheck(hull, node->children[0], p1f, p2f, p1, p2, trace);
     if (t1 < 0 && t2 < 0) return RecursiveHullCheck(hull, node->children[1], p1f, p2f, p1, p2, trace);
 
-    if (t1 < 0) frac = static_cast<float>((t1 + DIST_EPSILON) / (t1 - t2));
-    else frac = static_cast<float>((t1 - DIST_EPSILON) / (t1 - t2));
+    if (t1 < 0)
+        frac = static_cast<float>((t1 + DIST_EPSILON) / (t1 - t2));
+    else
+        frac = static_cast<float>((t1 - DIST_EPSILON) / (t1 - t2));
 
     if (frac < 0) frac = 0;
     if (frac > 1) frac = 1;

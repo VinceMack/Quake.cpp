@@ -39,14 +39,12 @@ ServerSubsystem& GetServerSubsystem() noexcept
     return subsystem;
 }
 
-static std::array<std::array<char, 5>, MAX_MODELS> localmodels{};
+static std::array<std::array<char, 5>, MAX_MODELS> localmodels { };
 
 void SV_Init()
 {
-    cvar_t* cvars[] = {
-        &sv_friction, &sv_stopspeed, &sv_gravity, &sv_maxvelocity,
-        &sv_nostep, &sv_idealpitchscale, &sv_maxspeed, &sv_accelerate, &sv_edgefriction
-    };
+    cvar_t* cvars[] = { &sv_friction, &sv_stopspeed, &sv_gravity, &sv_maxvelocity, &sv_nostep, &sv_idealpitchscale,
+        &sv_maxspeed, &sv_accelerate, &sv_edgefriction };
     for (auto* cvar : cvars) Cvar::Register(cvar);
 
     Cvar::SetServerChangeCallback([](const cvar_t& var) {
@@ -104,8 +102,8 @@ void SV_CreateBaseline()
 
 void SV_SendReconnect()
 {
-    std::array<char, 128> data{};
-    sizebuf_t msg{};
+    std::array<char, 128> data { };
+    sizebuf_t msg { };
 
     msg.data = reinterpret_cast<byte*>(data.data());
     msg.cursize = 0;
@@ -153,7 +151,7 @@ void SV_SpawnServer(const char* server)
 
     Host::Host_ClearMemory();
 
-    sv = server_t{};
+    sv = server_t { };
     sv.SetName(server);
 
     VM::PR_LoadProgs();
@@ -211,8 +209,10 @@ void SV_SpawnServer(const char* server)
     ent->v.solid = SOLID_BSP;
     ent->v.movetype = MOVETYPE_PUSH;
 
-    if (coop.value) VM::pr_global_struct->coop = coop.value;
-    else VM::pr_global_struct->deathmatch = deathmatch.value;
+    if (coop.value)
+        VM::pr_global_struct->coop = coop.value;
+    else
+        VM::pr_global_struct->deathmatch = deathmatch.value;
 
     VM::pr_global_struct->mapname = VM::PR_SetString(sv.name.data());
     VM::pr_global_struct->serverflags = static_cast<float>(svs.serverflags);

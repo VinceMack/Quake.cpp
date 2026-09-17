@@ -82,7 +82,8 @@ float V_CalcBob(void)
     } else {
         cycle = static_cast<float>(M_PI + M_PI * (cycle - cl_bobup.value) / (1.0 - cl_bobup.value));
     }
-    bob = std::sqrt(Client::cl.velocity[0] * Client::cl.velocity[0] + Client::cl.velocity[1] * Client::cl.velocity[1]) * cl_bob.value;
+    bob = std::sqrt(Client::cl.velocity[0] * Client::cl.velocity[0] + Client::cl.velocity[1] * Client::cl.velocity[1])
+        * cl_bob.value;
     bob = static_cast<float>(bob * 0.3 + bob * 0.7 * std::sin(cycle));
     if (bob > 4) {
         bob = 4;
@@ -208,9 +209,12 @@ static void CalcGunAngle(void)
     oldpitch = pitch;
     Client::cl.viewent.angles[YAW] = Render::r_refdef.viewangles[YAW] + yaw;
     Client::cl.viewent.angles[PITCH] = -(Render::r_refdef.viewangles[PITCH] + pitch);
-    Client::cl.viewent.angles[ROLL] -= static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_iroll_cycle.value) * v_iroll_level.value);
-    Client::cl.viewent.angles[PITCH] -= static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_ipitch_cycle.value) * v_ipitch_level.value);
-    Client::cl.viewent.angles[YAW] -= static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_iyaw_cycle.value) * v_iyaw_level.value);
+    Client::cl.viewent.angles[ROLL] -= static_cast<float>(
+        v_idlescale.value * std::sin(Client::cl.time * v_iroll_cycle.value) * v_iroll_level.value);
+    Client::cl.viewent.angles[PITCH] -= static_cast<float>(
+        v_idlescale.value * std::sin(Client::cl.time * v_ipitch_cycle.value) * v_ipitch_level.value);
+    Client::cl.viewent.angles[YAW]
+        -= static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_iyaw_cycle.value) * v_iyaw_level.value);
 }
 
 static void V_BoundOffsets(void)
@@ -236,9 +240,12 @@ static void V_BoundOffsets(void)
 
 static void V_AddIdle(void)
 {
-    Render::r_refdef.viewangles[ROLL] += static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_iroll_cycle.value) * v_iroll_level.value);
-    Render::r_refdef.viewangles[PITCH] += static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_ipitch_cycle.value) * v_ipitch_level.value);
-    Render::r_refdef.viewangles[YAW] += static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_iyaw_cycle.value) * v_iyaw_level.value);
+    Render::r_refdef.viewangles[ROLL] += static_cast<float>(
+        v_idlescale.value * std::sin(Client::cl.time * v_iroll_cycle.value) * v_iroll_level.value);
+    Render::r_refdef.viewangles[PITCH] += static_cast<float>(
+        v_idlescale.value * std::sin(Client::cl.time * v_ipitch_cycle.value) * v_ipitch_level.value);
+    Render::r_refdef.viewangles[YAW]
+        += static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_iyaw_cycle.value) * v_iyaw_level.value);
 }
 
 static void V_CalcViewRoll(void)

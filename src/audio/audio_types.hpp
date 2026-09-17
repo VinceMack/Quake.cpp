@@ -20,80 +20,102 @@ inline constexpr int MAX_CHANNELS = 128;
 inline constexpr int MAX_DYNAMIC_CHANNELS = 8;
 inline constexpr size_t MAX_SFX = 512;
 
-struct portable_samplepair_t { int left{}; int right{}; };
+struct portable_samplepair_t {
+    int left { };
+    int right { };
+};
 #if defined(_MSC_VER)
 #pragma warning(push)
-#pragma warning(disable: 4200)
+#pragma warning(disable : 4200)
 #endif
-struct sfxcache_t { int length{}; int loopstart{}; int speed{}; int width{}; int stereo{}; byte data[]; };
+struct sfxcache_t {
+    int length { };
+    int loopstart { };
+    int speed { };
+    int width { };
+    int stereo { };
+    byte data[];
+};
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 
 struct sfx_t {
-    char name[MAX_QPATH]{};
+    char name[MAX_QPATH] { };
     std::vector<byte> data; // an sfxcache_t header followed by the samples; empty until loaded
 };
 using sfx_s = sfx_t;
 
 // Returns the loaded sound data, or nullptr if the sound has not been loaded yet.
-[[nodiscard]] inline sfxcache_t* S_SfxCache(sfx_t* sfx) {
+[[nodiscard]] inline sfxcache_t* S_SfxCache(sfx_t* sfx)
+{
     return sfx->data.empty() ? nullptr : reinterpret_cast<sfxcache_t*>(sfx->data.data());
 }
 
 struct dma_t {
-    std::atomic<bool> gamealive{false}, soundalive{false}, splitbuffer{false};
-    std::atomic<int> channels{0}, samples{0}, submission_chunk{0}, samplepos{0}, samplebits{0}, speed{0};
-    std::atomic<unsigned char*> buffer{nullptr};
-    void Reset(int bits, int spd, int ch, int smp, unsigned char* buf = nullptr) {
-        splitbuffer.store(0, std::memory_order_relaxed); samplebits.store(bits, std::memory_order_relaxed);
-        speed.store(spd, std::memory_order_relaxed); channels.store(ch, std::memory_order_relaxed);
-        samples.store(smp, std::memory_order_relaxed); samplepos.store(0, std::memory_order_relaxed);
-        soundalive.store(true, std::memory_order_relaxed); gamealive.store(true, std::memory_order_relaxed);
-        submission_chunk.store(1, std::memory_order_relaxed); buffer.store(buf, std::memory_order_release);
+    std::atomic<bool> gamealive { false }, soundalive { false }, splitbuffer { false };
+    std::atomic<int> channels { 0 }, samples { 0 }, submission_chunk { 0 }, samplepos { 0 }, samplebits { 0 },
+        speed { 0 };
+    std::atomic<unsigned char*> buffer { nullptr };
+    void Reset(int bits, int spd, int ch, int smp, unsigned char* buf = nullptr)
+    {
+        splitbuffer.store(0, std::memory_order_relaxed);
+        samplebits.store(bits, std::memory_order_relaxed);
+        speed.store(spd, std::memory_order_relaxed);
+        channels.store(ch, std::memory_order_relaxed);
+        samples.store(smp, std::memory_order_relaxed);
+        samplepos.store(0, std::memory_order_relaxed);
+        soundalive.store(true, std::memory_order_relaxed);
+        gamealive.store(true, std::memory_order_relaxed);
+        submission_chunk.store(1, std::memory_order_relaxed);
+        buffer.store(buf, std::memory_order_release);
     }
 };
 
 struct channel_t {
-    sfx_t* sfx{};
-    int leftvol{}, rightvol{}, end{}, pos{}, looping{}, entnum{}, entchannel{};
-    Vector3 origin{};
-    vec_t dist_mult{};
-    int master_vol{};
+    sfx_t* sfx { };
+    int leftvol { }, rightvol { }, end { }, pos { }, looping { }, entnum { }, entchannel { };
+    Vector3 origin { };
+    vec_t dist_mult { };
+    int master_vol { };
 };
 
-struct wavinfo_t { int rate{}, width{}, channels{}, loopstart{}, samples{}, dataofs{}; };
+struct wavinfo_t {
+    int rate { }, width { }, channels { }, loopstart { }, samples { }, dataofs { };
+};
 
 enum class AudioCommandType { StartSound, StaticSound, StopSound, StopAllSounds, ListenerUpdate, ClearBuffer };
 
 struct AudioCommand {
-    AudioCommandType type{};
-    int entnum{}, entchannel{};
-    sfx_t* sfx{};
-    Vector3 origin{};
-    float vol{}, attenuation{};
-    bool clear{};
-    Vector3 v_forward{}, v_right{}, v_up{};
-    std::array<int, NUM_AMBIENTS> ambient_vols{};
-    float host_frametime{}, ambient_fade{};
-    bool snd_ambient{};
-    int random_offset{};
+    AudioCommandType type { };
+    int entnum { }, entchannel { };
+    sfx_t* sfx { };
+    Vector3 origin { };
+    float vol { }, attenuation { };
+    bool clear { };
+    Vector3 v_forward { }, v_right { }, v_up { };
+    std::array<int, NUM_AMBIENTS> ambient_vols { };
+    float host_frametime { }, ambient_fade { };
+    bool snd_ambient { };
+    int random_offset { };
 };
 
-template <typename T, size_t Capacity>
-class SPSCQueue {
+template <typename T, size_t Capacity> class SPSCQueue {
     static_assert((Capacity & (Capacity - 1)) == 0 && std::is_trivially_copyable_v<T>);
     std::array<T, Capacity> buffer_;
-    alignas(64) std::atomic<size_t> write_idx_{0}, read_idx_{0};
+    alignas(64) std::atomic<size_t> write_idx_ { 0 }, read_idx_ { 0 };
+
 public:
-    [[nodiscard]] bool Push(const T& val) {
+    [[nodiscard]] bool Push(const T& val)
+    {
         size_t w = write_idx_.load(std::memory_order_relaxed), r = read_idx_.load(std::memory_order_acquire);
         if (w - r >= Capacity) return false;
         buffer_[w & (Capacity - 1)] = val;
         write_idx_.store(w + 1, std::memory_order_release);
         return true;
     }
-    [[nodiscard]] bool Pop(T& val) {
+    [[nodiscard]] bool Pop(T& val)
+    {
         size_t r = read_idx_.load(std::memory_order_relaxed), w = write_idx_.load(std::memory_order_acquire);
         if (r == w) return false;
         val = buffer_[r & (Capacity - 1)];

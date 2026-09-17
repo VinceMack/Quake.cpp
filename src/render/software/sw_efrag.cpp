@@ -9,8 +9,8 @@ namespace Render {
 efrag_t** lastlink = nullptr;
 entity_t* r_addent = nullptr;
 mnode_t* r_pefragtopnode = nullptr;
-Vector3 r_emins{};
-Vector3 r_emaxs{};
+Vector3 r_emins { };
+Vector3 r_emaxs { };
 
 void R_RemoveEfrags(entity_t* ent)
 {

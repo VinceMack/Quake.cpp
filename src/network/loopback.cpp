@@ -7,11 +7,13 @@
 
 namespace Net {
 
-int LoopbackDriver::Init() {
+int LoopbackDriver::Init()
+{
     return (Client::cls.state == ca_dedicated) ? -1 : 0;
 }
 
-void LoopbackDriver::SearchForHosts(qboolean) {
+void LoopbackDriver::SearchForHosts(qboolean)
+{
     if (!Server::sv.active) return;
     hostCacheCount = 1;
     const char* name = (Common::Q_strcmp(hostname.string.c_str(), "UNNAMED") == 0) ? "local" : hostname.string.c_str();
@@ -23,7 +25,8 @@ void LoopbackDriver::SearchForHosts(qboolean) {
     Common::Q_strcpy(hostcache[0].cname, "local");
 }
 
-qsocket_t* LoopbackDriver::Connect(const char* host) {
+qsocket_t* LoopbackDriver::Connect(const char* host)
+{
     if (Common::Q_strcmp(host, "local") != 0) return nullptr;
     localconnectpending = true;
 
@@ -42,7 +45,8 @@ qsocket_t* LoopbackDriver::Connect(const char* host) {
     return loop_client;
 }
 
-qsocket_t* LoopbackDriver::CheckNewConnections() {
+qsocket_t* LoopbackDriver::CheckNewConnections()
+{
     if (!localconnectpending) return nullptr;
     localconnectpending = false;
     loop_server->sendMessageLength = loop_server->receiveMessageLength = 0;
@@ -51,7 +55,8 @@ qsocket_t* LoopbackDriver::CheckNewConnections() {
     return loop_server;
 }
 
-int LoopbackDriver::GetMessage(qsocket_t* sock) {
+int LoopbackDriver::GetMessage(qsocket_t* sock)
+{
     if (sock->receiveMessageLength == 0) return 0;
     int ret = sock->receiveMessage[0];
     int length = sock->receiveMessage[1] + (sock->receiveMessage[2] << 8);
@@ -69,7 +74,8 @@ int LoopbackDriver::GetMessage(qsocket_t* sock) {
     return ret;
 }
 
-int LoopbackDriver::SendMessage(qsocket_t* sock, sizebuf_t* data) {
+int LoopbackDriver::SendMessage(qsocket_t* sock, sizebuf_t* data)
+{
     if (!sock->driverdata) return -1;
     qsocket_t* peer = (qsocket_t*)sock->driverdata;
     if ((peer->receiveMessageLength + data->cursize + 4) > NET_MAXMESSAGE) {
@@ -87,7 +93,8 @@ int LoopbackDriver::SendMessage(qsocket_t* sock, sizebuf_t* data) {
     return 1;
 }
 
-int LoopbackDriver::SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data) {
+int LoopbackDriver::SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data)
+{
     if (!sock->driverdata) return -1;
     qsocket_t* peer = (qsocket_t*)sock->driverdata;
     if ((peer->receiveMessageLength + data->cursize + 3) > NET_MAXMESSAGE) return 0;
@@ -102,11 +109,13 @@ int LoopbackDriver::SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data) {
     return 1;
 }
 
-qboolean LoopbackDriver::CanSendMessage(qsocket_t* sock) {
+qboolean LoopbackDriver::CanSendMessage(qsocket_t* sock)
+{
     return sock->driverdata ? sock->canSend : false;
 }
 
-void LoopbackDriver::Close(qsocket_t* sock) {
+void LoopbackDriver::Close(qsocket_t* sock)
+{
     if (sock->driverdata) {
         ((qsocket_t*)sock->driverdata)->driverdata = nullptr;
     }

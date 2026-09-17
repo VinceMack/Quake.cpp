@@ -20,7 +20,8 @@ typedef int errno_t;
 #define STRUNCATE 80
 #endif
 
-inline errno_t strcpy_s(char* dest, size_t destsz, const char* src) {
+inline errno_t strcpy_s(char* dest, size_t destsz, const char* src)
+{
     if (!dest || destsz == 0) return EINVAL;
     if (!src) {
         dest[0] = '\0';
@@ -35,7 +36,8 @@ inline errno_t strcpy_s(char* dest, size_t destsz, const char* src) {
     return 0;
 }
 
-inline errno_t strncpy_s(char* dest, size_t destsz, const char* src, size_t count) {
+inline errno_t strncpy_s(char* dest, size_t destsz, const char* src, size_t count)
+{
     if (!dest || destsz == 0) return EINVAL;
     if (!src) {
         dest[0] = '\0';
@@ -63,7 +65,8 @@ inline errno_t strncpy_s(char* dest, size_t destsz, const char* src, size_t coun
     }
 }
 
-inline errno_t strcat_s(char* dest, size_t destsz, const char* src) {
+inline errno_t strcat_s(char* dest, size_t destsz, const char* src)
+{
     if (!dest || destsz == 0) return EINVAL;
     if (!src) return EINVAL;
     size_t dest_len = strlen(dest);
@@ -80,7 +83,8 @@ inline errno_t strcat_s(char* dest, size_t destsz, const char* src) {
     return 0;
 }
 
-inline int sprintf_s(char* dest, size_t destsz, const char* format, ...) {
+inline int sprintf_s(char* dest, size_t destsz, const char* format, ...)
+{
     if (!dest || destsz == 0) return -1;
     va_list args;
     va_start(args, format);
@@ -93,7 +97,8 @@ inline int sprintf_s(char* dest, size_t destsz, const char* format, ...) {
     return ret;
 }
 
-inline int vsprintf_s(char* dest, size_t destsz, const char* format, va_list args) {
+inline int vsprintf_s(char* dest, size_t destsz, const char* format, va_list args)
+{
     if (!dest || destsz == 0) return -1;
     int ret = vsnprintf(dest, destsz, format, args);
     if (ret < 0 || (size_t)ret >= destsz) {
@@ -103,7 +108,8 @@ inline int vsprintf_s(char* dest, size_t destsz, const char* format, va_list arg
     return ret;
 }
 
-inline errno_t fopen_s(FILE** pFile, const char* filename, const char* mode) {
+inline errno_t fopen_s(FILE** pFile, const char* filename, const char* mode)
+{
     if (!pFile || !filename || !mode) return EINVAL;
     *pFile = fopen(filename, mode);
     if (*pFile == nullptr) {
@@ -112,7 +118,8 @@ inline errno_t fopen_s(FILE** pFile, const char* filename, const char* mode) {
     return 0;
 }
 
-inline errno_t strerror_s(char* buf, size_t bufsz, int errnum) {
+inline errno_t strerror_s(char* buf, size_t bufsz, int errnum)
+{
     if (!buf || bufsz == 0) return EINVAL;
     const char* msg = strerror(errnum);
     if (!msg) {
@@ -129,7 +136,8 @@ inline errno_t strerror_s(char* buf, size_t bufsz, int errnum) {
     return 0;
 }
 
-inline int vfscanf_s_compat(FILE* stream, const char* format, va_list ap) {
+inline int vfscanf_s_compat(FILE* stream, const char* format, va_list ap)
+{
     void* args[16] = { nullptr };
     int arg_count = 0;
 
@@ -158,7 +166,7 @@ inline int vfscanf_s_compat(FILE* stream, const char* format, va_list ap) {
                     type = '[';
                 }
                 if (*p) p++;
-                
+
                 void* ptr = va_arg(ap, void*);
                 if (arg_count < 16) {
                     args[arg_count++] = ptr;
@@ -173,20 +181,31 @@ inline int vfscanf_s_compat(FILE* stream, const char* format, va_list ap) {
     }
 
     switch (arg_count) {
-        case 0:  return fscanf(stream, format);
-        case 1:  return fscanf(stream, format, args[0]);
-        case 2:  return fscanf(stream, format, args[0], args[1]);
-        case 3:  return fscanf(stream, format, args[0], args[1], args[2]);
-        case 4:  return fscanf(stream, format, args[0], args[1], args[2], args[3]);
-        case 5:  return fscanf(stream, format, args[0], args[1], args[2], args[3], args[4]);
-        case 6:  return fscanf(stream, format, args[0], args[1], args[2], args[3], args[4], args[5]);
-        case 7:  return fscanf(stream, format, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-        case 8:  return fscanf(stream, format, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
-        default: return -1;
+    case 0:
+        return fscanf(stream, format);
+    case 1:
+        return fscanf(stream, format, args[0]);
+    case 2:
+        return fscanf(stream, format, args[0], args[1]);
+    case 3:
+        return fscanf(stream, format, args[0], args[1], args[2]);
+    case 4:
+        return fscanf(stream, format, args[0], args[1], args[2], args[3]);
+    case 5:
+        return fscanf(stream, format, args[0], args[1], args[2], args[3], args[4]);
+    case 6:
+        return fscanf(stream, format, args[0], args[1], args[2], args[3], args[4], args[5]);
+    case 7:
+        return fscanf(stream, format, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+    case 8:
+        return fscanf(stream, format, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
+    default:
+        return -1;
     }
 }
 
-inline int vsscanf_s_compat(const char* buffer, const char* format, va_list ap) {
+inline int vsscanf_s_compat(const char* buffer, const char* format, va_list ap)
+{
     void* args[16] = { nullptr };
     int arg_count = 0;
 
@@ -215,7 +234,7 @@ inline int vsscanf_s_compat(const char* buffer, const char* format, va_list ap) 
                     type = '[';
                 }
                 if (*p) p++;
-                
+
                 void* ptr = va_arg(ap, void*);
                 if (arg_count < 16) {
                     args[arg_count++] = ptr;
@@ -230,20 +249,31 @@ inline int vsscanf_s_compat(const char* buffer, const char* format, va_list ap) 
     }
 
     switch (arg_count) {
-        case 0:  return sscanf(buffer, format);
-        case 1:  return sscanf(buffer, format, args[0]);
-        case 2:  return sscanf(buffer, format, args[0], args[1]);
-        case 3:  return sscanf(buffer, format, args[0], args[1], args[2]);
-        case 4:  return sscanf(buffer, format, args[0], args[1], args[2], args[3]);
-        case 5:  return sscanf(buffer, format, args[0], args[1], args[2], args[3], args[4]);
-        case 6:  return sscanf(buffer, format, args[0], args[1], args[2], args[3], args[4], args[5]);
-        case 7:  return sscanf(buffer, format, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-        case 8:  return sscanf(buffer, format, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
-        default: return -1;
+    case 0:
+        return sscanf(buffer, format);
+    case 1:
+        return sscanf(buffer, format, args[0]);
+    case 2:
+        return sscanf(buffer, format, args[0], args[1]);
+    case 3:
+        return sscanf(buffer, format, args[0], args[1], args[2]);
+    case 4:
+        return sscanf(buffer, format, args[0], args[1], args[2], args[3]);
+    case 5:
+        return sscanf(buffer, format, args[0], args[1], args[2], args[3], args[4]);
+    case 6:
+        return sscanf(buffer, format, args[0], args[1], args[2], args[3], args[4], args[5]);
+    case 7:
+        return sscanf(buffer, format, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+    case 8:
+        return sscanf(buffer, format, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
+    default:
+        return -1;
     }
 }
 
-inline int fscanf_s(FILE* stream, const char* format, ...) {
+inline int fscanf_s(FILE* stream, const char* format, ...)
+{
     va_list ap;
     va_start(ap, format);
     int ret = vfscanf_s_compat(stream, format, ap);
@@ -251,7 +281,8 @@ inline int fscanf_s(FILE* stream, const char* format, ...) {
     return ret;
 }
 
-inline int sscanf_s(const char* buffer, const char* format, ...) {
+inline int sscanf_s(const char* buffer, const char* format, ...)
+{
     va_list ap;
     va_start(ap, format);
     int ret = vsscanf_s_compat(buffer, format, ap);
@@ -263,7 +294,8 @@ constexpr int _SH_DENYNO = 0;
 constexpr int _S_IREAD = 0400;
 constexpr int _S_IWRITE = 0200;
 
-inline int _sopen_s(int* pfd, const char* filename, int oflag, int shflag, int pmode) {
+inline int _sopen_s(int* pfd, const char* filename, int oflag, int shflag, int pmode)
+{
     (void)shflag;
     if (!pfd) return EINVAL;
     *pfd = open(filename, oflag, pmode);

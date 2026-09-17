@@ -25,5 +25,3 @@ float V_CalcBob();
 extern float v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
 } // namespace View
-
-

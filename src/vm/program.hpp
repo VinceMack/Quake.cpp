@@ -9,16 +9,7 @@
 using func_t = int;
 using string_t = int;
 
-enum etype_t : int {
-    ev_void,
-    ev_string,
-    ev_float,
-    ev_vector,
-    ev_entity,
-    ev_field,
-    ev_function,
-    ev_pointer
-};
+enum etype_t : int { ev_void, ev_string, ev_float, ev_vector, ev_entity, ev_field, ev_function, ev_pointer };
 
 constexpr int OFS_NULL = 0;
 constexpr int OFS_RETURN = 1;
@@ -132,7 +123,7 @@ struct dfunction_t {
     int s_name = 0;
     int s_file = 0;
     int numparms = 0;
-    std::array<uint8_t, MAX_PARMS> parm_size{};
+    std::array<uint8_t, MAX_PARMS> parm_size { };
 };
 
 constexpr int PROG_VERSION = 6;
@@ -189,7 +180,10 @@ void PR_Init();
 void PR_LoadProgs();
 
 string_t PR_SetString(const char* str);
-inline string_t PR_SetString(std::string_view str) { return PR_SetString(str.data()); }
+inline string_t PR_SetString(std::string_view str)
+{
+    return PR_SetString(str.data());
+}
 [[nodiscard]] char* PR_GetString(string_t handle);
 string_t PR_CreateString(int size, char** out_ptr);
 

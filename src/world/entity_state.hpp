@@ -4,8 +4,8 @@
 #include "core/math.hpp"
 
 struct entity_state_t {
-    Vector3 origin{};
-    Vector3 angles{};
+    Vector3 origin { };
+    Vector3 angles { };
     int modelindex = 0;
     int frame = 0;
     int colormap = 0;
