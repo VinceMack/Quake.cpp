@@ -18,7 +18,7 @@ namespace Render {
 
 drawsurf_t r_drawsurf;
 
-static int lightleft, sourcesstep, blocksize, sourcetstep;
+static int lightleft, blocksize, sourcetstep;
 static int lightright, lightleftstep, lightrightstep, blockdivshift;
 static void* prowdestbase;
 static unsigned char* pbasesource;
@@ -193,30 +193,6 @@ void R_DrawSurfaceBlock8_mip1() { R_DrawSurfaceBlock8_mip_T<3>(); }
 void R_DrawSurfaceBlock8_mip2() { R_DrawSurfaceBlock8_mip_T<2>(); }
 void R_DrawSurfaceBlock8_mip3() { R_DrawSurfaceBlock8_mip_T<1>(); }
 
-void R_DrawSurfaceBlock16()
-{
-    unsigned short* prowdest = (unsigned short*)prowdestbase;
-    for (int k = 0; k < blocksize; k++) {
-        unsigned char* psource = pbasesource;
-        int lighttemp = lightright - lightleft;
-        int lightstep = lighttemp >> blockdivshift;
-        int light = lightleft;
-        unsigned short* pdest = prowdest;
-        for (int b = 0; b < blocksize; b++) {
-            unsigned char pix = *psource;
-            *pdest = Vid::vid.colormap16[(light & 0xFF00) + pix];
-            psource += sourcesstep;
-            pdest++;
-            light += lightstep;
-        }
-        pbasesource += sourcetstep;
-        lightright += lightrightstep;
-        lightleft += lightleftstep;
-        prowdest = (unsigned short*)((size_t)prowdest + surfrowbytes);
-    }
-    prowdestbase = prowdest;
-}
-
 void R_DrawSurface()
 {
     R_BuildLightMap();
@@ -230,15 +206,8 @@ void R_DrawSurface()
     r_numhblocks = r_drawsurf.surfwidth >> blockdivshift;
     r_numvblocks = r_drawsurf.surfheight >> blockdivshift;
 
-    void (*pblockdrawer)(void);
-    int horzblockstep;
-    if (r_pixbytes == 1) {
-        pblockdrawer = surfmiptable[r_drawsurf.surfmip];
-        horzblockstep = blocksize;
-    } else {
-        pblockdrawer = R_DrawSurfaceBlock16;
-        horzblockstep = blocksize << 1;
-    }
+    void (*pblockdrawer)(void) = surfmiptable[r_drawsurf.surfmip];
+    int horzblockstep = blocksize;
     int smax = mt->width >> r_drawsurf.surfmip;
     int twidth = texwidth;
     int tmax = mt->height >> r_drawsurf.surfmip;

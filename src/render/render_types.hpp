@@ -20,7 +20,6 @@ using vrect_t = vrect_s;
 struct viddef_t {
     pixel_t* buffer = nullptr;
     pixel_t* colormap = nullptr;
-    unsigned short* colormap16 = nullptr;
     int fullbright = 0;
     unsigned rowbytes = 0;
     unsigned width = 0;
@@ -34,7 +33,6 @@ struct viddef_t {
     unsigned conheight = 0;
     int maxwarpwidth = 0;
     int maxwarpheight = 0;
-    pixel_t* direct = nullptr;
 };
 
 // Forward declarations

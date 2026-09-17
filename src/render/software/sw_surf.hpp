@@ -10,7 +10,6 @@ void R_DrawSurfaceBlock8_mip0();
 void R_DrawSurfaceBlock8_mip1();
 void R_DrawSurfaceBlock8_mip2();
 void R_DrawSurfaceBlock8_mip3();
-void R_DrawSurfaceBlock16();
 
 void R_AddDynamicLights();
 void R_BuildLightMap();

@@ -13,7 +13,6 @@ using namespace Render;
 namespace Vid {
 
 viddef_t vid;
-unsigned short d_8to16table[256];
 
 void VID_HandlePause()
 {
@@ -21,9 +20,6 @@ void VID_HandlePause()
 
 #define BASEWIDTH (320 * 2)
 #define BASEHEIGHT (200 * 2)
-
-int VGA_width, VGA_height, VGA_rowbytes;
-byte* VGA_pagebase;
 
 static SDL_Window* window = nullptr;
 static SDL_Surface* screen = nullptr;
@@ -105,17 +101,16 @@ void VID_Init(unsigned char* palette)
         screen = new_screen;
     }
     VID_SetPalette(palette);
-    VGA_width = vid.conwidth = vid.width;
-    VGA_height = vid.conheight = vid.height;
+    vid.conwidth = vid.width;
+    vid.conheight = vid.height;
     vid.aspect = static_cast<float>(((float)vid.height / (float)vid.width) * (320.0 / 240.0));
     vid.numpages = 1;
     vid.colormap = host_colormap;
     vid.fullbright = 256 - LittleLong(*((int*)vid.colormap + 2048));
-    VGA_pagebase = vid.buffer = (pixel_t*)screen->pixels;
-    VGA_rowbytes = vid.rowbytes = screen->pitch;
+    vid.buffer = (pixel_t*)screen->pixels;
+    vid.rowbytes = screen->pitch;
     vid.conbuffer = vid.buffer;
     vid.conrowbytes = vid.rowbytes;
-    vid.direct = 0;
     chunk = vid.width * vid.height * sizeof(*d_pzbuffer);
     cachesize = D_SurfaceCacheForRes(vid.width, vid.height);
     chunk += cachesize;

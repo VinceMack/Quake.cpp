@@ -57,19 +57,11 @@ void R_MakeSky()
     unsigned* pnewsky = reinterpret_cast<unsigned*>(newsky.data());
     for (int y = 0; y < SKYSIZE; y++) {
         int baseofs = ((y + yshift) & SKYMASK) * 131;
-#if UNALIGNED_OK
-        for (int x = 0; x < SKYSIZE; x += 4) {
-            int ofs = baseofs + ((x + xshift) & SKYMASK);
-            *pnewsky = (*(pnewsky + (128 / sizeof(unsigned))) & *reinterpret_cast<unsigned*>(&bottommask[ofs])) | *reinterpret_cast<unsigned*>(&bottomsky[ofs]);
-            pnewsky++;
-        }
-#else
         for (int x = 0; x < SKYSIZE; x++) {
             int ofs = baseofs + ((x + xshift) & SKYMASK);
             *reinterpret_cast<byte*>(pnewsky) = (*(reinterpret_cast<byte*>(pnewsky) + 128) & bottommask[ofs]) | bottomsky[ofs];
             pnewsky = reinterpret_cast<unsigned*>(reinterpret_cast<byte*>(pnewsky) + 1);
         }
-#endif
         pnewsky += 128 / sizeof(unsigned);
     }
     r_skymade = 1;

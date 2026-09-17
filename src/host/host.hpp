@@ -12,7 +12,6 @@ struct client_t;
 
 struct quakeparms_t {
     const char* basedir{nullptr};
-    const char* cachedir{nullptr};
     int argc{0};
     char** argv{nullptr};
     void* membase{nullptr};

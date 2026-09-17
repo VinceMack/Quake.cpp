@@ -95,9 +95,7 @@ void R_TimeRefresh_f()
     float start = static_cast<float>(Sys_FloatTime());
     for (int i = 0; i < 128; i++) {
         r_refdef.viewangles[1] = static_cast<float>(i / 128.0 * 360.0);
-        VID_LockBuffer();
         R_RenderView();
-        VID_UnlockBuffer();
         vr.x = r_refdef.vrect.x;
         vr.y = r_refdef.vrect.y;
         vr.width = r_refdef.vrect.width;

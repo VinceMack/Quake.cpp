@@ -332,7 +332,6 @@ void S_Update(const Vector3& origin, const Vector3& forward, const Vector3& righ
     }
 }
 
-void S_ExtraUpdate() {}
 
 void S_PlayHelper(bool has_volume) {
     thread_local std::mt19937 rng(std::random_device{}());

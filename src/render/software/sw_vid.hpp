@@ -8,9 +8,6 @@
 namespace Vid {
 
 extern viddef_t vid;
-extern unsigned short d_8to16table[256];
-extern int VGA_width, VGA_height, VGA_rowbytes;
-extern byte* VGA_pagebase;
 
 void VID_HandlePause();
 void VID_SetPalette(unsigned char* palette);

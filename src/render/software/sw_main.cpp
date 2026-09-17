@@ -55,7 +55,6 @@ qboolean r_drawpolys = false;
 qboolean r_drawculledpolys = false;
 qboolean r_worldpolysbacktofront = false;
 qboolean r_recursiveaffinetriangles = true;
-int r_pixbytes = 1;
 float r_aliasuvscale = 1.0f;
 qboolean r_dowarp = false;
 bool r_dowarpold = false;
@@ -442,11 +441,6 @@ void R_EdgeDrawing()
         db_time2 = static_cast<float>(Sys_FloatTime());
         se_time1 = db_time2;
     }
-    if (!r_dspeeds.value) {
-        VID_UnlockBuffer();
-        S_ExtraUpdate();
-        VID_LockBuffer();
-    }
     if (!(r_drawpolys | r_drawculledpolys)) {
         R_ScanEdges();
     }
@@ -461,21 +455,10 @@ void R_RenderView_()
     }
     R_SetupFrame();
     R_MarkLeaves();
-    Sys_LowFPPrecision();
     if (!cl_entities[0].model || !cl.worldmodel) {
         Sys_Error("R_RenderView: nullptr worldmodel");
     }
-    if (!r_dspeeds.value) {
-        VID_UnlockBuffer();
-        S_ExtraUpdate();
-        VID_LockBuffer();
-    }
     R_EdgeDrawing();
-    if (!r_dspeeds.value) {
-        VID_UnlockBuffer();
-        S_ExtraUpdate();
-        VID_LockBuffer();
-    }
     if (r_dspeeds.value) {
         se_time2 = static_cast<float>(Sys_FloatTime());
         de_time1 = se_time2;
@@ -516,7 +499,6 @@ void R_RenderView_()
     if (r_reportedgeout.value && r_outofedges) {
         Con_Printf("Short roughly %d edges\n", r_outofedges * 2 / 3);
     }
-    Sys_HighFPPrecision();
 }
 
 void R_RenderView()
@@ -525,9 +507,6 @@ void R_RenderView()
     int delta = static_cast<int>(reinterpret_cast<byte*>(&dummy) - r_stack_start);
     if (delta < -10000 || delta > 10000) {
         Sys_Error("R_RenderView: called without enough stack");
-    }
-    if (Hunk_LowMark() & 3) {
-        Sys_Error("Hunk is missaligned");
     }
     if (reinterpret_cast<size_t>(&dummy) & 3) {
         Sys_Error("Stack is missaligned");

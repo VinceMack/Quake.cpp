@@ -44,10 +44,6 @@ void Sys_Quit(void) {
     std::exit(0);
 }
 
-void Sys_Init(void) {}
-void Sys_LowFPPrecision(void) {}
-void Sys_HighFPPrecision(void) {}
-void Sys_SetFPCW(void) {}
 
 [[noreturn]] void Sys_Error(const char* error, ...) {
     va_list argptr;
@@ -148,13 +144,13 @@ int Sys_FileWrite(int handle, const void* src, int count) {
     return size;
 }
 
-int Sys_FileTime(const char* path) {
+bool Sys_FileExists(const char* path) {
     FILE* f = nullptr;
     if (fopen_s(&f, path, "rb") == 0 && f) {
         std::fclose(f);
-        return 1;
+        return true;
     }
-    return -1;
+    return false;
 }
 
 void Sys_mkdir(const char* path) {

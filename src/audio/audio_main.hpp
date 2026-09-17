@@ -32,7 +32,6 @@ void S_StopSound(int entnum, int entchannel);
 void S_StopAllSounds(bool clear);
 void S_ClearBuffer();
 void S_Update(const Vector3& origin, const Vector3& v_forward, const Vector3& v_right, const Vector3& v_up);
-void S_ExtraUpdate();
 
 [[nodiscard]] sfx_t* S_PrecacheSound(eastl::string_view sample);
 void S_TouchSound(eastl::string_view sample);

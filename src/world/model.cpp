@@ -923,20 +923,10 @@ void* Mod_LoadAliasSkin(void* pin,
     int skinsize,
     aliashdr_t* pheader)
 {
-    byte* pskin = reinterpret_cast<byte*>(Hunk_Alloc(skinsize * r_pixbytes, loadname));
+    byte* pskin = reinterpret_cast<byte*>(Hunk_Alloc(skinsize, loadname));
     byte* pinskin = reinterpret_cast<byte*>(pin);
     *pskinindex = static_cast<int>(reinterpret_cast<byte*>(pskin) - reinterpret_cast<byte*>(pheader));
-    if (r_pixbytes == 1) {
-        Q_memcpy(pskin, pinskin, skinsize);
-    } else if (r_pixbytes == 2) {
-        unsigned short* pusskin = reinterpret_cast<unsigned short*>(pskin);
-        for (int i = 0; i < skinsize; i++) {
-            pusskin[i] = d_8to16table[pinskin[i]];
-        }
-    } else {
-        Sys_Error("Mod_LoadAliasSkin: driver set invalid r_pixbytes: %d\n",
-            r_pixbytes);
-    }
+    Q_memcpy(pskin, pinskin, skinsize);
     pinskin += skinsize;
     return reinterpret_cast<void*>(pinskin);
 }
@@ -1114,7 +1104,7 @@ void* Mod_LoadSpriteFrame(void* pin, mspriteframe_t** ppframe)
     int width = LittleLong(pinframe->width);
     int height = LittleLong(pinframe->height);
     int size = width * height;
-    int alloc_size = sizeof(mspriteframe_t) + size * r_pixbytes;
+    int alloc_size = sizeof(mspriteframe_t) + size;
     loadmodel->sprite_allocations.emplace_back();
     auto& sprite_buf = loadmodel->sprite_allocations.back();
     sprite_buf.resize(alloc_size);
@@ -1130,18 +1120,7 @@ void* Mod_LoadSpriteFrame(void* pin, mspriteframe_t** ppframe)
     pspriteframe->down = static_cast<float>(origin[1] - height);
     pspriteframe->left = static_cast<float>(origin[0]);
     pspriteframe->right = static_cast<float>(width + origin[0]);
-    if (r_pixbytes == 1) {
-        std::memcpy(&pspriteframe->pixels[0], reinterpret_cast<byte*>(pinframe + 1), size);
-    } else if (r_pixbytes == 2) {
-        byte* ppixin = reinterpret_cast<byte*>(pinframe + 1);
-        unsigned short* ppixout = reinterpret_cast<unsigned short*>(&pspriteframe->pixels[0]);
-        for (int i = 0; i < size; i++) {
-            ppixout[i] = d_8to16table[ppixin[i]];
-        }
-    } else {
-        Sys_Error("Mod_LoadSpriteFrame: driver set invalid r_pixbytes: %d\n",
-            r_pixbytes);
-    }
+    std::memcpy(&pspriteframe->pixels[0], reinterpret_cast<byte*>(pinframe + 1), size);
     return reinterpret_cast<void*>(reinterpret_cast<byte*>(pinframe) + sizeof(dspriteframe_t) + size);
 }
 

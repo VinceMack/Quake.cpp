@@ -171,8 +171,6 @@ extern int net_driverlevel;
 
 extern cvar_t hostname;
 extern cvar_t net_messagetimeout;
-extern char playername[];
-extern int playercolor;
 
 extern int messagesSent;
 extern int messagesReceived;
@@ -192,10 +190,7 @@ extern double net_time;
 extern sizebuf_t net_message;
 extern int net_activeconnections;
 
-extern qboolean serialAvailable;
-extern qboolean ipxAvailable;
 extern qboolean tcpipAvailable;
-extern char my_ipx_address[NET_NAMELEN];
 extern char my_tcpip_address[NET_NAMELEN];
 
 extern qboolean slistInProgress;

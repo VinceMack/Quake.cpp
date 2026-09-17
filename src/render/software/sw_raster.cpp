@@ -54,7 +54,6 @@ void D_Init()
     r_drawpolys = false;
     r_worldpolysbacktofront = false;
     r_recursiveaffinetriangles = true;
-    r_pixbytes = 1;
     r_aliasuvscale = 1.0;
 }
 
@@ -91,7 +90,7 @@ void D_SetupFrame()
 
 void D_UpdateRects(vrect_t* prect)
 {
-    UNUSED(prect);
+    static_cast<void>(prect);
 }
 
 void D_ViewChanged()

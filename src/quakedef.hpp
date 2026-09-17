@@ -2,13 +2,7 @@
 #pragma once
 #include <cstdint>
 
-//#define	GLTEST			// experimental stuff
-
-#define QUAKE_GAME // as opposed to utilities
-
 constexpr double VERSION = 1.09;
-
-//define	PARANOID			// speed sapping error checking
 
 #define GAMENAME "id1"
 
@@ -22,15 +16,7 @@ constexpr double VERSION = 1.09;
 
 #include "platform/crt_compat.hpp"
 
-
-inline void VID_LockBuffer(void) {}
-inline void VID_UnlockBuffer(void) {}
-constexpr int UNALIGNED_OK = 0;
-
-// !!! if this is changed, it must be changed in d_ifacea.h too !!!
 constexpr int CACHE_SIZE = 32; // used to align key data structures
-
-#define UNUSED(x) (x = x) // for pesky compiler / lint warnings
 
 constexpr int MINIMUM_MEMORY = 0x550000;
 constexpr int MINIMUM_MEMORY_LEVELPAK = MINIMUM_MEMORY + 0x100000;
@@ -144,10 +130,6 @@ constexpr uint32_t HIT_EMPATHY_SHIELDS = (1U << (23 + 3));
 // MAX_SCOREBOARD and MAX_SCOREBOARDNAME defined in core/types.hpp
 
 constexpr int SOUND_CHANNELS = 8;
-
-// This makes anyone on id's net privileged
-// Use for multiplayer testing only - VERY dangerous!!!
-// #define IDGODS
 
 #include "sys_core.hpp"
 #include "sys_render.hpp"

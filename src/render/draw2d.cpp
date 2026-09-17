@@ -93,24 +93,13 @@ void Draw_Character(int x, int y, int num)
     } else {
         drawline = 8;
     }
-    if (r_pixbytes == 1) {
-        byte* dest = vid.conbuffer + y * vid.conrowbytes + x;
-        while (drawline--) {
-            for (int i = 0; i < 8; ++i) {
-                if (source[i]) dest[i] = source[i];
-            }
-            source += 128;
-            dest += vid.conrowbytes;
+    byte* dest = vid.conbuffer + y * vid.conrowbytes + x;
+    while (drawline--) {
+        for (int i = 0; i < 8; ++i) {
+            if (source[i]) dest[i] = source[i];
         }
-    } else {
-        auto* pusdest = (unsigned short*)((byte*)vid.conbuffer + y * vid.conrowbytes + (x << 1));
-        while (drawline--) {
-            for (int i = 0; i < 8; ++i) {
-                if (source[i]) pusdest[i] = d_8to16table[source[i]];
-            }
-            source += 128;
-            pusdest += (vid.conrowbytes >> 1);
-        }
+        source += 128;
+        dest += vid.conrowbytes;
     }
 }
 
@@ -129,29 +118,15 @@ static inline void Draw_Pic_Impl(int x, int y, qpic_t* pic, const byte* translat
         Sys_Error("Draw_Pic: bad coordinates");
     }
     const byte* source = pic->data;
-    if (r_pixbytes == 1) {
-        byte* dest = vid.buffer + y * vid.rowbytes + x;
-        for (int v = 0; v < pic->height; v++, dest += vid.rowbytes, source += pic->width) {
-            if constexpr (!Trans) {
-                std::memcpy(dest, source, pic->width);
-            } else {
-                for (int u = 0; u < pic->width; u++) {
-                    if (const byte tbyte = source[u]; tbyte != TRANSPARENT_COLOR) {
-                        dest[u] = Translate ? translation[tbyte] : tbyte;
-                    }
-                }
-            }
-        }
-    } else {
-        auto* pusdest = (unsigned short*)vid.buffer + y * (vid.rowbytes >> 1) + x;
-        for (int v = 0; v < pic->height; v++, pusdest += vid.rowbytes >> 1, source += pic->width) {
+    byte* dest = vid.buffer + y * vid.rowbytes + x;
+    for (int v = 0; v < pic->height; v++, dest += vid.rowbytes, source += pic->width) {
+        if constexpr (!Trans) {
+            std::memcpy(dest, source, pic->width);
+        } else {
             for (int u = 0; u < pic->width; u++) {
-                const byte tbyte = source[u];
-                if constexpr (Trans) {
-                    if (tbyte == TRANSPARENT_COLOR) continue;
+                if (const byte tbyte = source[u]; tbyte != TRANSPARENT_COLOR) {
+                    dest[u] = Translate ? translation[tbyte] : tbyte;
                 }
-                const byte final_byte = (Trans && Translate) ? translation[tbyte] : tbyte;
-                pusdest[u] = d_8to16table[final_byte];
             }
         }
     }
@@ -197,76 +172,30 @@ void Draw_ConsoleBackground(int lines)
     for (size_t x = 0; x < ver_view.length(); x++) {
         Draw_CharToConback(ver_view[x], dest + (x << 3));
     }
-    if (r_pixbytes == 1) {
-        dest = vid.conbuffer;
-        for (int y = 0; y < lines; y++, dest += vid.conrowbytes) {
-            const int v = (vid.conheight - lines + y) * 200 / vid.conheight;
-            const byte* src = conback->data + v * 320;
-            if (vid.conwidth == 320) {
-                std::memcpy(dest, src, vid.conwidth);
-            } else {
-                int f = 0;
-                const int fstep = 320 * 0x10000 / vid.conwidth;
-                for (int x = 0; x < (int)vid.conwidth; x += 4) {
-                    dest[x] = src[f >> 16]; f += fstep;
-                    dest[x + 1] = src[f >> 16]; f += fstep;
-                    dest[x + 2] = src[f >> 16]; f += fstep;
-                    dest[x + 3] = src[f >> 16]; f += fstep;
-                }
-            }
-        }
-    } else {
-        auto* pusdest = (unsigned short*)vid.conbuffer;
-        for (int y = 0; y < lines; y++, pusdest += (vid.conrowbytes >> 1)) {
-            const int v = (vid.conheight - lines + y) * 200 / vid.conheight;
-            const byte* src = conback->data + v * 320;
+    dest = vid.conbuffer;
+    for (int y = 0; y < lines; y++, dest += vid.conrowbytes) {
+        const int v = (vid.conheight - lines + y) * 200 / vid.conheight;
+        const byte* src = conback->data + v * 320;
+        if (vid.conwidth == 320) {
+            std::memcpy(dest, src, vid.conwidth);
+        } else {
             int f = 0;
             const int fstep = 320 * 0x10000 / vid.conwidth;
             for (int x = 0; x < (int)vid.conwidth; x += 4) {
-                pusdest[x] = d_8to16table[src[f >> 16]]; f += fstep;
-                pusdest[x + 1] = d_8to16table[src[f >> 16]]; f += fstep;
-                pusdest[x + 2] = d_8to16table[src[f >> 16]]; f += fstep;
-                pusdest[x + 3] = d_8to16table[src[f >> 16]]; f += fstep;
+                dest[x] = src[f >> 16]; f += fstep;
+                dest[x + 1] = src[f >> 16]; f += fstep;
+                dest[x + 2] = src[f >> 16]; f += fstep;
+                dest[x + 3] = src[f >> 16]; f += fstep;
             }
         }
     }
 }
 
-template<typename T, bool Transparent>
-static inline void R_DrawRect_T(const vrect_t* prect, int rowbytes, const byte* psrc, const T* table = nullptr)
+static void R_DrawRect8(const vrect_t* prect, int rowbytes, const byte* psrc)
 {
-    auto* pdest = reinterpret_cast<T*>(vid.buffer) + (prect->y * (vid.rowbytes / sizeof(T))) + prect->x;
-    const int srcdelta = rowbytes - prect->width;
-    const int destdelta = (vid.rowbytes / sizeof(T)) - prect->width;
-    for (int i = 0; i < prect->height; i++) {
-        for (int j = 0; j < prect->width; j++) {
-            if (const byte t = *psrc; !Transparent || t != TRANSPARENT_COLOR) {
-                *pdest = table ? table[t] : static_cast<T>(t);
-            }
-            psrc++; pdest++;
-        }
-        psrc += srcdelta; pdest += destdelta;
-    }
-}
-
-void R_DrawRect8(const vrect_t* prect, int rowbytes, const byte* psrc, bool transparent)
-{
-    if (transparent) {
-        R_DrawRect_T<byte, true>(prect, rowbytes, psrc);
-    } else {
-        byte* pdest = vid.buffer + (prect->y * vid.rowbytes) + prect->x;
-        for (int i = 0; i < prect->height; i++, psrc += rowbytes, pdest += vid.rowbytes) {
-            std::memcpy(pdest, psrc, prect->width);
-        }
-    }
-}
-
-void R_DrawRect16(const vrect_t* prect, int rowbytes, const byte* psrc, bool transparent)
-{
-    if (transparent) {
-        R_DrawRect_T<unsigned short, true>(prect, rowbytes, psrc, d_8to16table);
-    } else {
-        R_DrawRect_T<unsigned short, false>(prect, rowbytes, psrc, d_8to16table);
+    byte* pdest = vid.buffer + (prect->y * vid.rowbytes) + prect->x;
+    for (int i = 0; i < prect->height; i++, psrc += rowbytes, pdest += vid.rowbytes) {
+        std::memcpy(pdest, psrc, prect->width);
     }
 }
 
@@ -292,8 +221,7 @@ void Draw_TileClear(int x, int y, int w, int h)
             else vr.width = r_rectdesc.width;
             if (vr.width > width) vr.width = width;
             const byte* psrc = r_rectdesc.ptexbytes + (tileoffsety * r_rectdesc.rowbytes) + tileoffsetx;
-            if (r_pixbytes == 1) R_DrawRect8(&vr, r_rectdesc.rowbytes, psrc, false);
-            else R_DrawRect16(&vr, r_rectdesc.rowbytes, psrc, false);
+            R_DrawRect8(&vr, r_rectdesc.rowbytes, psrc);
             vr.x += vr.width;
             width -= vr.width;
             tileoffsetx = 0;
@@ -306,25 +234,14 @@ void Draw_TileClear(int x, int y, int w, int h)
 
 void Draw_Fill(int x, int y, int w, int h, int c)
 {
-    if (r_pixbytes == 1) {
-        byte* dest = vid.buffer + y * vid.rowbytes + x;
-        for (int v = 0; v < h; v++, dest += vid.rowbytes) {
-            std::fill_n(dest, w, static_cast<byte>(c));
-        }
-    } else {
-        const auto uc = static_cast<unsigned short>(d_8to16table[c]);
-        auto* pusdest = (unsigned short*)vid.buffer + y * (vid.rowbytes >> 1) + x;
-        for (int v = 0; v < h; v++, pusdest += (vid.rowbytes >> 1)) {
-            std::fill_n(pusdest, w, uc);
-        }
+    byte* dest = vid.buffer + y * vid.rowbytes + x;
+    for (int v = 0; v < h; v++, dest += vid.rowbytes) {
+        std::fill_n(dest, w, static_cast<byte>(c));
     }
 }
 
 void Draw_FadeScreen()
 {
-    VID_UnlockBuffer();
-    S_ExtraUpdate();
-    VID_LockBuffer();
     for (int y = 0; y < static_cast<int>(vid.height); y++) {
         byte* pbuf = vid.buffer + vid.rowbytes * y;
         const int t = (y & 1) << 1;
@@ -332,9 +249,6 @@ void Draw_FadeScreen()
             if ((x & 3) != t) pbuf[x] = 0;
         }
     }
-    VID_UnlockBuffer();
-    S_ExtraUpdate();
-    VID_LockBuffer();
 }
 
 void Draw_BeginDisc()

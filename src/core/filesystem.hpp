@@ -46,9 +46,7 @@ void COM_Path_f(void);
 
 extern bool standard_quake, rogue, hipnotic;
 extern bool msg_suppress_1;
-extern bool com_modified;
 extern bool proghack;
-extern int static_registered;
 
 void CRC_Init(std::uint16_t& crcvalue) noexcept;
 void CRC_ProcessByte(std::uint16_t& crcvalue, byte data) noexcept;

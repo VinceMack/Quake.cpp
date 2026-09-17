@@ -30,13 +30,11 @@ int main(int argc, char** argv) {
     parms.memsize = kDefaultHeapSize;
     parms.membase = std::malloc(static_cast<size_t>(parms.memsize));
     parms.basedir = ".";
-    parms.cachedir = nullptr;
 
     Common::COM_InitArgv(argc, argv);
     parms.argc = Common::com_argc;
     parms.argv = Common::com_argv;
 
-    Common::Sys_Init();
     Host::Host_Init(&parms);
     Cvar::Register(&Host::sys_nostdout);
 

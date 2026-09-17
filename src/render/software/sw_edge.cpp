@@ -377,9 +377,6 @@ void R_ScanEdges()
         }
         (*pdrawfunc)();
         if (span_p >= max_span_p) {
-            VID_UnlockBuffer();
-            S_ExtraUpdate();
-            VID_LockBuffer();
             if (r_drawculledpolys) {
                 R_DrawCulledPolys();
             } else {

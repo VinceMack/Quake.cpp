@@ -27,10 +27,3 @@
 #include "render/software/sw_frame.hpp"
 #include "render/software/sw_main.hpp"
 #include "render/software/sw_renderer.hpp"
-
-namespace Render {
-
-inline void D_EnableBackBufferAccess() { VID_LockBuffer(); }
-inline void D_DisableBackBufferAccess() { VID_UnlockBuffer(); }
-
-} // namespace Render

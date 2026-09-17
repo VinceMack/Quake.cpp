@@ -23,14 +23,11 @@ qsocket_t* net_activeSockets = nullptr;
 qsocket_t* net_freeSockets = nullptr;
 int net_numsockets = 0;
 
-qboolean serialAvailable = false;
-qboolean ipxAvailable = false;
 qboolean tcpipAvailable = false;
 
 int net_hostport = 0;
 int DEFAULTnet_hostport = 26000;
 
-char my_ipx_address[NET_NAMELEN]{};
 char my_tcpip_address[NET_NAMELEN]{};
 
 sizebuf_t net_message;

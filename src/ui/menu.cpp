@@ -30,11 +30,6 @@ using namespace Wad;
 using namespace Cvar;
 using namespace Cmd;
 
-namespace Vid {
-void (*vid_menudrawfn)() = nullptr;
-void (*vid_menukeyfn)(int key) = nullptr;
-}
-
 // ============================================================================
 // MENU SUBSYSTEM (Modernized & Table-Driven LoC Reduction)
 // ============================================================================
@@ -48,17 +43,12 @@ bool m_return_onerror = false;
 eastl::string m_return_reason;
 bool m_entersound = false, m_recursiveDraw = false;
 
-int m_multiplayer_cursor = 0, m_net_cursor = 0, m_save_demonum = 0;
+int m_multiplayer_cursor = 0, m_save_demonum = 0;
 int m_main_cursor = 0, m_singleplayer_cursor = 0, load_cursor = 0;
 int setup_cursor = 4, setup_oldtop = 0, setup_oldbottom = 0, setup_top = 0, setup_bottom = 0;
-int m_net_items = 0, m_net_saveHeight = 0, options_cursor = 0, keys_cursor = 0;
+int options_cursor = 0, keys_cursor = 0;
 bool bind_grab = false; int help_page = 0;
 
-int serialConfig_cursor = 0, serialConfig_comport = 0, serialConfig_irq = 0, serialConfig_baud = 0;
-eastl::string serialConfig_phone;
-int modemConfig_cursor = 0; char modemConfig_dialing = 'T';
-eastl::array<char, 16> modemConfig_clear{}, modemConfig_hangup{};
-eastl::array<char, 32> modemConfig_init{};
 int lanConfig_cursor = -1, lanConfig_port = 0;
 eastl::string lanConfig_portname, lanConfig_joinname, setup_hostname, setup_myname;
 
@@ -74,13 +64,8 @@ eastl::array<byte, 256> identityTable{}, translationTable{};
 
 inline bool StartingGame() { return m_multiplayer_cursor == 1; }
 inline bool JoiningGame()  { return m_multiplayer_cursor == 0; }
-inline bool SerialConfig() { return m_net_cursor == 0; }
-inline bool DirectConfig() { return m_net_cursor == 1; }
-inline bool IPXConfig()    { return m_net_cursor == 2; }
-inline bool TCPIPConfig()  { return m_net_cursor == 3; }
 
 void M_ConfigureNetSubsystem();
-void M_Net_Key(int k);
 
 inline void M_DrawCharacter(int cx, int line, int num) { Draw_Character(cx + ((vid.width - 320) >> 1), line, num); }
 void M_Print(int cx, int cy, eastl::string_view str) { for (char c : str) { M_DrawCharacter(cx, cy, static_cast<unsigned char>(c) + 128); cx += 8; } }
@@ -133,9 +118,9 @@ static inline void DrawLineCursor(int x, int y_start, int cursor, int step = 8) 
 }
 
 void M_Menu_Main_f(); void M_Menu_SinglePlayer_f(); void M_Menu_Load_f(); void M_Menu_Save_f();
-void M_Menu_MultiPlayer_f(); void M_Menu_Setup_f(); void M_Menu_Net_f(); void M_Menu_Options_f();
-void M_Menu_Keys_f(); void M_Menu_Video_f(); void M_Menu_Help_f(); void M_Menu_Quit_f();
-void M_Menu_SerialConfig_f(); void M_Menu_ModemConfig_f(); void M_Menu_LanConfig_f();
+void M_Menu_MultiPlayer_f(); void M_Menu_Setup_f(); void M_Menu_Options_f();
+void M_Menu_Keys_f(); void M_Menu_Help_f(); void M_Menu_Quit_f();
+void M_Menu_LanConfig_f();
 void M_Menu_GameOptions_f(); void M_Menu_Search_f(); void M_Menu_ServerList_f();
 
 void M_ToggleMenu_f() {
@@ -225,7 +210,7 @@ void M_Save_Key(int k) {
 void M_Menu_MultiPlayer_f() { key_dest = key_menu; m_state = MenuState::MultiPlayer; m_entersound = true; }
 void M_MultiPlayer_Draw() {
     DrawMenuHeader("gfx/p_multi.lmp"); M_DrawTransPic(72, 32, Draw_CachePic("gfx/mp_menu.lmp")); DrawMenuDot(54, 32, m_multiplayer_cursor);
-    if (!serialAvailable && !ipxAvailable && !tcpipAvailable) M_PrintWhite((320 - 27 * 8) / 2, 148, "No Communications Available");
+    if (!tcpipAvailable) M_PrintWhite((320 - 27 * 8) / 2, 148, "No Communications Available");
 }
 void M_MultiPlayer_Key(int key) {
     if (key == K_ESCAPE) { M_Menu_Main_f(); return; }
@@ -233,7 +218,7 @@ void M_MultiPlayer_Key(int key) {
     if (key == K_ENTER) {
         m_entersound = true;
         if (m_multiplayer_cursor == 2) M_Menu_Setup_f();
-        else if (serialAvailable || ipxAvailable || tcpipAvailable) M_Menu_Net_f();
+        else if (tcpipAvailable) M_Menu_LanConfig_f();
     }
 }
 
@@ -289,45 +274,7 @@ void M_Setup_Key(int k) {
     }
 }
 
-constexpr auto net_helpMessage = eastl::array<eastl::string_view, 16>{{
-    "                        ", " Two computers connected", "   through two modems.  ", "                        ",
-    "                        ", " Two computers connected", " by a null-modem cable. ", "                        ",
-    " Novell network LANs    ", " or Windows 95 DOS-box. ", "                        ", "(LAN=Local Area Network)",
-    " Commonly used to play  ", " over the Internet, but ", " also used on a Local   ", " Area Network.          "
-}};
-
-void M_Menu_Net_f() {
-    key_dest = key_menu; m_state = MenuState::Net; m_entersound = true; m_net_items = 4;
-    if (m_net_cursor >= m_net_items) m_net_cursor = 0;
-    m_net_cursor--; M_Net_Key(K_DOWNARROW);
-}
-
-void M_Net_Draw() {
-    DrawMenuHeader("gfx/p_multi.lmp"); int f = 32;
-    M_DrawTransPic(72, f, Draw_CachePic(serialAvailable ? "gfx/netmen1.lmp" : "gfx/dim_modm.lmp")); f += 19;
-    M_DrawTransPic(72, f, Draw_CachePic(serialAvailable ? "gfx/netmen2.lmp" : "gfx/dim_drct.lmp")); f += 19;
-    M_DrawTransPic(72, f, Draw_CachePic(ipxAvailable    ? "gfx/netmen3.lmp" : "gfx/dim_ipx.lmp"));  f += 19;
-    M_DrawTransPic(72, f, Draw_CachePic(tcpipAvailable  ? "gfx/netmen4.lmp" : "gfx/dim_tcp.lmp"));
-    f = (320 - 26 * 8) / 2; M_DrawTextBox(f, 134, 24, 4); f += 8;
-    for (int i = 0; i < 4; i++) M_Print(f, 142 + i * 8, net_helpMessage[m_net_cursor * 4 + i]);
-    DrawMenuDot(54, 32, m_net_cursor);
-}
-
-void M_Net_Key(int k) {
-again:
-    if (k == K_ESCAPE) { M_Menu_MultiPlayer_f(); return; }
-    if (k == K_DOWNARROW) { S_LocalSound("misc/menu1.wav"); m_net_cursor = (m_net_cursor + 1) % m_net_items; }
-    if (k == K_UPARROW)   { S_LocalSound("misc/menu1.wav"); m_net_cursor = (m_net_cursor - 1 + m_net_items) % m_net_items; }
-    if (k == K_ENTER) {
-        m_entersound = true;
-        if (m_net_cursor == 0 || m_net_cursor == 1) M_Menu_SerialConfig_f();
-        else if (m_net_cursor == 2 || m_net_cursor == 3) M_Menu_LanConfig_f();
-    }
-    if ((m_net_cursor == 0 && !serialAvailable) || (m_net_cursor == 1 && !serialAvailable) ||
-        (m_net_cursor == 2 && !ipxAvailable) || (m_net_cursor == 3 && !tcpipAvailable)) goto again;
-}
-
-constexpr int OPTIONS_ITEMS = 13, SLIDER_RANGE = 10;
+constexpr int OPTIONS_ITEMS = 12, SLIDER_RANGE = 10;
 void M_Menu_Options_f() { key_dest = key_menu; m_state = MenuState::Options; m_entersound = true; }
 
 void M_AdjustSliders(int dir) {
@@ -364,7 +311,6 @@ void M_Options_Draw() {
     M_Print(16, 104, "          Invert Mouse"); M_DrawCheckbox(220, 104, m_pitch.value < 0);
     M_Print(16, 112, "            Lookspring"); M_DrawCheckbox(220, 112, static_cast<int>(lookspring.value));
     M_Print(16, 120, "            Lookstrafe"); M_DrawCheckbox(220, 120, static_cast<int>(lookstrafe.value));
-    if (vid_menudrawfn) M_Print(16, 128, "         Video Options");
     DrawLineCursor(200, 32, options_cursor);
 }
 
@@ -374,7 +320,7 @@ void M_Options_Key(int k) {
         m_entersound = true;
         switch (options_cursor) {
         case 0: M_Menu_Keys_f(); break; case 1: m_state = MenuState::None; ConsoleSystem::ToggleConsole_f(); break;
-        case 2: Cmd::BufferAddText("exec default.cfg\n"); break; case 12: M_Menu_Video_f(); break;
+        case 2: Cmd::BufferAddText("exec default.cfg\n"); break;
         default: M_AdjustSliders(1); break;
         }
         return;
@@ -383,7 +329,6 @@ void M_Options_Key(int k) {
     if (k == K_DOWNARROW) { S_LocalSound("misc/menu1.wav"); options_cursor = (options_cursor + 1) % OPTIONS_ITEMS; }
     if (k == K_LEFTARROW)  M_AdjustSliders(-1);
     if (k == K_RIGHTARROW) M_AdjustSliders(1);
-    if (options_cursor == 12 && vid_menudrawfn == nullptr) options_cursor = (k == K_UPARROW) ? 11 : 0;
 }
 
 struct BindName { eastl::string_view command; eastl::string_view description; };
@@ -441,10 +386,6 @@ void M_Keys_Key(int k) {
     } else if (k == K_BACKSPACE || k == K_DEL) { S_LocalSound("misc/menu2.wav"); M_UnbindCommand(bindnames[keys_cursor].command); }
 }
 
-void M_Menu_Video_f() { key_dest = key_menu; m_state = MenuState::Video; m_entersound = true; }
-void M_Video_Draw() { if (vid_menudrawfn) (*vid_menudrawfn)(); }
-void M_Video_Key(int key) { if (vid_menukeyfn) (*vid_menukeyfn)(key); }
-
 constexpr int NUM_HELP_PAGES = 6;
 void M_Menu_Help_f() { key_dest = key_menu; m_state = MenuState::Help; m_entersound = true; help_page = 0; }
 void M_Help_Draw() { M_DrawPic(0, 0, Draw_CachePic(va("gfx/help%i.lmp", help_page))); }
@@ -455,16 +396,6 @@ void M_Help_Key(int key) {
 }
 
 void M_Menu_Quit_f() { key_dest = key_console; Host_Quit_f(); }
-
-constexpr auto serialConfig_cursor_table = eastl::array{ 48, 64, 80, 96, 112, 132 };
-constexpr int NUM_SERIALCONFIG_CMDS = 6;
-constexpr auto ISA_uarts = eastl::array{ 0x3f8, 0x2f8, 0x3e8, 0x2e8 };
-void M_Menu_SerialConfig_f() { M_Menu_Net_f(); }
-void M_SerialConfig_Draw() {}
-void M_SerialConfig_Key(int) { M_Menu_Net_f(); }
-void M_Menu_ModemConfig_f() { M_Menu_Net_f(); }
-void M_ModemConfig_Draw() {}
-void M_ModemConfig_Key(int) { M_Menu_Net_f(); }
 
 constexpr auto lanConfig_cursor_table = eastl::array{ 72, 92, 124 };
 constexpr int NUM_LANCONFIG_CMDS = 3;
@@ -479,8 +410,8 @@ void M_Menu_LanConfig_f() {
 
 void M_LanConfig_Draw() {
     DrawMenuHeader("gfx/p_multi.lmp"); int basex = (320 - Draw_CachePic("gfx/p_multi.lmp")->width) / 2;
-    M_Print(basex, 32, va("%s - %s", StartingGame() ? "New Game" : "Join Game", IPXConfig() ? "IPX" : "TCP/IP")); basex += 8;
-    M_Print(basex, 52, "Address:"); M_Print(basex + 9 * 8, 52, IPXConfig() ? my_ipx_address : my_tcpip_address);
+    M_Print(basex, 32, va("%s - TCP/IP", StartingGame() ? "New Game" : "Join Game")); basex += 8;
+    M_Print(basex, 52, "Address:"); M_Print(basex + 9 * 8, 52, my_tcpip_address);
     M_Print(basex, lanConfig_cursor_table[0], "Port"); M_DrawTextBox(basex + 8 * 8, lanConfig_cursor_table[0] - 8, 6, 1);
     M_Print(basex + 9 * 8, lanConfig_cursor_table[0], lanConfig_portname);
     if (JoiningGame()) {
@@ -495,7 +426,7 @@ void M_LanConfig_Draw() {
 }
 
 void M_LanConfig_Key(int key) {
-    if (key == K_ESCAPE) { M_Menu_Net_f(); return; }
+    if (key == K_ESCAPE) { M_Menu_MultiPlayer_f(); return; }
     if (key == K_UPARROW)   { S_LocalSound("misc/menu1.wav"); lanConfig_cursor = (lanConfig_cursor - 1 + NUM_LANCONFIG_CMDS) % NUM_LANCONFIG_CMDS; }
     if (key == K_DOWNARROW) { S_LocalSound("misc/menu1.wav"); lanConfig_cursor = (lanConfig_cursor + 1) % NUM_LANCONFIG_CMDS; }
     if (key == K_ENTER) {
@@ -634,7 +565,7 @@ void M_NetStart_Change(int dir) {
 }
 
 void M_GameOptions_Key(int key) {
-    if (key == K_ESCAPE) { M_Menu_Net_f(); return; }
+    if (key == K_ESCAPE) { M_Menu_LanConfig_f(); return; }
     if (key == K_UPARROW)   { S_LocalSound("misc/menu1.wav"); gameoptions_cursor = (gameoptions_cursor - 1 + NUM_GAMEOPTIONS) % NUM_GAMEOPTIONS; }
     if (key == K_DOWNARROW) { S_LocalSound("misc/menu1.wav"); gameoptions_cursor = (gameoptions_cursor + 1) % NUM_GAMEOPTIONS; }
     if (key == K_LEFTARROW && gameoptions_cursor > 0)  { S_LocalSound("misc/menu3.wav"); M_NetStart_Change(-1); }
@@ -697,7 +628,7 @@ void M_Init() {
         {"togglemenu", M_ToggleMenu_f}, {"menu_main", M_Menu_Main_f}, {"menu_singleplayer", M_Menu_SinglePlayer_f},
         {"menu_load", M_Menu_Load_f}, {"menu_save", M_Menu_Save_f}, {"menu_multiplayer", M_Menu_MultiPlayer_f},
         {"menu_setup", M_Menu_Setup_f}, {"menu_options", M_Menu_Options_f}, {"menu_keys", M_Menu_Keys_f},
-        {"menu_video", M_Menu_Video_f}, {"help", M_Menu_Help_f}, {"menu_quit", M_Menu_Quit_f}
+        {"help", M_Menu_Help_f}, {"menu_quit", M_Menu_Quit_f}
     };
     for (auto [name, fn] : cmds) Cmd::AddCommand(name, fn);
 }
@@ -705,26 +636,29 @@ void M_Init() {
 using MenuFn = void(*)();
 using MenuKeyFn = void(*)(int);
 
+// Indexed by MenuState; keep in the same order as the enum in menu.hpp.
 constexpr MenuFn menu_draw_table[] = {
     nullptr, M_Main_Draw, M_SinglePlayer_Draw, M_Load_Draw, M_Save_Draw,
-    M_MultiPlayer_Draw, M_Setup_Draw, M_Net_Draw, M_Options_Draw, M_Video_Draw,
-    M_Keys_Draw, M_Help_Draw, nullptr, M_SerialConfig_Draw, M_ModemConfig_Draw,
+    M_MultiPlayer_Draw, M_Setup_Draw, M_Options_Draw,
+    M_Keys_Draw, M_Help_Draw, nullptr,
     M_LanConfig_Draw, M_GameOptions_Draw, M_Search_Draw, M_ServerList_Draw
 };
 
 constexpr MenuKeyFn menu_key_table[] = {
     nullptr, M_Main_Key, M_SinglePlayer_Key, M_Load_Key, M_Save_Key,
-    M_MultiPlayer_Key, M_Setup_Key, M_Net_Key, M_Options_Key, M_Video_Key,
-    M_Keys_Key, M_Help_Key, nullptr, M_SerialConfig_Key, M_ModemConfig_Key,
+    M_MultiPlayer_Key, M_Setup_Key, M_Options_Key,
+    M_Keys_Key, M_Help_Key, nullptr,
     M_LanConfig_Key, M_GameOptions_Key, [](int) { M_Search_Key(); }, M_ServerList_Key
 };
+static_assert(std::size(menu_draw_table) == static_cast<size_t>(MenuState::SList) + 1);
+static_assert(std::size(menu_key_table) == static_cast<size_t>(MenuState::SList) + 1);
 
 void M_Draw() {
     if (m_state == MenuState::None || key_dest != key_menu) return;
     if (!m_recursiveDraw) {
         Screen::GetScreenSystem().SetCopyeverything(1);
         if (Screen::GetScreenSystem().GetConCurrent()) {
-            Draw_ConsoleBackground(vid.height); VID_UnlockBuffer(); S_ExtraUpdate(); VID_LockBuffer();
+            Draw_ConsoleBackground(vid.height);
         } else Draw_FadeScreen();
         Screen::GetScreenSystem().SetFullupdate(0);
     } else m_recursiveDraw = false;
@@ -733,7 +667,6 @@ void M_Draw() {
     if (idx < std::size(menu_draw_table) && menu_draw_table[idx]) menu_draw_table[idx]();
 
     if (m_entersound) { S_LocalSound("misc/menu2.wav"); m_entersound = false; }
-    VID_UnlockBuffer(); S_ExtraUpdate(); VID_LockBuffer();
 }
 
 void M_Keydown(int key) {
@@ -743,8 +676,7 @@ void M_Keydown(int key) {
 
 void M_ConfigureNetSubsystem() {
     Cmd::BufferAddText("stopdemo\n");
-    if (SerialConfig() || DirectConfig()) Cmd::BufferAddText("com1 enable\n");
-    if (IPXConfig() || TCPIPConfig()) net_hostport = lanConfig_port;
+    net_hostport = lanConfig_port;
 }
 
 } // namespace Menu

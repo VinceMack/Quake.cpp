@@ -229,7 +229,6 @@ extern qboolean r_drawculledpolys;
 extern qboolean r_worldpolysbacktofront;
 extern qboolean r_recursiveaffinetriangles;
 extern float r_aliasuvscale;
-extern int r_pixbytes;
 extern qboolean r_dowarp;
 
 extern affinetridesc_t r_affinetridesc;

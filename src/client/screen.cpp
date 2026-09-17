@@ -392,7 +392,7 @@ void ScreenSystem::ScreenShot_f()
         pcxname[5] = static_cast<char>(i / 10 + '0');
         pcxname[6] = static_cast<char>(i % 10 + '0');
         sprintf_s(checkname, sizeof(checkname), "%s/%s", com_gamedir, pcxname.c_str());
-        if (Sys_FileTime(checkname) == -1) {
+        if (!Sys_FileExists(checkname)) {
             break;
         }
     }
@@ -400,9 +400,7 @@ void ScreenSystem::ScreenShot_f()
         Con_Printf("SCR_ScreenShot_f: Couldn't create a PCX file\n");
         return;
     }
-    D_EnableBackBufferAccess();
     WritePCXfile(pcxname.c_str(), vid.buffer, vid.width, vid.height, vid.rowbytes, host_basepal);
-    D_DisableBackBufferAccess();
     Con_Printf("Wrote %s\n", pcxname.c_str());
 }
 
@@ -521,7 +519,6 @@ void ScreenSystem::UpdateScreen()
     if (vid.recalc_refdef) {
         CalcRefdef();
     }
-    D_EnableBackBufferAccess();
     if (fullupdate_++ < vid.numpages) {
         copyeverything_ = 1;
         Draw_TileClear(0, 0, vid.width, vid.height);
@@ -530,11 +527,7 @@ void ScreenSystem::UpdateScreen()
     pconupdate_ = nullptr;
     SetUpToDrawConsole();
     EraseCenterString();
-    D_DisableBackBufferAccess();
-    VID_LockBuffer();
     V_RenderView();
-    VID_UnlockBuffer();
-    D_EnableBackBufferAccess();
     if (drawdialog_) {
         Sbar_Draw();
         Draw_FadeScreen();
@@ -560,7 +553,6 @@ void ScreenSystem::UpdateScreen()
         DrawConsole();
         M_Draw();
     }
-    D_DisableBackBufferAccess();
     if (pconupdate_) {
         D_UpdateRects(pconupdate_);
     }
