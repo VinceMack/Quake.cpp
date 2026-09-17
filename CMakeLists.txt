@@ -44,7 +44,7 @@ set(EASTL_BUILD_BENCHMARK OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(SDL2 EABase EASTL)
 
 # Gather source files
-set(CORE_SRCS
+set(ENGINE_SRCS
     src/core/string_utils.cpp
     src/core/cvar.cpp
     src/core/cmd.cpp
@@ -52,7 +52,7 @@ set(CORE_SRCS
     src/core/msg.cpp
     src/core/filesystem.cpp
     src/core/wad.cpp
-    src/platform/sys_win.cpp
+    src/platform/sys_sdl.cpp
     src/world/model.cpp
     src/world/collision.cpp
     src/host/host.cpp
@@ -107,42 +107,61 @@ set(CORE_SRCS
     src/client/input.cpp
 )
 
-add_executable(Quake.cpp ${CORE_SRCS})
-
-target_include_directories(Quake.cpp PRIVATE src)
-
-# Link SDL2, EASTL, and Windows libraries
+# The engine is a static library so that the game executable and the test executables
+# share one build of every subsystem.
+add_library(quake_engine STATIC ${ENGINE_SRCS})
+target_include_directories(quake_engine PUBLIC src)
+target_link_libraries(quake_engine PUBLIC SDL2-static EASTL)
 if(WIN32)
-    target_link_libraries(Quake.cpp PRIVATE SDL2main SDL2-static EASTL ws2_32 winmm)
-else()
-    target_link_libraries(Quake.cpp PRIVATE SDL2main SDL2-static EASTL)
+    target_link_libraries(quake_engine PUBLIC ws2_32 winmm)
 endif()
 
-# Suppress some old C warnings for cleaner output
-if(MSVC)
-    target_compile_options(Quake.cpp PRIVATE 
-        /W4 
-        /Z7
-        /w14702      # Force C4702 (Unreachable code) to be a Level 1 Warning
-        /Gy          # Function-level linking (puts each function in its own section)
-        /Gw          # Optimize global data (puts each variable in its own section)
-    )
-    # Target-specific linker overrides
-    # NOTE: /INCREMENTAL:NO is required to allow /OPT:REF to function.
-    target_link_options(Quake.cpp PRIVATE
-        /INCREMENTAL:NO
-        /OPT:REF       # Eliminate unreferenced functions and data
-    )
-else()
-    target_compile_options(Quake.cpp PRIVATE 
-        -Wall -Wextra 
-        -Wunreachable-code # Warn about unreachable code paths
-        -Wno-write-strings
-        -fno-exceptions
-        -ffunction-sections # Put each function in its own section
-        -fdata-sections     # Put each variable in its own section
-    )
-    target_link_options(Quake.cpp PRIVATE
-        -Wl,--gc-sections       # Garbage collect empty sections
-    )
+add_executable(Quake.cpp src/platform/main.cpp)
+target_link_libraries(Quake.cpp PRIVATE quake_engine SDL2main)
+
+# Tests: fast unit tests for the core layer, plus a behavioral regression harness that
+# replays fixed-frame scenarios against recorded state digests (see tests/regression.py).
+enable_testing()
+add_executable(quake_unit_tests tests/unit_tests.cpp)
+target_link_libraries(quake_unit_tests PRIVATE quake_engine)
+add_test(NAME unit COMMAND quake_unit_tests)
+
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME regression
+             COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/regression.py
+                     $<TARGET_FILE:Quake.cpp> ${CMAKE_SOURCE_DIR})
 endif()
+
+# Warning configuration shared by every engine target.
+function(quake_set_warnings target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE
+            /W4
+            /Z7
+            /w14702      # Force C4702 (Unreachable code) to be a Level 1 Warning
+            /Gy          # Function-level linking (puts each function in its own section)
+            /Gw          # Optimize global data (puts each variable in its own section)
+        )
+        # NOTE: /INCREMENTAL:NO is required to allow /OPT:REF to function.
+        target_link_options(${target} PRIVATE /INCREMENTAL:NO /OPT:REF)
+    else()
+        target_compile_options(${target} PRIVATE
+            -Wall -Wextra
+            -Wunreachable-code
+            -Wno-write-strings
+            -fno-exceptions
+            -ffunction-sections
+            -fdata-sections
+        )
+        target_link_options(${target} PRIVATE -Wl,--gc-sections)
+        if(MINGW)
+            # Produce self-contained executables that do not depend on the compiler's runtime DLLs.
+            target_link_options(${target} PRIVATE -static)
+        endif()
+    endif()
+endfunction()
+
+quake_set_warnings(quake_engine)
+quake_set_warnings(Quake.cpp)
+quake_set_warnings(quake_unit_tests)

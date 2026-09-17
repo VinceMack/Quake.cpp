@@ -1,3 +1,4 @@
+// sys_sdl.cpp -- SDL-based operating system layer: file I/O, timers, console, process lifecycle
 #include "quakedef.hpp"
 #include "platform/system.hpp"
 #include "core/cvar.hpp"
@@ -13,7 +14,6 @@
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
-#include <ctime>
 #include <EASTL/array.h>
 
 #ifdef _WIN32
@@ -22,9 +22,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #endif
-
-const char* basedir = ".";
-const char* cachedir = "/tmp";
 
 namespace Host {
 qboolean isDedicated = false;
@@ -169,50 +166,11 @@ void Sys_mkdir(const char* path) {
 }
 
 double Sys_FloatTime(void) {
-    static std::clock_t starttime = 0;
-    if (!starttime) starttime = std::clock();
-    return (std::clock() - starttime) * 1.0 / CLOCKS_PER_SEC;
+    static const Uint64 start = SDL_GetPerformanceCounter();
+    static const double frequency = static_cast<double>(SDL_GetPerformanceFrequency());
+    return static_cast<double>(SDL_GetPerformanceCounter() - start) / frequency;
 }
 
-void moncontrol() {}
 char* Sys_ConsoleInput(void) { return nullptr; }
 
 } // namespace Common
-
-int main(int c, char** v) {
-    quakeparms_t parms;
-    static int frame = 0;
-    Common::moncontrol();
-    std::signal(SIGFPE, SIG_IGN);
-
-    parms.memsize = 64 * 1024 * 1024;
-    parms.membase = std::malloc(parms.memsize);
-    parms.basedir = basedir;
-    parms.cachedir = cachedir;
-
-    Common::COM_InitArgv(c, v);
-    parms.argc = Common::com_argc;
-    parms.argv = Common::com_argv;
-
-    Common::Sys_Init();
-    Host::Host_Init(&parms);
-    Cvar::Register(&Host::sys_nostdout);
-
-    double oldtime = Common::Sys_FloatTime() - 0.1;
-    while (1) {
-        double newtime = Common::Sys_FloatTime();
-        double time = newtime - oldtime;
-        if (Client::cls.state == ca_dedicated) {
-            if (time < Host::sys_ticrate.value) {
-                SDL_Delay(1);
-                continue;
-            }
-            time = Host::sys_ticrate.value;
-        }
-        if (time > Host::sys_ticrate.value * 2) oldtime = newtime;
-        else oldtime += time;
-        if (++frame > 10) Common::moncontrol();
-        Host::Host_Frame(static_cast<float>(time));
-        Common::moncontrol();
-    }
-}

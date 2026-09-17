@@ -42,4 +42,8 @@ void Host_Quit_f();
 void Host_ClientCommands(const char* fmt, ...);
 void Host_ShutdownServer(qboolean crash);
 
+// Deterministic digest of server, client, and framebuffer state for regression testing.
+[[nodiscard]] uint64_t Host_StateHash();
+void Host_PrintStateHash();
+
 } // namespace Host

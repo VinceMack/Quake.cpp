@@ -220,6 +220,61 @@ void Host_Shutdown() {
     NET_Shutdown(); S_Shutdown(); IN_Shutdown(); if (cls.state != ca_dedicated) VID_Shutdown();
 }
 
+namespace {
+
+void HashBytes(uint64_t& hash, const void* data, size_t length) {
+    const auto* bytes = static_cast<const unsigned char*>(data);
+    for (size_t i = 0; i < length; ++i) {
+        hash ^= bytes[i];
+        hash *= 1099511628211ULL; // FNV-1a prime
+    }
+}
+
+} // namespace
+
+uint64_t Host_StateHash() {
+    uint64_t hash = 1469598103934665603ULL; // FNV-1a offset basis
+
+    const unsigned char server_active = sv.active ? 1 : 0;
+    HashBytes(hash, &server_active, sizeof(server_active));
+    if (sv.active && progs) {
+        HashBytes(hash, &sv.time, sizeof(sv.time));
+        HashBytes(hash, &sv.num_edicts, sizeof(sv.num_edicts));
+        for (int i = 0; i < sv.num_edicts; ++i) {
+            const edict_t* ent = EDICT_NUM(i);
+            const unsigned char is_free = ent->free ? 1 : 0;
+            HashBytes(hash, &is_free, sizeof(is_free));
+            HashBytes(hash, &ent->v, static_cast<size_t>(progs->entityfields) * 4);
+        }
+        HashBytes(hash, pr_globals, static_cast<size_t>(progs->numglobals) * 4);
+    }
+
+    if (cls.state != ca_dedicated) {
+        HashBytes(hash, &cl.time, sizeof(cl.time));
+        HashBytes(hash, &cl.num_entities, sizeof(cl.num_entities));
+        for (int i = 0; i < cl.num_entities; ++i) {
+            const entity_t& ent = cl_entities[i];
+            HashBytes(hash, &ent.origin, sizeof(ent.origin));
+            HashBytes(hash, &ent.angles, sizeof(ent.angles));
+            HashBytes(hash, &ent.frame, sizeof(ent.frame));
+            HashBytes(hash, &ent.skinnum, sizeof(ent.skinnum));
+            HashBytes(hash, &ent.effects, sizeof(ent.effects));
+        }
+        if (vid.buffer) {
+            for (unsigned y = 0; y < vid.height; ++y) {
+                HashBytes(hash, vid.buffer + y * vid.rowbytes, vid.width);
+            }
+        }
+    }
+    return hash;
+}
+
+void Host_PrintStateHash() {
+    std::printf("STATEHASH frame=%d edicts=%d hash=%016llx\n", host_framecount, sv.num_edicts,
+        static_cast<unsigned long long>(Host_StateHash()));
+    std::fflush(stdout);
+}
+
 int current_skill;
 void Host_Quit_f() { if (key_dest != key_console && cls.state != ca_dedicated) { M_Menu_Quit_f(); return; } CL_Disconnect(); Host_ShutdownServer(false); Sys_Quit(); }
 

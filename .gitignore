@@ -67,3 +67,5 @@ dkms.conf
 
 # Visual Studio Code
 .vscode/
+# Regression harness working directory
+/tests/scratch/
