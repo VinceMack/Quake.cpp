@@ -10,11 +10,19 @@
 #include "ui/hud.hpp"
 #include "server/server.hpp"
 #include "world/model.hpp"
-#include "client/client.hpp"
+#include "client/client_types.hpp"
 #include "ui/console.hpp"
 #include "platform/system.hpp"
 #include "core/cvar.hpp"
 #include <cmath>
+
+using namespace Common;
+using namespace Console;
+using namespace Client;
+using namespace Model;
+using namespace Server;
+using namespace Vid;
+using namespace Math;
 
 namespace Render {
 

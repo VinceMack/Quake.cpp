@@ -9,6 +9,7 @@ using namespace Client;
 namespace Render {
 
 eastl::array<int, 256> d_lightstylevalue{};
+int r_dlightframecount = 0;
 
 void R_AnimateLight()
 {

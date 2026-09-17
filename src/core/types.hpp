@@ -115,3 +115,17 @@ inline constexpr short Q_MAXSHORT = 0x7fff, Q_MINSHORT = static_cast<short>(0x80
 inline constexpr int Q_MAXINT = 0x7fffffff, Q_MININT = static_cast<int>(0x80000000);
 inline constexpr int Q_MAXLONG = 0x7fffffff, Q_MINLONG = static_cast<int>(0x80000000);
 inline constexpr int Q_MAXFLOAT = 0x7fffffff, Q_MINFLOAT = static_cast<int>(0x7fffffff);
+
+inline constexpr int MAX_QPATH = 64;
+inline constexpr int MAX_OSPATH = 128;
+
+inline constexpr int MAX_EDICTS = 600;
+inline constexpr int MAX_LIGHTSTYLES = 64;
+inline constexpr int MAX_MODELS = 256;
+inline constexpr int MAX_SOUNDS = 256;
+inline constexpr int MAX_STYLESTRING = 64;
+
+inline constexpr int MAX_SCOREBOARD = 16;
+inline constexpr int MAX_SCOREBOARDNAME = 32;
+inline constexpr int MAX_CL_STATS = 32;
+

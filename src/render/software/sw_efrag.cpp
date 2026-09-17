@@ -1,7 +1,12 @@
 // sw_efrag.cpp -- Entity Fragment Splitting and BSP Linking
 #include "render/software/sw_efrag.hpp"
-#include "client/client.hpp"
+#include "client/client_types.hpp"
 #include "ui/console.hpp"
+#include "platform/system.hpp"
+
+using namespace Common;
+using namespace Console;
+using namespace Client;
 
 namespace Render {
 

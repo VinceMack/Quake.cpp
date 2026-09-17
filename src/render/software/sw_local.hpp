@@ -19,8 +19,6 @@ inline constexpr unsigned int FRAMECOUNT_MASK = 0x7FFFFFFF;
 inline constexpr double XCENTERING = 0.5;
 inline constexpr double YCENTERING = 0.5;
 
-extern short* d_pzbuffer;
-
 struct surfcache_s {
     surfcache_s* next = nullptr;
     surfcache_s** owner = nullptr;
@@ -281,6 +279,7 @@ extern float xscale, yscale;
 extern float xscaleinv, yscaleinv;
 extern int screenwidth;
 extern unsigned int d_zrowbytes, d_zwidth;
+extern short* d_pzbuffer;
 extern float pixelAspect;
 extern int r_drawnpolycount;
 extern eastl::array<int, SIN_BUFFER_SIZE> sintable;
@@ -377,3 +376,5 @@ extern int r_sstepx, r_tstepx, r_lstepy, r_sstepy, r_tstepy;
 extern int r_zistepx, r_zistepy;
 
 } // namespace Render
+
+using Render::d_pzbuffer;

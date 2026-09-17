@@ -14,7 +14,7 @@
 #include "render/software/sw_warp.hpp"
 #include "render/software/sw_raster.hpp"
 #include "render/software/sw_vid.hpp"
-#include "client/client.hpp"
+#include "client/client_types.hpp"
 #include "client/view.hpp"
 #include "world/model.hpp"
 #include "core/cmd.hpp"
@@ -24,12 +24,21 @@
 #include "audio/audio_main.hpp"
 #include "ui/console.hpp"
 
+using namespace Common;
+using namespace Console;
+using namespace Client;
+using namespace Model;
+using namespace Audio;
+using namespace Vid;
+using namespace Math;
+
 namespace Render {
 
 // Core global rendering state
 refdef_t r_refdef{};
 Vector3 r_origin{}, vpn{}, vright{}, vup{};
-Vector3 base_vpn{}, base_vright{}, base_vup{}, base_modelorg{}, modelorg{};
+Vector3 base_vpn{}, base_vright{}, base_vup{};
+Vector3 r_worldmodelorg{};
 float xcenter = 0.0f, ycenter = 0.0f;
 float xscale = 0.0f, yscale = 0.0f;
 float xscaleinv = 0.0f, yscaleinv = 0.0f;
@@ -38,10 +47,9 @@ int screenwidth = 0;
 float pixelAspect = 0.0f;
 int r_framecount = 1;
 int r_visframecount = 0;
-int r_drawnpolycount = 0, r_polycount = 0, r_wholepolycount = 0, r_amodels_drawn = 0;
-int c_faceclip = 0, c_surf = 0;
+int r_drawnpolycount = 0, r_polycount = 0, r_wholepolycount = 0;
+int c_faceclip = 0;
 texture_s* r_notexture_mip = nullptr;
-eastl::array<int, 256> d_lightstylevalue{};
 
 qboolean r_drawpolys = false;
 qboolean r_drawculledpolys = false;
@@ -64,8 +72,6 @@ int r_cnumsurfs = 0;
 bool r_surfsonstack = false;
 int r_maxedgesseen = 0, r_maxsurfsseen = 0, r_numallocatededges = 0;
 edge_t* auxedges = nullptr;
-edge_t *r_edges = nullptr, *edge_p = nullptr, *edge_max = nullptr;
-surf_t *surfaces = nullptr, *surface_p = nullptr, *surf_max = nullptr;
 int r_outofsurfaces = 0, r_outofedges = 0;
 
 cvar_t r_clearcolor = { "r_clearcolor", "2" };
@@ -278,12 +284,13 @@ void R_DrawViewModel()
         return;
     }
     r_entorigin = currententity->origin;
-    modelorg = r_origin - r_entorigin;
-    viewlightvec = -vup;
+    Vector3 viewlightvec = -vup;
+    (void)viewlightvec;
     int j = R_LightPoint(currententity->origin);
     if (j < 24) {
         j = 24;
     }
+    alight_t r_viewlighting{};
     r_viewlighting.ambientlight = j;
     r_viewlighting.shadelight = j;
     for (int lnum = 0; lnum < MAX_DLIGHTS; lnum++) {

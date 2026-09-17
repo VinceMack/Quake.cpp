@@ -10,6 +10,10 @@ using namespace Client;
 
 namespace Render {
 
+polydesc_t r_polydesc{};
+int r_currentbkey = 0;
+int r_clipflags = 0;
+
 bool r_lastvertvalid = false;
 int r_emitted = 0;
 float r_nearzi = 0.0f;

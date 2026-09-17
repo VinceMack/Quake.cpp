@@ -15,6 +15,7 @@
 #include "core/msg.hpp"
 #include "core/cvar.hpp"
 #include "world/model.hpp"
+#include "render/render_types.hpp"
 
 namespace Audio { struct sfx_t; }
 using Audio::sfx_t;

@@ -4,21 +4,22 @@
 #include "render/software/sw_warp.hpp"
 #include "render/software/sw_surf.hpp"
 #include "render/software/sw_bsp.hpp"
-#include "client/client.hpp"
+#include "client/client_types.hpp"
 #include "core/cvar.hpp"
+
+using namespace Vid;
+using namespace Client;
+
+namespace Render {
 
 short* d_pzbuffer = nullptr;
 unsigned int d_zrowbytes = 0;
 unsigned int d_zwidth = 0;
 
-namespace Render {
-
 constexpr int NUM_MIPS = 4;
 cvar_t d_subdiv16 = { "d_subdiv16", "1", false, false, 0.0f, nullptr };
 cvar_t d_mipcap = { "d_mipcap", "0", false, false, 0.0f, nullptr };
 cvar_t d_mipscale = { "d_mipscale", "1", false, false, 0.0f, nullptr };
-surfcache_t* d_initial_rover = nullptr;
-qboolean d_roverwrapped = false;
 int d_minmip = 0;
 eastl::array<float, 3> d_scalemip{};
 constexpr eastl::array<float, 3> basemip = { 1.0f, 0.5f * 0.8f, 0.25f * 0.8f };

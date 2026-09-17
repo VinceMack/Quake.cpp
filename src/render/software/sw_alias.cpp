@@ -38,8 +38,6 @@ finalvert_t* pfinalverts = nullptr;
 auxvert_t* pauxverts = nullptr;
 int r_amodels_drawn = 0;
 int a_skinwidth = 0;
-float aliasxscale = 0.0f, aliasyscale = 0.0f, aliasxcenter = 0.0f, aliasycenter = 0.0f;
-float r_aliastransition = 0.0f, r_resfudge = 0.0f;
 
 struct aedge_t {
     int index0;

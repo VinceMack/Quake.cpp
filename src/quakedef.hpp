@@ -46,30 +46,19 @@ constexpr int YAW = 1;
 // fall over
 constexpr int ROLL = 2;
 
-constexpr int MAX_QPATH = 64;   // max length of a quake game pathname
-constexpr int MAX_OSPATH = 128; // max length of a filesystem pathname
-
 constexpr double ON_EPSILON = 0.1; // point on plane side epsilon
 
 constexpr int MAX_MSGLEN = 8000;   // max length of a reliable message
 constexpr int MAX_DATAGRAM = 1024; // max length of unreliable message
 
 //
-// per-level limits
+// per-level limits (MAX_EDICTS, MAX_LIGHTSTYLES, MAX_MODELS, MAX_SOUNDS, MAX_STYLESTRING defined in core/types.hpp)
 //
-constexpr int MAX_EDICTS = 600;
-constexpr int MAX_LIGHTSTYLES = 64;
-constexpr int MAX_MODELS = 256; // these are sent over the net as bytes
-constexpr int MAX_SOUNDS = 256; // so they cannot be blindly increased
-
 constexpr int SAVEGAME_COMMENT_LENGTH = 39;
 
-constexpr int MAX_STYLESTRING = 64;
-
 //
-// stats are integers communicated to the client by the server
+// stats are integers communicated to the client by the server (MAX_CL_STATS in core/types.hpp)
 //
-constexpr int MAX_CL_STATS = 32;
 constexpr int STAT_HEALTH = 0;
 constexpr int STAT_FRAGS = 1;
 constexpr int STAT_WEAPON = 2;
@@ -152,9 +141,7 @@ constexpr uint32_t HIT_WETSUIT = (1U << (23 + 2));
 constexpr uint32_t HIT_EMPATHY_SHIELDS = (1U << (23 + 3));
 
 //===========================================
-
-constexpr int MAX_SCOREBOARD = 16;
-constexpr int MAX_SCOREBOARDNAME = 32;
+// MAX_SCOREBOARD and MAX_SCOREBOARDNAME defined in core/types.hpp
 
 constexpr int SOUND_CHANNELS = 8;
 

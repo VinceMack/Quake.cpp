@@ -63,6 +63,7 @@ set(CORE_SRCS
     src/render/renderer.cpp
     src/client/screen.cpp
     src/client/view.cpp
+    src/client/view_blend.cpp
     src/render/software/sw_vid.cpp
     src/render/software/sw_part.cpp
     src/render/software/sw_sky.cpp
