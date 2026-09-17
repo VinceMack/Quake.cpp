@@ -7,16 +7,6 @@
 #include <numbers>
 #include <cmath>
 
-using namespace Common;
-using namespace Console;
-using namespace Host;
-using namespace Net;
-using namespace Audio;
-using namespace Model;
-using namespace Render;
-using namespace Math;
-using namespace Vid;
-
 namespace Client {
 
 static int num_temp_entities = 0;
@@ -61,19 +51,19 @@ void CL_DecayLights() {
 }
 
 void CL_InitTEnts() {
-    cl_sfx_wizhit    = S_PrecacheSound("wizard/hit.wav");
-    cl_sfx_knighthit = S_PrecacheSound("hknight/hit.wav");
-    cl_sfx_tink1     = S_PrecacheSound("weapons/tink1.wav");
-    cl_sfx_ric1      = S_PrecacheSound("weapons/ric1.wav");
-    cl_sfx_ric2      = S_PrecacheSound("weapons/ric2.wav");
-    cl_sfx_ric3      = S_PrecacheSound("weapons/ric3.wav");
-    cl_sfx_r_exp3    = S_PrecacheSound("weapons/r_exp3.wav");
+    cl_sfx_wizhit    = Audio::S_PrecacheSound("wizard/hit.wav");
+    cl_sfx_knighthit = Audio::S_PrecacheSound("hknight/hit.wav");
+    cl_sfx_tink1     = Audio::S_PrecacheSound("weapons/tink1.wav");
+    cl_sfx_ric1      = Audio::S_PrecacheSound("weapons/ric1.wav");
+    cl_sfx_ric2      = Audio::S_PrecacheSound("weapons/ric2.wav");
+    cl_sfx_ric3      = Audio::S_PrecacheSound("weapons/ric3.wav");
+    cl_sfx_r_exp3    = Audio::S_PrecacheSound("weapons/r_exp3.wav");
 }
 
 void CL_ParseBeam(model_t* m) {
-    const int ent = MSG_ReadShort();
-    const Vector3 start{ MSG_ReadCoord(), MSG_ReadCoord(), MSG_ReadCoord() };
-    const Vector3 end{ MSG_ReadCoord(), MSG_ReadCoord(), MSG_ReadCoord() };
+    const int ent = Common::MSG_ReadShort();
+    const Vector3 start{ Common::MSG_ReadCoord(), Common::MSG_ReadCoord(), Common::MSG_ReadCoord() };
+    const Vector3 end{ Common::MSG_ReadCoord(), Common::MSG_ReadCoord(), Common::MSG_ReadCoord() };
     for (int pass = 0; pass < 2; ++pass) {
         for (auto& b : cl_beams) {
             if (pass == 0 ? (b.entity == ent) : (!b.model || b.endtime < cl.time)) {
@@ -86,14 +76,14 @@ void CL_ParseBeam(model_t* m) {
             }
         }
     }
-    Con_Printf("beam list overflow!\n");
+    Console::Con_Printf("beam list overflow!\n");
 }
 
 void CL_ParseTEnt() {
-    const int type = MSG_ReadByte();
+    const int type = Common::MSG_ReadByte();
     auto PosSnd = [](sfx_t* sfx, int color = 0, int count = 0) {
-        const Vector3 pos{ MSG_ReadCoord(), MSG_ReadCoord(), MSG_ReadCoord() };
-        if (count) R_RunParticleEffect(pos, vec3_origin, color, count);
+        const Vector3 pos{ Common::MSG_ReadCoord(), Common::MSG_ReadCoord(), Common::MSG_ReadCoord() };
+        if (count) Render::R_RunParticleEffect(pos, Math::vec3_origin, color, count);
         if (sfx) S_StartSound(-1, 0, sfx, pos, 1, 1);
         return pos;
     };
@@ -109,10 +99,10 @@ void CL_ParseTEnt() {
     case TE_GUNSHOT: PosSnd(nullptr, 0, 20); break;
     case TE_EXPLOSION: case TE_EXPLOSION2: {
         Vector3 pos = PosSnd(cl_sfx_r_exp3);
-        if (type == TE_EXPLOSION) R_ParticleExplosion(pos);
+        if (type == TE_EXPLOSION) Render::R_ParticleExplosion(pos);
         else {
-            int cstart = MSG_ReadByte(), clen = MSG_ReadByte();
-            R_ParticleExplosion2(pos, cstart, clen);
+            int cstart = Common::MSG_ReadByte(), clen = Common::MSG_ReadByte();
+            Render::R_ParticleExplosion2(pos, cstart, clen);
         }
         if (auto* dl = CL_AllocDlight(0)) {
             dl->origin = pos;
@@ -122,14 +112,14 @@ void CL_ParseTEnt() {
         }
         break;
     }
-    case TE_TAREXPLOSION: R_BlobExplosion(PosSnd(cl_sfx_r_exp3)); break;
-    case TE_LIGHTNING1: CL_ParseBeam(Mod_ForName("progs/bolt.mdl", true)); break;
-    case TE_LIGHTNING2: CL_ParseBeam(Mod_ForName("progs/bolt2.mdl", true)); break;
-    case TE_LIGHTNING3: CL_ParseBeam(Mod_ForName("progs/bolt3.mdl", true)); break;
-    case TE_BEAM:       CL_ParseBeam(Mod_ForName("progs/beam.mdl", true)); break;
-    case TE_LAVASPLASH: R_LavaSplash(PosSnd(nullptr)); break;
-    case TE_TELEPORT:   R_TeleportSplash(PosSnd(nullptr)); break;
-    default: Sys_Error("CL_ParseTEnt: bad type");
+    case TE_TAREXPLOSION: Render::R_BlobExplosion(PosSnd(cl_sfx_r_exp3)); break;
+    case TE_LIGHTNING1: CL_ParseBeam(Model::Mod_ForName("progs/bolt.mdl", true)); break;
+    case TE_LIGHTNING2: CL_ParseBeam(Model::Mod_ForName("progs/bolt2.mdl", true)); break;
+    case TE_LIGHTNING3: CL_ParseBeam(Model::Mod_ForName("progs/bolt3.mdl", true)); break;
+    case TE_BEAM:       CL_ParseBeam(Model::Mod_ForName("progs/beam.mdl", true)); break;
+    case TE_LAVASPLASH: Render::R_LavaSplash(PosSnd(nullptr)); break;
+    case TE_TELEPORT:   Render::R_TeleportSplash(PosSnd(nullptr)); break;
+    default: Common::Sys_Error("CL_ParseTEnt: bad type");
     }
 }
 
@@ -138,7 +128,7 @@ entity_t* CL_NewTempEntity() {
     entity_t* ent = &cl_temp_entities[num_temp_entities++];
     *ent = {};
     cl_visedicts[cl_numvisedicts++] = ent;
-    ent->colormap = vid.colormap;
+    ent->colormap = Vid::vid.colormap;
     return ent;
 }
 

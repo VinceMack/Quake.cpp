@@ -7,18 +7,6 @@
 #include "client/cl_demo.hpp"
 #include "client/chase.hpp"
 
-using namespace Common;
-using namespace Console;
-using namespace Cvar;
-using namespace Cmd;
-using namespace Host;
-using namespace Net;
-using namespace Math;
-using namespace Render;
-using namespace Audio;
-using namespace Server;
-using namespace Vid;
-
 namespace Client {
 
 cvar_t cl_name          = { "_cl_name", "player", true, {}, {}, {} };
@@ -50,18 +38,18 @@ int cl_numvisedicts = 0;
 entity_t* cl_visedicts[MAX_VISEDICTS];
 
 entity_t* CL_EntityNum(int num) {
-    if (num >= MAX_EDICTS) Host_Error("CL_EntityNum: %i is an invalid number", num);
+    if (num >= MAX_EDICTS) Host::Host_Error("CL_EntityNum: %i is an invalid number", num);
     while (cl.num_entities <= num) {
-        cl_entities[cl.num_entities].colormap = vid.colormap;
+        cl_entities[cl.num_entities].colormap = Vid::vid.colormap;
         cl.num_entities++;
     }
     return &cl_entities[num];
 }
 
 void CL_ClearState() {
-    if (!sv.active) Host_ClearMemory();
+    if (!Server::sv.active) Host::Host_ClearMemory();
     cl = {};
-    SZ_Clear(&cls.message);
+    Common::SZ_Clear(&cls.message);
     cl_efrags.fill({});
     cl_entities.fill({});
     cl_static_entities.fill({});
@@ -76,18 +64,18 @@ void CL_ClearState() {
 }
 
 void CL_Disconnect() {
-    S_StopAllSounds(true);
+    Audio::S_StopAllSounds(true);
     if (cls.demoplayback) CL_StopPlayback();
     else if (cls.state == ca_connected) {
         if (cls.demorecording) CL_Stop_f();
-        Con_DPrintf("Sending clc_disconnect\n");
-        SZ_Clear(&cls.message);
-        MSG_WriteByte(&cls.message, clc_disconnect);
-        NET_SendUnreliableMessage(cls.netcon, &cls.message);
-        SZ_Clear(&cls.message);
-        NET_Close(cls.netcon);
+        Console::Con_DPrintf("Sending clc_disconnect\n");
+        Common::SZ_Clear(&cls.message);
+        Common::MSG_WriteByte(&cls.message, clc_disconnect);
+        Net::NET_SendUnreliableMessage(cls.netcon, &cls.message);
+        Common::SZ_Clear(&cls.message);
+        Net::NET_Close(cls.netcon);
         cls.state = ca_disconnected;
-        if (sv.active) Host_ShutdownServer(false);
+        if (Server::sv.active) Host::Host_ShutdownServer(false);
     }
     cls.demoplayback = cls.timedemo = false;
     cls.signon = 0;
@@ -95,33 +83,33 @@ void CL_Disconnect() {
 
 void CL_Disconnect_f() {
     CL_Disconnect();
-    if (sv.active) Host_ShutdownServer(false);
+    if (Server::sv.active) Host::Host_ShutdownServer(false);
 }
 
 void CL_EstablishConnection(const char* host) {
     if (cls.state == ca_dedicated || cls.demoplayback) return;
     CL_Disconnect();
-    cls.netcon = NET_Connect(host);
-    if (!cls.netcon) Host_Error("CL_Connect: connect failed\n");
-    Con_DPrintf("CL_EstablishConnection: connected to %s\n", host);
+    cls.netcon = Net::NET_Connect(host);
+    if (!cls.netcon) Host::Host_Error("CL_Connect: connect failed\n");
+    Console::Con_DPrintf("CL_EstablishConnection: connected to %s\n", host);
     cls.demonum = -1;
     cls.state = ca_connected;
     cls.signon = 0;
 }
 
 void CL_SignonReply() {
-    Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
+    Console::Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
     auto WriteCmd = [](const char* cmd) {
-        MSG_WriteByte(&cls.message, clc_stringcmd);
-        MSG_WriteString(&cls.message, cmd);
+        Common::MSG_WriteByte(&cls.message, clc_stringcmd);
+        Common::MSG_WriteString(&cls.message, cmd);
     };
     switch (cls.signon) {
     case 1:
         WriteCmd("prespawn");
         break;
     case 2:
-        WriteCmd(va("name \"%s\"\n", cl_name.string.c_str()));
-        WriteCmd(va("color %i %i\n", static_cast<int>(cl_color.value) >> 4, static_cast<int>(cl_color.value) & 15));
+        WriteCmd(Common::va("name \"%s\"\n", cl_name.string.c_str()));
+        WriteCmd(Common::va("color %i %i\n", static_cast<int>(cl_color.value) >> 4, static_cast<int>(cl_color.value) & 15));
         WriteCmd(("spawn " + std::string(cls.spawnparms.data())).c_str());
         break;
     case 3:
@@ -136,9 +124,9 @@ void CL_SignonReply() {
 void CL_PrintEntities_f() {
     int i = 0;
     for (const auto& ent : std::span(cl_entities.data(), cl.num_entities)) {
-        Con_Printf("%3i:", i++);
-        if (!ent.model) { Con_Printf("EMPTY\n"); continue; }
-        Con_Printf("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n",
+        Console::Con_Printf("%3i:", i++);
+        if (!ent.model) { Console::Con_Printf("EMPTY\n"); continue; }
+        Console::Con_Printf("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n",
             ent.model->name, ent.frame, ent.origin[0], ent.origin[1], ent.origin[2],
             ent.angles[0], ent.angles[1], ent.angles[2]);
     }
@@ -146,7 +134,7 @@ void CL_PrintEntities_f() {
 
 static float CL_LerpPoint() {
     float f = static_cast<float>(cl.mtime[0] - cl.mtime[1]);
-    if (!f || cl_nolerp.value || cls.timedemo || sv.active) {
+    if (!f || cl_nolerp.value || cls.timedemo || Server::sv.active) {
         cl.time = cl.mtime[0];
         return 1.0f;
     }
@@ -178,12 +166,12 @@ void CL_RelinkEntities() {
         }
     }
     if (cl.num_entities <= 1) return;
-    const float bobjrotate = anglemod(static_cast<float>(100.0 * cl.time));
+    const float bobjrotate = Math::anglemod(static_cast<float>(100.0 * cl.time));
     int i = 1;
 
     for (auto& ent : std::span(cl_entities.data() + 1, cl.num_entities - 1)) {
         if (!ent.model) {
-            if (ent.forcelink) R_RemoveEfrags(&ent);
+            if (ent.forcelink) Render::R_RemoveEfrags(&ent);
             ++i;
             continue;
         }
@@ -211,7 +199,7 @@ void CL_RelinkEntities() {
         }
 
         if (ent.model->flags & EF_ROTATE) ent.angles[1] = bobjrotate;
-        if (ent.effects & EF_BRIGHTFIELD) R_EntityParticles(&ent);
+        if (ent.effects & EF_BRIGHTFIELD) Render::R_EntityParticles(&ent);
 
         auto AddLight = [&](float base_rad, float die_off, float z_off = 16.0f, bool fwd = false) {
             if (auto* dl = CL_AllocDlight(i)) {
@@ -219,7 +207,7 @@ void CL_RelinkEntities() {
                 dl->origin.z += z_off;
                 if (fwd) {
                     Vector3 fv, rv, uv;
-                    AngleVectors(ent.angles, fv, rv, uv);
+                    Math::AngleVectors(ent.angles, fv, rv, uv);
                     dl->origin += fv * 18.0f;
                 }
                 dl->radius = base_rad + static_cast<float>(rand() & 31);
@@ -237,7 +225,7 @@ void CL_RelinkEntities() {
         }};
         for (auto [flag, type] : trail_map) {
             if (ent.model->flags & flag) {
-                R_RocketTrail(oldorg, ent.origin, type);
+                Render::R_RocketTrail(oldorg, ent.origin, type);
                 if (flag == EF_ROCKET) {
                     if (auto* dl = CL_AllocDlight(i)) {
                         dl->origin = ent.origin;
@@ -259,17 +247,17 @@ void CL_RelinkEntities() {
 
 int CL_ReadFromServer() {
     cl.oldtime = cl.time;
-    cl.time += host_frametime;
+    cl.time += Host::host_frametime;
     int ret;
     do {
         ret = CL_GetMessage();
-        if (ret == -1) Host_Error("CL_ReadFromServer: lost server connection");
+        if (ret == -1) Host::Host_Error("CL_ReadFromServer: lost server connection");
         if (!ret) break;
-        cl.last_received_message = static_cast<float>(realtime);
+        cl.last_received_message = static_cast<float>(Host::realtime);
         CL_ParseServerMessage();
     } while (ret && cls.state == ca_connected);
 
-    if (cl_shownet.value) Con_Printf("\n");
+    if (cl_shownet.value) Console::Con_Printf("\n");
     CL_RelinkEntities();
     CL_UpdateTEnts();
     return 0;
@@ -284,22 +272,22 @@ void CL_SendCmd() {
         CL_SendMove(&cmd);
     }
     if (cls.demoplayback) {
-        SZ_Clear(&cls.message);
+        Common::SZ_Clear(&cls.message);
         return;
     }
     if (!cls.message.cursize) return;
-    if (!NET_CanSendMessage(cls.netcon)) {
-        Con_DPrintf("CL_WriteToServer: can't send\n");
+    if (!Net::NET_CanSendMessage(cls.netcon)) {
+        Console::Con_DPrintf("CL_WriteToServer: can't send\n");
         return;
     }
-    if (NET_SendMessage(cls.netcon, &cls.message) == -1) Host_Error("CL_WriteToServer: lost server connection");
-    SZ_Clear(&cls.message);
+    if (Net::NET_SendMessage(cls.netcon, &cls.message) == -1) Host::Host_Error("CL_WriteToServer: lost server connection");
+    Common::SZ_Clear(&cls.message);
 }
 
 struct CmdPair { const char* name; void (*fn)(); };
 
 void CL_Init() {
-    SZ_Init(&cls.message, cls.message_buf);
+    Common::SZ_Init(&cls.message, cls.message_buf);
     CL_InitInput();
     CL_InitTEnts();
     for (auto* c : { &cl_name, &cl_color, &cl_upspeed, &cl_forwardspeed, &cl_backspeed, &cl_sidespeed,

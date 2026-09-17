@@ -5,10 +5,6 @@
 
 #include <cmath>
 
-using namespace Math;
-using namespace Client;
-using namespace Screen;
-
 namespace Render {
 
 std::array<int, SIN_BUFFER_SIZE> sintable{};
@@ -46,7 +42,7 @@ void D_WarpScreen()
 {
     std::array<byte*, MAXHEIGHT + (AMP2 * 2)> rowptr{};
     std::array<int, MAXWIDTH + (AMP2 * 2)> column{};
-    const auto& scr_vrect = GetScreenSystem().GetVrect();
+    const auto& scr_vrect = Screen::GetScreenSystem().GetVrect();
     int w = r_refdef.vrect.width;
     int h = r_refdef.vrect.height;
     float wratio = static_cast<float>(w) / static_cast<float>(scr_vrect.width);
@@ -59,7 +55,7 @@ void D_WarpScreen()
     for (int u = 0; u < scr_vrect.width + AMP2 * 2; u++) {
         column[u] = r_refdef.vrect.x + static_cast<int>(static_cast<float>(u) * wratio * static_cast<float>(w) / static_cast<float>(w + AMP2 * 2));
     }
-    int* turb = intsintable.data() + (static_cast<int>(cl.time * SPEED) & (CYCLE - 1));
+    int* turb = intsintable.data() + (static_cast<int>(Client::cl.time * SPEED) & (CYCLE - 1));
     byte* dest = reinterpret_cast<byte*>(Vid::vid.buffer) + scr_vrect.y * Vid::vid.rowbytes + scr_vrect.x;
     for (int v = 0; v < scr_vrect.height; v++, dest += Vid::vid.rowbytes) {
         int* col = &column[turb[v]];
@@ -78,7 +74,7 @@ void Turbulent8(espan_t* pspan)
     float sdivz16stepu = d_sdivzstepu * 16;
     float tdivz16stepu = d_tdivzstepu * 16;
     float zi16stepu = d_zistepu * 16;
-    r_turb_turb = sintable.data() + (static_cast<int>(cl.time * SPEED) & (CYCLE - 1));
+    r_turb_turb = sintable.data() + (static_cast<int>(Client::cl.time * SPEED) & (CYCLE - 1));
     r_turb_sstep = 0;
     r_turb_tstep = 0;
     r_turb_pbase = reinterpret_cast<unsigned char*>(cacheblock);

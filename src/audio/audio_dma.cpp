@@ -6,9 +6,6 @@
 
 #include <SDL.h>
 
-using namespace Common;
-using namespace Console;
-
 namespace Audio {
 
 dma_t the_shm;
@@ -43,12 +40,12 @@ bool SNDDMA_Init() {
     } else if (desired_bits == 16) {
         desired.format = (SDL_BYTEORDER == SDL_BIG_ENDIAN) ? AUDIO_S16MSB : AUDIO_S16LSB;
     } else {
-        Con_Printf("Unknown number of audio bits: %d\n", desired_bits);
+        Console::Con_Printf("Unknown number of audio bits: %d\n", desired_bits);
         return false;
     }
 
     if (SDL_OpenAudio(&desired, nullptr) < 0) {
-        Con_Printf("Couldn't open SDL audio: %s\n", SDL_GetError());
+        Console::Con_Printf("Couldn't open SDL audio: %s\n", SDL_GetError());
         return false;
     }
     SDL_PauseAudio(0);

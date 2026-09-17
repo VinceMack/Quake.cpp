@@ -6,8 +6,6 @@
 
 #include <algorithm>
 
-using namespace Common;
-
 namespace Audio {
 
 namespace {

@@ -3,15 +3,6 @@
 #include "client/cl_input.hpp"
 #include "client/cl_main.hpp"
 
-using namespace Common;
-using namespace Console;
-using namespace Cvar;
-using namespace Cmd;
-using namespace Host;
-using namespace View;
-using namespace Math;
-using namespace Net;
-
 namespace Client {
 
 kbutton_t in_mlook, in_klook, in_left, in_right, in_forward, in_back;
@@ -21,18 +12,18 @@ int in_impulse = 0;
 
 static void KeyDown(kbutton_t* b) {
     std::string_view c = Cmd::Argv(1);
-    int k = c.empty() ? -1 : Q_atoi(c);
+    int k = c.empty() ? -1 : Common::Q_atoi(c);
     if (k == b->down[0] || k == b->down[1]) return;
     if (!b->down[0]) b->down[0] = k;
     else if (!b->down[1]) b->down[1] = k;
-    else { Con_Printf("Three keys down for a button!\n"); return; }
+    else { Console::Con_Printf("Three keys down for a button!\n"); return; }
     if (!(b->state & 1)) b->state |= 3;
 }
 
 static void KeyUp(kbutton_t* b) {
     std::string_view c = Cmd::Argv(1);
     if (c.empty()) { b->down[0] = b->down[1] = 0; b->state = 4; return; }
-    int k = Q_atoi(c);
+    int k = Common::Q_atoi(c);
     if (b->down[0] == k) b->down[0] = 0;
     else if (b->down[1] == k) b->down[1] = 0;
     else return;
@@ -51,17 +42,17 @@ float CL_KeyState(kbutton_t* key) {
 }
 
 void CL_AdjustAngles() {
-    float speed = static_cast<float>((in_speed.state & 1) ? host_frametime * cl_anglespeedkey.value : host_frametime);
+    float speed = static_cast<float>((in_speed.state & 1) ? Host::host_frametime * cl_anglespeedkey.value : Host::host_frametime);
     if (!(in_strafe.state & 1)) {
-        cl.viewangles[YAW] = anglemod(cl.viewangles[YAW] + speed * cl_yawspeed.value * (CL_KeyState(&in_left) - CL_KeyState(&in_right)));
+        cl.viewangles[YAW] = Math::anglemod(cl.viewangles[YAW] + speed * cl_yawspeed.value * (CL_KeyState(&in_left) - CL_KeyState(&in_right)));
     }
     if (in_klook.state & 1) {
-        V_StopPitchDrift();
+        View::V_StopPitchDrift();
         cl.viewangles[PITCH] += speed * cl_pitchspeed.value * (CL_KeyState(&in_back) - CL_KeyState(&in_forward));
     }
     const float up = CL_KeyState(&in_lookup), down = CL_KeyState(&in_lookdown);
     cl.viewangles[PITCH] += speed * cl_pitchspeed.value * (down - up);
-    if (up || down) V_StopPitchDrift();
+    if (up || down) View::V_StopPitchDrift();
     cl.viewangles[PITCH] = std::clamp(cl.viewangles[PITCH], -70.0f, 80.0f);
     cl.viewangles[ROLL]  = std::clamp(cl.viewangles[ROLL], -50.0f, 50.0f);
 }
@@ -91,22 +82,22 @@ void CL_SendMove(usercmd_t* cmd) {
     buf.cursize = 0;
     cl.cmd = *cmd;
 
-    MSG_WriteByte(&buf, clc_move);
-    MSG_WriteFloat(&buf, static_cast<float>(cl.mtime[0]));
-    for (int i = 0; i < 3; ++i) MSG_WriteAngle(&buf, cl.viewangles[i]);
-    MSG_WriteShort(&buf, static_cast<int>(cmd->forwardmove));
-    MSG_WriteShort(&buf, static_cast<int>(cmd->sidemove));
-    MSG_WriteShort(&buf, static_cast<int>(cmd->upmove));
+    Common::MSG_WriteByte(&buf, clc_move);
+    Common::MSG_WriteFloat(&buf, static_cast<float>(cl.mtime[0]));
+    for (int i = 0; i < 3; ++i) Common::MSG_WriteAngle(&buf, cl.viewangles[i]);
+    Common::MSG_WriteShort(&buf, static_cast<int>(cmd->forwardmove));
+    Common::MSG_WriteShort(&buf, static_cast<int>(cmd->sidemove));
+    Common::MSG_WriteShort(&buf, static_cast<int>(cmd->upmove));
     int bits = (in_attack.state & 3 ? 1 : 0) | (in_jump.state & 3 ? 2 : 0);
     in_attack.state &= ~2;
     in_jump.state &= ~2;
-    MSG_WriteByte(&buf, bits);
-    MSG_WriteByte(&buf, in_impulse);
+    Common::MSG_WriteByte(&buf, bits);
+    Common::MSG_WriteByte(&buf, in_impulse);
     in_impulse = 0;
 
     if (cls.demoplayback || ++cl.movemessages <= 2) return;
-    if (NET_SendUnreliableMessage(cls.netcon, &buf) == -1) {
-        Con_Printf("CL_SendMove: lost server connection\n");
+    if (Net::NET_SendUnreliableMessage(cls.netcon, &buf) == -1) {
+        Console::Con_Printf("CL_SendMove: lost server connection\n");
         CL_Disconnect();
     }
 }
@@ -125,9 +116,9 @@ void CL_InitInput() {
         {"speed", &in_speed}, {"attack", &in_attack}, {"use", &in_use}, {"jump", &in_jump}, {"klook", &in_klook}
     };
     for (auto [name, btn] : btns) BindBtn(name, btn);
-    Cmd::AddCommand("impulse", []() { in_impulse = Q_atoi(Cmd::Argv(1)); });
+    Cmd::AddCommand("impulse", []() { in_impulse = Common::Q_atoi(Cmd::Argv(1)); });
     Cmd::AddCommand("+mlook", []() { KeyDown(&in_mlook); });
-    Cmd::AddCommand("-mlook", []() { KeyUp(&in_mlook); if (!(in_mlook.state & 1) && lookspring.value) V_StartPitchDrift(); });
+    Cmd::AddCommand("-mlook", []() { KeyUp(&in_mlook); if (!(in_mlook.state & 1) && lookspring.value) View::V_StartPitchDrift(); });
 }
 
 } // namespace Client

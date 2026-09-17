@@ -12,13 +12,6 @@
 #include <cstdio>
 #include <vector>
 
-using namespace Math;
-using namespace Common;
-using namespace Console;
-using namespace Net;
-using namespace Client;
-using namespace Server;
-
 namespace Render {
 
 inline constexpr int MAX_PARTICLES = 2048;
@@ -51,9 +44,9 @@ static inline particle_t* AllocParticle()
 
 void R_InitParticles()
 {
-    int i = COM_CheckParm("-particles");
+    int i = Common::COM_CheckParm("-particles");
     if (i) {
-        r_numparticles = Q_atoi(com_argv[i + 1]);
+        r_numparticles = Common::Q_atoi(Common::com_argv[i + 1]);
         if (r_numparticles < ABSOLUTE_MIN_PARTICLES) {
             r_numparticles = ABSOLUTE_MIN_PARTICLES;
         }
@@ -74,12 +67,12 @@ void R_EntityParticles(entity_t* ent)
         }
     }
     for (int i = 0; i < NUMVERTEXNORMALS; i++) {
-        const float yaw = static_cast<float>(cl.time * avelocities[i].x);
-        const float pitch = static_cast<float>(cl.time * avelocities[i].y);
+        const float yaw = static_cast<float>(Client::cl.time * avelocities[i].x);
+        const float pitch = static_cast<float>(Client::cl.time * avelocities[i].y);
         const Vector3 forward(std::cos(pitch) * std::cos(yaw), std::cos(pitch) * std::sin(yaw), -std::sin(pitch));
         particle_t* p = AllocParticle();
         if (!p) return;
-        p->die = static_cast<float>(cl.time + 0.01);
+        p->die = static_cast<float>(Client::cl.time + 0.01);
         p->color = static_cast<float>(0x6f);
         p->type = ptype_t::Explode;
         p->org = ent->origin + Vector3(r_avertexnormals[i][0], r_avertexnormals[i][1], r_avertexnormals[i][2]) * dist + forward * beamlength;
@@ -101,13 +94,13 @@ void R_ReadPointFile_f()
     FILE* f;
     Vector3 org;
     char name[MAX_OSPATH];
-    sprintf_s(name, sizeof(name), "maps/%s.pts", sv.name);
-    COM_FOpenFile(name, &f);
+    sprintf_s(name, sizeof(name), "maps/%s.pts", Server::sv.name);
+    Common::COM_FOpenFile(name, &f);
     if (!f) {
-        Con_Printf("couldn't open %s\n", name);
+        Console::Con_Printf("couldn't open %s\n", name);
         return;
     }
-    Con_Printf("Reading %s...\n", name);
+    Console::Con_Printf("Reading %s...\n", name);
     int c = 0;
     for (;;) {
         int r = fscanf_s(f, "%f %f %f\n", &org[0], &org[1], &org[2]);
@@ -116,7 +109,7 @@ void R_ReadPointFile_f()
         }
         c++;
         if (!free_particles) {
-            Con_Printf("Not enough free particles\n");
+            Console::Con_Printf("Not enough free particles\n");
             break;
         }
         particle_t* p = free_particles;
@@ -126,24 +119,24 @@ void R_ReadPointFile_f()
         p->die = 99999.0f;
         p->color = static_cast<float>((-c) & 15);
         p->type = ptype_t::Static;
-        p->vel = vec3_origin;
+        p->vel = Math::vec3_origin;
         p->org = org;
     }
     fclose(f);
-    Con_Printf("%i points read\n", c);
+    Console::Con_Printf("%i points read\n", c);
 }
 
 void R_ParseParticleEffect()
 {
     Vector3 org, dir;
-    org.x = MSG_ReadCoord();
-    org.y = MSG_ReadCoord();
-    org.z = MSG_ReadCoord();
-    dir.x = MSG_ReadChar() * (1.0f / 16.0f);
-    dir.y = MSG_ReadChar() * (1.0f / 16.0f);
-    dir.z = MSG_ReadChar() * (1.0f / 16.0f);
-    int msgcount = MSG_ReadByte();
-    int color = MSG_ReadByte();
+    org.x = Common::MSG_ReadCoord();
+    org.y = Common::MSG_ReadCoord();
+    org.z = Common::MSG_ReadCoord();
+    dir.x = Common::MSG_ReadChar() * (1.0f / 16.0f);
+    dir.y = Common::MSG_ReadChar() * (1.0f / 16.0f);
+    dir.z = Common::MSG_ReadChar() * (1.0f / 16.0f);
+    int msgcount = Common::MSG_ReadByte();
+    int color = Common::MSG_ReadByte();
     int count = (msgcount == 255) ? 1024 : msgcount;
     R_RunParticleEffect(org, dir, color, count);
 }
@@ -153,7 +146,7 @@ void R_ParticleExplosion(const Vector3& org)
     for (int i = 0; i < 1024; i++) {
         particle_t* p = AllocParticle();
         if (!p) return;
-        p->die = static_cast<float>(cl.time + 5);
+        p->die = static_cast<float>(Client::cl.time + 5);
         p->color = static_cast<float>(ramp1[0]);
         p->ramp = static_cast<float>(rand() & 3);
         p->type = (i & 1) ? ptype_t::Explode : ptype_t::Explode2;
@@ -168,7 +161,7 @@ void R_ParticleExplosion2(const Vector3& org, int colorStart, int colorLength)
     for (int i = 0; i < 512; i++) {
         particle_t* p = AllocParticle();
         if (!p) return;
-        p->die = static_cast<float>(cl.time + 0.3);
+        p->die = static_cast<float>(Client::cl.time + 0.3);
         p->color = static_cast<float>(colorStart + (colorMod++ % colorLength));
         p->type = ptype_t::Blob;
         p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
@@ -181,7 +174,7 @@ void R_BlobExplosion(const Vector3& org)
     for (int i = 0; i < 1024; i++) {
         particle_t* p = AllocParticle();
         if (!p) return;
-        p->die = static_cast<float>(cl.time + 1 + (rand() & 8) * 0.05);
+        p->die = static_cast<float>(Client::cl.time + 1 + (rand() & 8) * 0.05);
         if (i & 1) {
             p->type = ptype_t::Blob;
             p->color = static_cast<float>(66 + rand() % 6);
@@ -200,14 +193,14 @@ void R_RunParticleEffect(const Vector3& org, const Vector3& dir, int color, int 
         particle_t* p = AllocParticle();
         if (!p) return;
         if (count == 1024) {
-            p->die = static_cast<float>(cl.time + 5);
+            p->die = static_cast<float>(Client::cl.time + 5);
             p->color = static_cast<float>(ramp1[0]);
             p->ramp = static_cast<float>(rand() & 3);
             p->type = (i & 1) ? ptype_t::Explode : ptype_t::Explode2;
             p->org = org + Vector3(static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16), static_cast<float>((rand() % 32) - 16));
             p->vel = Vector3(static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256), static_cast<float>((rand() % 512) - 256));
         } else {
-            p->die = static_cast<float>(cl.time + 0.1 * (rand() % 5));
+            p->die = static_cast<float>(Client::cl.time + 0.1 * (rand() % 5));
             p->color = static_cast<float>((color & ~7) + (rand() & 7));
             p->type = ptype_t::SlowGrav;
             p->org = org + Vector3(static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8));
@@ -222,7 +215,7 @@ void R_LavaSplash(const Vector3& org)
         for (int j = -16; j < 16; j++) {
             particle_t* p = AllocParticle();
             if (!p) return;
-            p->die = static_cast<float>(cl.time + 2 + (rand() & 31) * 0.02);
+            p->die = static_cast<float>(Client::cl.time + 2 + (rand() & 31) * 0.02);
             p->color = static_cast<float>(224 + (rand() & 7));
             p->type = ptype_t::SlowGrav;
             Vector3 dir(static_cast<float>(j * 8 + (rand() & 7)), static_cast<float>(i * 8 + (rand() & 7)), 256.0f);
@@ -240,7 +233,7 @@ void R_TeleportSplash(const Vector3& org)
             for (int k = -24; k < 32; k += 4) {
                 particle_t* p = AllocParticle();
                 if (!p) return;
-                p->die = static_cast<float>(cl.time + 0.2 + (rand() & 7) * 0.02);
+                p->die = static_cast<float>(Client::cl.time + 0.2 + (rand() & 7) * 0.02);
                 p->color = static_cast<float>(7 + (rand() & 7));
                 p->type = ptype_t::SlowGrav;
                 Vector3 dir(static_cast<float>(j * 8), static_cast<float>(i * 8), static_cast<float>(k * 8));
@@ -268,8 +261,8 @@ void R_RocketTrail(Vector3 start, const Vector3& end, int type)
         len -= dec;
         particle_t* p = AllocParticle();
         if (!p) return;
-        p->vel = vec3_origin;
-        p->die = static_cast<float>(cl.time + 2);
+        p->vel = Math::vec3_origin;
+        p->die = static_cast<float>(Client::cl.time + 2);
         switch (type) {
         case 0: // rocket trail
             p->ramp = static_cast<float>(rand() & 3);
@@ -290,7 +283,7 @@ void R_RocketTrail(Vector3 start, const Vector3& end, int type)
             break;
         case 3:
         case 5: // tracer
-            p->die = static_cast<float>(cl.time + 0.5);
+            p->die = static_cast<float>(Client::cl.time + 0.5);
             p->type = ptype_t::Static;
             if (type == 3) {
                 p->color = static_cast<float>(52 + ((tracercount & 4) << 1));
@@ -318,7 +311,7 @@ void R_RocketTrail(Vector3 start, const Vector3& end, int type)
         case 6: // voor trail
             p->color = static_cast<float>(9 * 16 + 8 + (rand() & 3));
             p->type = ptype_t::Static;
-            p->die = static_cast<float>(cl.time + 0.3);
+            p->die = static_cast<float>(Client::cl.time + 0.3);
             p->org = start + Vector3(static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8), static_cast<float>((rand() & 15) - 8));
             break;
         }
@@ -329,10 +322,10 @@ void R_RocketTrail(Vector3 start, const Vector3& end, int type)
 void R_DrawParticles()
 {
     D_StartParticles();
-    VectorScale(vright, xscaleshrink, r_pright);
-    VectorScale(vup, yscaleshrink, r_pup);
+    Math::VectorScale(vright, xscaleshrink, r_pright);
+    Math::VectorScale(vup, yscaleshrink, r_pup);
     VectorCopy(vpn, r_ppn);
-    const float frametime = static_cast<float>(cl.time - cl.oldtime);
+    const float frametime = static_cast<float>(Client::cl.time - Client::cl.oldtime);
     const float time3 = frametime * 15;
     const float time2 = frametime * 10;
     const float time1 = frametime * 5;
@@ -341,7 +334,7 @@ void R_DrawParticles()
 
     for (;;) {
         particle_t* kill = active_particles;
-        if (kill && kill->die < cl.time) {
+        if (kill && kill->die < Client::cl.time) {
             active_particles = kill->next;
             kill->next = free_particles;
             free_particles = kill;
@@ -353,7 +346,7 @@ void R_DrawParticles()
     for (particle_t* p = active_particles; p; p = p->next) {
         for (;;) {
             particle_t* kill = p->next;
-            if (kill && kill->die < cl.time) {
+            if (kill && kill->die < Client::cl.time) {
                 p->next = kill->next;
                 kill->next = free_particles;
                 free_particles = kill;

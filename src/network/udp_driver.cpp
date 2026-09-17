@@ -2,11 +2,6 @@
 #include "quakedef.hpp"
 #include "network/udp_driver.hpp"
 
-using namespace Common;
-using namespace Console;
-using namespace Cvar;
-using namespace Cmd;
-
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -71,7 +66,7 @@ static int PartialIPAddress(const char* in, struct qsockaddr* hostaddr) {
         mask <<= 8;
         addr = (addr << 8) + num;
     }
-    if (*b++ == ':') port = Q_atoi(b);
+    if (*b++ == ':') port = Common::Q_atoi(b);
     hostaddr->sa_family = AF_INET;
     ((struct sockaddr_in*)hostaddr)->sin_port = htons(static_cast<u_short>(port));
     ((struct sockaddr_in*)hostaddr)->sin_addr.s_addr = (myAddr & htonl(mask)) | htonl(addr);
@@ -81,7 +76,7 @@ static int PartialIPAddress(const char* in, struct qsockaddr* hostaddr) {
 int UDPDriver::Init() {
     char buff[MAXHOSTNAMELEN];
     struct qsockaddr addr;
-    if (COM_CheckParm("-noudp")) return -1;
+    if (Common::COM_CheckParm("-noudp")) return -1;
 
 #ifdef _WIN32
     WSADATA wsaData;
@@ -93,17 +88,17 @@ int UDPDriver::Init() {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     if (getaddrinfo(buff, nullptr, &hints, &result) != 0 || !result) {
-        Sys_Error("UDP_Init: unable to resolve hostname");
+        Common::Sys_Error("UDP_Init: unable to resolve hostname");
     }
     myAddr = ((struct sockaddr_in*)result->ai_addr)->sin_addr.s_addr;
     freeaddrinfo(result);
 
-    if (Q_strcmp(hostname.string.c_str(), "UNNAMED") == 0) {
+    if (Common::Q_strcmp(hostname.string.c_str(), "UNNAMED") == 0) {
         buff[15] = 0;
         Cvar::Set("hostname", buff);
     }
     if ((net_controlsocket = OpenSocket(0)) == -1) {
-        Sys_Error("UDP_Init: Unable to open control socket\n");
+        Common::Sys_Error("UDP_Init: Unable to open control socket\n");
     }
 
     ((struct sockaddr_in*)&broadcastaddr)->sin_family = AF_INET;
@@ -111,10 +106,10 @@ int UDPDriver::Init() {
     ((struct sockaddr_in*)&broadcastaddr)->sin_port = htons(static_cast<u_short>(net_hostport));
 
     GetSocketAddr(net_controlsocket, &addr);
-    Q_strcpy(my_tcpip_address, AddrToString(&addr));
-    char* colon = Q_strrchr(my_tcpip_address, ':');
+    Common::Q_strcpy(my_tcpip_address, AddrToString(&addr));
+    char* colon = Common::Q_strrchr(my_tcpip_address, ':');
     if (colon) *colon = 0;
-    Con_Printf("UDP Initialized\n");
+    Console::Con_Printf("UDP Initialized\n");
     tcpipAvailable = true;
     return net_controlsocket;
 }
@@ -130,7 +125,7 @@ void UDPDriver::Shutdown() {
 void UDPDriver::Listen(qboolean state) {
     if (state) {
         if (net_acceptsocket == -1 && (net_acceptsocket = OpenSocket(net_hostport)) == -1) {
-            Sys_Error("UDP_Listen: Unable to open accept socket\n");
+            Common::Sys_Error("UDP_Listen: Unable to open accept socket\n");
         }
     } else if (net_acceptsocket != -1) {
         CloseSocket(net_acceptsocket);
@@ -176,7 +171,7 @@ int UDPDriver::CheckNewConnections() {
     if (net_acceptsocket == -1) return -1;
     unsigned long available;
     if (ioctl(net_acceptsocket, FIONREAD, &available) == -1) {
-        Sys_Error("UDP: ioctlsocket (FIONREAD) failed\n");
+        Common::Sys_Error("UDP: ioctlsocket (FIONREAD) failed\n");
     }
     return available ? net_acceptsocket : -1;
 }
@@ -237,7 +232,7 @@ int UDPDriver::StringToAddr(const char* string, struct qsockaddr* addr) {
 
 int UDPDriver::GetSocketAddr(int socket, struct qsockaddr* addr) {
     socklen_t addrlen = sizeof(struct qsockaddr);
-    Q_memset(addr, 0, sizeof(struct qsockaddr));
+    Common::Q_memset(addr, 0, sizeof(struct qsockaddr));
     getsockname(socket, (struct sockaddr*)addr, &addrlen);
     unsigned int a = ((struct sockaddr_in*)addr)->sin_addr.s_addr;
     struct in_addr loopbackAddr;
@@ -251,10 +246,10 @@ int UDPDriver::GetSocketAddr(int socket, struct qsockaddr* addr) {
 int UDPDriver::GetNameFromAddr(struct qsockaddr* addr, char* name) {
     char hostname_buf[NI_MAXHOST];
     if (getnameinfo((const sockaddr*)addr, sizeof(struct qsockaddr), hostname_buf, NI_MAXHOST, nullptr, 0, NI_NAMEREQD) == 0) {
-        Q_strncpy(name, hostname_buf, NET_NAMELEN - 1);
+        Common::Q_strncpy(name, hostname_buf, NET_NAMELEN - 1);
         return 0;
     }
-    Q_strcpy(name, AddrToString(addr));
+    Common::Q_strcpy(name, AddrToString(addr));
     return 0;
 }
 

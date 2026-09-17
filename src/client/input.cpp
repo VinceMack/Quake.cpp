@@ -11,29 +11,6 @@
 #include <algorithm>
 #include <ostream>
 
-using namespace Client;
-using namespace Common;
-using namespace Console;
-using namespace Render;
-using namespace Draw;
-using namespace Host;
-using namespace Input;
-using namespace Keys;
-using namespace Math;
-using namespace Menu;
-using namespace Model;
-using namespace Net;
-using namespace VM;
-using namespace Sbar;
-using namespace Screen;
-using namespace Server;
-using namespace Audio;
-using namespace Vid;
-using namespace View;
-using namespace Wad;
-using namespace Cvar;
-using namespace Cmd;
-
 // ============================================================================
 // KEYBOARD SUBSYSTEM
 // ============================================================================
@@ -80,10 +57,10 @@ constexpr keyname_t keynames[] = {
 void Key_Console(int key) {
     if (key == K_ENTER) {
         Cmd::BufferAddText(key_lines[edit_line].data() + 1); Cmd::BufferAddText("\n");
-        Con_Printf("%s\n", key_lines[edit_line].data());
+        Console::Con_Printf("%s\n", key_lines[edit_line].data());
         edit_line = (edit_line + 1) & 31; history_line = edit_line;
         key_lines[edit_line][0] = ']'; key_linepos = 1;
-        if (cls.state == ca_disconnected) Screen::GetScreenSystem().UpdateScreen();
+        if (Client::cls.state == ca_disconnected) Screen::GetScreenSystem().UpdateScreen();
         return;
     }
     if (key == K_TAB) {
@@ -91,8 +68,8 @@ void Key_Console(int key) {
         if (cmd_view.empty()) cmd_view = Cvar::CompleteVariable(key_lines[edit_line].data() + 1);
         if (!cmd_view.empty()) {
             std::string cmd_str(cmd_view.data(), cmd_view.length());
-            Q_strcpy(key_lines[edit_line].data() + 1, cmd_str.c_str());
-            key_linepos = Q_strlen(cmd_str.c_str()) + 1;
+            Common::Q_strcpy(key_lines[edit_line].data() + 1, cmd_str.c_str());
+            key_linepos = Common::Q_strlen(cmd_str.c_str()) + 1;
             key_lines[edit_line][key_linepos++] = ' '; key_lines[edit_line][key_linepos] = 0;
             return;
         }
@@ -101,20 +78,20 @@ void Key_Console(int key) {
     if (key == K_UPARROW) {
         do { history_line = (history_line - 1) & 31; } while (history_line != edit_line && !key_lines[history_line][1]);
         if (history_line == edit_line) history_line = (edit_line + 1) & 31;
-        Q_strcpy(key_lines[edit_line].data(), key_lines[history_line].data());
-        key_linepos = Q_strlen(key_lines[edit_line].data()); return;
+        Common::Q_strcpy(key_lines[edit_line].data(), key_lines[history_line].data());
+        key_linepos = Common::Q_strlen(key_lines[edit_line].data()); return;
     }
     if (key == K_DOWNARROW) {
         if (history_line == edit_line) return;
         do { history_line = (history_line + 1) & 31; } while (history_line != edit_line && !key_lines[history_line][1]);
         if (history_line == edit_line) { key_lines[edit_line][0] = ']'; key_linepos = 1; }
-        else { Q_strcpy(key_lines[edit_line].data(), key_lines[history_line].data()); key_linepos = Q_strlen(key_lines[edit_line].data()); }
+        else { Common::Q_strcpy(key_lines[edit_line].data(), key_lines[history_line].data()); key_linepos = Common::Q_strlen(key_lines[edit_line].data()); }
         return;
     }
-    auto& con = GetConsoleSystem();
-    if (key == K_PGUP || key == K_MWHEELUP) { con.SetBackscroll(std::min(con.GetBackscroll() + 2, con.GetTotalLines() - (int)(vid.height >> 3) - 1)); return; }
+    auto& con = Console::GetConsoleSystem();
+    if (key == K_PGUP || key == K_MWHEELUP) { con.SetBackscroll(std::min(con.GetBackscroll() + 2, con.GetTotalLines() - (int)(Vid::vid.height >> 3) - 1)); return; }
     if (key == K_PGDN || key == K_MWHEELDOWN) { con.SetBackscroll(std::max(0, con.GetBackscroll() - 2)); return; }
-    if (key == K_HOME) { con.SetBackscroll(con.GetTotalLines() - (vid.height >> 3) - 1); return; }
+    if (key == K_HOME) { con.SetBackscroll(con.GetTotalLines() - (Vid::vid.height >> 3) - 1); return; }
     if (key == K_END)  { con.SetBackscroll(0); return; }
     if (key >= 32 && key <= 127 && key_linepos < MAXCMDLINE - 1) {
         key_lines[edit_line][key_linepos++] = static_cast<char>(key);
@@ -138,7 +115,7 @@ int Key_StringToKeynum(std::string_view str) {
     if (str.empty()) return -1;
     if (str.size() == 1) return str[0];
     const auto it = std::find_if(std::begin(keynames), std::end(keynames), [str](const keyname_t& kn) {
-        return kn.name && Q_strcasecmp(str, kn.name) == 0;
+        return kn.name && Common::Q_strcasecmp(str, kn.name) == 0;
     });
     return (it != std::end(keynames)) ? it->keynum : -1;
 }
@@ -156,25 +133,25 @@ const char* Key_KeynumToString(int keynum) {
 void Key_SetBinding(int keynum, const char* binding) { if (keynum >= 0 && keynum < 256) keybindings[keynum] = binding; }
 
 void Key_Unbind_f() {
-    if (Cmd::Argc() != 2) { Con_Printf("unbind <key> : remove commands from a key\n"); return; }
+    if (Cmd::Argc() != 2) { Console::Con_Printf("unbind <key> : remove commands from a key\n"); return; }
     int b = Key_StringToKeynum(Cmd::Argv(1));
-    if (b == -1) Con_Printf("\"%s\" isn't a valid key\n", Cmd::Argv(1)); else Key_SetBinding(b, "");
+    if (b == -1) Console::Con_Printf("\"%s\" isn't a valid key\n", Cmd::Argv(1)); else Key_SetBinding(b, "");
 }
 
 void Key_Unbindall_f() { for (auto& kb : keybindings) kb.clear(); }
 
 void Key_Bind_f() {
     int c = Cmd::Argc();
-    if (c != 2 && c != 3) { Con_Printf("bind <key> [command] : attach a command to a key\n"); return; }
+    if (c != 2 && c != 3) { Console::Con_Printf("bind <key> [command] : attach a command to a key\n"); return; }
     int b = Key_StringToKeynum(Cmd::Argv(1));
-    if (b == -1) { Con_Printf("\"%s\" isn't a valid key\n", Cmd::Argv(1)); return; }
+    if (b == -1) { Console::Con_Printf("\"%s\" isn't a valid key\n", Cmd::Argv(1)); return; }
     if (c == 2) {
-        if (!keybindings[b].empty()) Con_Printf("\"%s\" = \"%s\"\n", Cmd::Argv(1), keybindings[b].c_str());
-        else Con_Printf("\"%s\" is not bound\n", Cmd::Argv(1));
+        if (!keybindings[b].empty()) Console::Con_Printf("\"%s\" = \"%s\"\n", Cmd::Argv(1), keybindings[b].c_str());
+        else Console::Con_Printf("\"%s\" is not bound\n", Cmd::Argv(1));
         return;
     }
     char cmd[1024] = "";
-    for (int i = 2; i < c; i++) { if (i > 2) Q_strcat(cmd, " "); Q_strcat(cmd, Cmd::Argv(i)); }
+    for (int i = 2; i < c; i++) { if (i > 2) Common::Q_strcat(cmd, " "); Common::Q_strcat(cmd, Cmd::Argv(i)); }
     Key_SetBinding(b, cmd);
 }
 
@@ -203,38 +180,38 @@ void Key_Event(int key, bool down) {
     if (down) {
         key_repeats[key]++;
         if (key != K_BACKSPACE && key != K_PAUSE && key_repeats[key] > 1) return;
-        if (key >= 200 && keybindings[key].empty()) Con_Printf("%s is unbound, hit F4 to set.\n", Key_KeynumToString(key));
+        if (key >= 200 && keybindings[key].empty()) Console::Con_Printf("%s is unbound, hit F4 to set.\n", Key_KeynumToString(key));
     }
     if (key == K_SHIFT) shift_down = down;
     if (key == K_ESCAPE) {
         if (!down) return;
         switch (key_dest) {
         case key_message: Key_Message(key); break;
-        case key_menu: M_Keydown(key); break;
-        case key_game: case key_console: M_ToggleMenu_f(); break;
-        default: Sys_Error("Bad key_dest");
+        case key_menu: Menu::M_Keydown(key); break;
+        case key_game: case key_console: Menu::M_ToggleMenu_f(); break;
+        default: Common::Sys_Error("Bad key_dest");
         }
         return;
     }
     if (!down) {
         auto ExecRelease = [](int k) {
-            const auto& kb = keybindings[k]; if (!kb.empty() && kb[0] == '+') Cmd::BufferAddText(va("-%s %i\n", kb.c_str() + 1, k));
+            const auto& kb = keybindings[k]; if (!kb.empty() && kb[0] == '+') Cmd::BufferAddText(Common::va("-%s %i\n", kb.c_str() + 1, k));
         };
         ExecRelease(key); if (keyshift[key] != key) ExecRelease(keyshift[key]); return;
     }
-    if (cls.demoplayback && down && consolekeys[key] && key_dest == key_game) { M_ToggleMenu_f(); return; }
-    if ((key_dest == key_menu && menubound[key]) || (key_dest == key_console && !consolekeys[key]) || (key_dest == key_game && (!GetConsoleSystem().IsForcedUp() || !consolekeys[key]))) {
+    if (Client::cls.demoplayback && down && consolekeys[key] && key_dest == key_game) { Menu::M_ToggleMenu_f(); return; }
+    if ((key_dest == key_menu && menubound[key]) || (key_dest == key_console && !consolekeys[key]) || (key_dest == key_game && (!Console::GetConsoleSystem().IsForcedUp() || !consolekeys[key]))) {
         const auto& kb = keybindings[key];
-        if (!kb.empty()) { if (kb[0] == '+') Cmd::BufferAddText(va("%s %i\n", kb.c_str(), key)); else { Cmd::BufferAddText(kb.c_str()); Cmd::BufferAddText("\n"); } }
+        if (!kb.empty()) { if (kb[0] == '+') Cmd::BufferAddText(Common::va("%s %i\n", kb.c_str(), key)); else { Cmd::BufferAddText(kb.c_str()); Cmd::BufferAddText("\n"); } }
         return;
     }
     if (!down) return;
     if (shift_down) key = keyshift[key];
     switch (key_dest) {
     case key_message: Key_Message(key); break;
-    case key_menu: M_Keydown(key); break;
+    case key_menu: Menu::M_Keydown(key); break;
     case key_game: case key_console: Key_Console(key); break;
-    default: Sys_Error("Bad key_dest");
+    default: Common::Sys_Error("Bad key_dest");
     }
 }
 
@@ -257,7 +234,7 @@ void IN_MouseMove(float xrel, float yrel) {
 }
 
 void IN_Init(void) {
-    if (COM_CheckParm("-nomouse")) return;
+    if (Common::COM_CheckParm("-nomouse")) return;
     mouse_x = mouse_y = 0.0f;
     mouse_avail = 1;
     Cvar::Register(&_windowed_mouse);
@@ -273,33 +250,33 @@ void IN_Commands(void) {
     i = SDL_GetMouseState(NULL, NULL);
     mouse_buttonstate = (i & ~0x06) | ((i & 0x02) << 1) | ((i & 0x04) >> 1);
     for (i = 0; i < 3; i++) {
-        if ((mouse_buttonstate & (1 << i)) && !(mouse_oldbuttonstate & (1 << i))) Key_Event(K_MOUSE1 + i, true);
-        if (!(mouse_buttonstate & (1 << i)) && (mouse_oldbuttonstate & (1 << i))) Key_Event(K_MOUSE1 + i, false);
+        if ((mouse_buttonstate & (1 << i)) && !(mouse_oldbuttonstate & (1 << i))) Keys::Key_Event(Keys::K_MOUSE1 + i, true);
+        if (!(mouse_buttonstate & (1 << i)) && (mouse_oldbuttonstate & (1 << i))) Keys::Key_Event(Keys::K_MOUSE1 + i, false);
     }
     mouse_oldbuttonstate = mouse_buttonstate;
 }
 
 void IN_Move(usercmd_t* cmd) {
     if (!mouse_avail) return;
-    mouse_x *= sensitivity.value;
-    mouse_y *= sensitivity.value;
-    if ((in_strafe.state & 1) || (lookstrafe.value && ((in_mlook.state & 1) || _windowed_mouse.value))) {
-        cmd->sidemove += m_side.value * mouse_x;
+    mouse_x *= Client::sensitivity.value;
+    mouse_y *= Client::sensitivity.value;
+    if ((Client::in_strafe.state & 1) || (Client::lookstrafe.value && ((Client::in_mlook.state & 1) || _windowed_mouse.value))) {
+        cmd->sidemove += Client::m_side.value * mouse_x;
     } else {
-        cl.viewangles[YAW] -= m_yaw.value * mouse_x;
+        Client::cl.viewangles[YAW] -= Client::m_yaw.value * mouse_x;
     }
-    if ((in_mlook.state & 1) || _windowed_mouse.value) {
-        V_StopPitchDrift();
+    if ((Client::in_mlook.state & 1) || _windowed_mouse.value) {
+        View::V_StopPitchDrift();
     }
-    if (((in_mlook.state & 1) || _windowed_mouse.value) && !(in_strafe.state & 1)) {
-        cl.viewangles[PITCH] += m_pitch.value * mouse_y;
-        if (cl.viewangles[PITCH] > 80) cl.viewangles[PITCH] = 80;
-        if (cl.viewangles[PITCH] < -70) cl.viewangles[PITCH] = -70;
+    if (((Client::in_mlook.state & 1) || _windowed_mouse.value) && !(Client::in_strafe.state & 1)) {
+        Client::cl.viewangles[PITCH] += Client::m_pitch.value * mouse_y;
+        if (Client::cl.viewangles[PITCH] > 80) Client::cl.viewangles[PITCH] = 80;
+        if (Client::cl.viewangles[PITCH] < -70) Client::cl.viewangles[PITCH] = -70;
     } else {
-        if ((in_strafe.state & 1) && noclip_anglehack) {
-            cmd->upmove -= m_forward.value * mouse_y;
+        if ((Client::in_strafe.state & 1) && Host::noclip_anglehack) {
+            cmd->upmove -= Client::m_forward.value * mouse_y;
         } else {
-            cmd->forwardmove -= m_forward.value * mouse_y;
+            cmd->forwardmove -= Client::m_forward.value * mouse_y;
         }
     }
     mouse_x = mouse_y = 0.0f;
@@ -323,63 +300,63 @@ void Sys_SendKeyEvents(void)
             modstate = SDL_GetModState();
             switch (sym) {
             case SDLK_KP_ENTER:
-            case SDLK_RETURN: sym = K_ENTER; break;
-            case SDLK_ESCAPE: sym = K_ESCAPE; break;
-            case SDLK_DELETE: sym = K_DEL; break;
-            case SDLK_BACKSPACE: sym = K_BACKSPACE; break;
-            case SDLK_F1: sym = K_F1; break;
-            case SDLK_F2: sym = K_F2; break;
-            case SDLK_F3: sym = K_F3; break;
-            case SDLK_F4: sym = K_F4; break;
-            case SDLK_F5: sym = K_F5; break;
-            case SDLK_F6: sym = K_F6; break;
-            case SDLK_F7: sym = K_F7; break;
-            case SDLK_F8: sym = K_F8; break;
-            case SDLK_F9: sym = K_F9; break;
-            case SDLK_F10: sym = K_F10; break;
-            case SDLK_F11: sym = K_F11; break;
-            case SDLK_F12: sym = K_F12; break;
-            case SDLK_PAUSE: sym = K_PAUSE; break;
-            case SDLK_UP: sym = K_UPARROW; break;
-            case SDLK_DOWN: sym = K_DOWNARROW; break;
-            case SDLK_RIGHT: sym = K_RIGHTARROW; break;
-            case SDLK_LEFT: sym = K_LEFTARROW; break;
-            case SDLK_INSERT: sym = K_INS; break;
-            case SDLK_HOME: sym = K_HOME; break;
-            case SDLK_END: sym = K_END; break;
-            case SDLK_PAGEUP: sym = K_PGUP; break;
-            case SDLK_PAGEDOWN: sym = K_PGDN; break;
+            case SDLK_RETURN: sym = Keys::K_ENTER; break;
+            case SDLK_ESCAPE: sym = Keys::K_ESCAPE; break;
+            case SDLK_DELETE: sym = Keys::K_DEL; break;
+            case SDLK_BACKSPACE: sym = Keys::K_BACKSPACE; break;
+            case SDLK_F1: sym = Keys::K_F1; break;
+            case SDLK_F2: sym = Keys::K_F2; break;
+            case SDLK_F3: sym = Keys::K_F3; break;
+            case SDLK_F4: sym = Keys::K_F4; break;
+            case SDLK_F5: sym = Keys::K_F5; break;
+            case SDLK_F6: sym = Keys::K_F6; break;
+            case SDLK_F7: sym = Keys::K_F7; break;
+            case SDLK_F8: sym = Keys::K_F8; break;
+            case SDLK_F9: sym = Keys::K_F9; break;
+            case SDLK_F10: sym = Keys::K_F10; break;
+            case SDLK_F11: sym = Keys::K_F11; break;
+            case SDLK_F12: sym = Keys::K_F12; break;
+            case SDLK_PAUSE: sym = Keys::K_PAUSE; break;
+            case SDLK_UP: sym = Keys::K_UPARROW; break;
+            case SDLK_DOWN: sym = Keys::K_DOWNARROW; break;
+            case SDLK_RIGHT: sym = Keys::K_RIGHTARROW; break;
+            case SDLK_LEFT: sym = Keys::K_LEFTARROW; break;
+            case SDLK_INSERT: sym = Keys::K_INS; break;
+            case SDLK_HOME: sym = Keys::K_HOME; break;
+            case SDLK_END: sym = Keys::K_END; break;
+            case SDLK_PAGEUP: sym = Keys::K_PGUP; break;
+            case SDLK_PAGEDOWN: sym = Keys::K_PGDN; break;
             case SDLK_RSHIFT:
-            case SDLK_LSHIFT: sym = K_SHIFT; break;
+            case SDLK_LSHIFT: sym = Keys::K_SHIFT; break;
             case SDLK_RCTRL:
-            case SDLK_LCTRL: sym = K_CTRL; break;
+            case SDLK_LCTRL: sym = Keys::K_CTRL; break;
             case SDLK_RALT:
-            case SDLK_LALT: sym = K_ALT; break;
-            case SDLK_KP_0: sym = (modstate & KMOD_NUM) ? SDLK_0 : K_INS; break;
-            case SDLK_KP_1: sym = (modstate & KMOD_NUM) ? SDLK_1 : K_END; break;
-            case SDLK_KP_2: sym = (modstate & KMOD_NUM) ? SDLK_2 : K_DOWNARROW; break;
-            case SDLK_KP_3: sym = (modstate & KMOD_NUM) ? SDLK_3 : K_PGDN; break;
-            case SDLK_KP_4: sym = (modstate & KMOD_NUM) ? SDLK_4 : K_LEFTARROW; break;
+            case SDLK_LALT: sym = Keys::K_ALT; break;
+            case SDLK_KP_0: sym = (modstate & KMOD_NUM) ? SDLK_0 : Keys::K_INS; break;
+            case SDLK_KP_1: sym = (modstate & KMOD_NUM) ? SDLK_1 : Keys::K_END; break;
+            case SDLK_KP_2: sym = (modstate & KMOD_NUM) ? SDLK_2 : Keys::K_DOWNARROW; break;
+            case SDLK_KP_3: sym = (modstate & KMOD_NUM) ? SDLK_3 : Keys::K_PGDN; break;
+            case SDLK_KP_4: sym = (modstate & KMOD_NUM) ? SDLK_4 : Keys::K_LEFTARROW; break;
             case SDLK_KP_5: sym = SDLK_5; break;
-            case SDLK_KP_6: sym = (modstate & KMOD_NUM) ? SDLK_6 : K_RIGHTARROW; break;
-            case SDLK_KP_7: sym = (modstate & KMOD_NUM) ? SDLK_7 : K_HOME; break;
-            case SDLK_KP_8: sym = (modstate & KMOD_NUM) ? SDLK_8 : K_UPARROW; break;
-            case SDLK_KP_9: sym = (modstate & KMOD_NUM) ? SDLK_9 : K_PGUP; break;
+            case SDLK_KP_6: sym = (modstate & KMOD_NUM) ? SDLK_6 : Keys::K_RIGHTARROW; break;
+            case SDLK_KP_7: sym = (modstate & KMOD_NUM) ? SDLK_7 : Keys::K_HOME; break;
+            case SDLK_KP_8: sym = (modstate & KMOD_NUM) ? SDLK_8 : Keys::K_UPARROW; break;
+            case SDLK_KP_9: sym = (modstate & KMOD_NUM) ? SDLK_9 : Keys::K_PGUP; break;
             }
             if (sym > 255) sym = 0;
-            Key_Event(sym, state);
+            Keys::Key_Event(sym, state);
             break;
         case SDL_MOUSEMOTION:
-            if (((unsigned)event.motion.x != (vid.width / 2)) || ((unsigned)event.motion.y != (vid.height / 2))) {
+            if (((unsigned)event.motion.x != (Vid::vid.width / 2)) || ((unsigned)event.motion.y != (Vid::vid.height / 2))) {
                 Input::IN_MouseMove(static_cast<float>(event.motion.xrel * 10), static_cast<float>(event.motion.yrel * 10));
-                if (((unsigned)event.motion.x < ((vid.width / 2) - (vid.width / 4))) || ((unsigned)event.motion.x > ((vid.width / 2) + (vid.width / 4))) || ((unsigned)event.motion.y < ((vid.height / 2) - (vid.height / 4))) || ((unsigned)event.motion.y > ((vid.height / 2) + (vid.height / 4)))) {
-                    if (Vid::GetWindow()) SDL_WarpMouseInWindow(Vid::GetWindow(), vid.width / 2, vid.height / 2);
+                if (((unsigned)event.motion.x < ((Vid::vid.width / 2) - (Vid::vid.width / 4))) || ((unsigned)event.motion.x > ((Vid::vid.width / 2) + (Vid::vid.width / 4))) || ((unsigned)event.motion.y < ((Vid::vid.height / 2) - (Vid::vid.height / 4))) || ((unsigned)event.motion.y > ((Vid::vid.height / 2) + (Vid::vid.height / 4)))) {
+                    if (Vid::GetWindow()) SDL_WarpMouseInWindow(Vid::GetWindow(), Vid::vid.width / 2, Vid::vid.height / 2);
                 }
             }
             break;
         case SDL_QUIT:
-            CL_Disconnect();
-            Host_ShutdownServer(false);
+            Client::CL_Disconnect();
+            Host::Host_ShutdownServer(false);
             Sys_Quit();
             break;
         default:

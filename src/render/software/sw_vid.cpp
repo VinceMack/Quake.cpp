@@ -7,10 +7,6 @@
 #include <cstring>
 #include <vector>
 
-using namespace Common;
-using namespace Host;
-using namespace Render;
-
 namespace Vid {
 
 viddef_t vid;
@@ -53,7 +49,7 @@ void VID_Init(unsigned char* palette)
     int cachesize;
     Uint32 flags;
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        Sys_Error("VID: Couldn't load SDL Video: %s", SDL_GetError());
+        Common::Sys_Error("VID: Couldn't load SDL Video: %s", SDL_GetError());
     }
     if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
         SDL_setenv("SDL_AUDIODRIVER", "dummy", 1);
@@ -65,38 +61,38 @@ void VID_Init(unsigned char* palette)
     vid.height = BASEHEIGHT;
     vid.maxwarpwidth = WARP_WIDTH;
     vid.maxwarpheight = WARP_HEIGHT;
-    if ((pnum = COM_CheckParm("-winsize"))) {
-        if (pnum >= com_argc - 2) {
-            Sys_Error("VID: -winsize <width> <height>\n");
+    if ((pnum = Common::COM_CheckParm("-winsize"))) {
+        if (pnum >= Common::com_argc - 2) {
+            Common::Sys_Error("VID: -winsize <width> <height>\n");
         }
-        vid.width = Q_atoi(com_argv[pnum + 1]);
-        vid.height = Q_atoi(com_argv[pnum + 2]);
+        vid.width = Common::Q_atoi(Common::com_argv[pnum + 1]);
+        vid.height = Common::Q_atoi(Common::com_argv[pnum + 2]);
         if (!vid.width || !vid.height) {
-            Sys_Error("VID: Bad window width/height\n");
+            Common::Sys_Error("VID: Bad window width/height\n");
         }
     }
     flags = 0;
-    if (COM_CheckParm("-fullscreen")) {
+    if (Common::COM_CheckParm("-fullscreen")) {
         flags |= SDL_WINDOW_FULLSCREEN;
     }
     window = SDL_CreateWindow("Quake.cpp",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         vid.width, vid.height, flags);
     if (!window) {
-        Sys_Error("VID: Couldn't create window: %s\n", SDL_GetError());
+        Common::Sys_Error("VID: Couldn't create window: %s\n", SDL_GetError());
     }
     screen = SDL_GetWindowSurface(window);
     if (!screen) {
-        Sys_Error("VID: Couldn't get window surface: %s\n", SDL_GetError());
+        Common::Sys_Error("VID: Couldn't get window surface: %s\n", SDL_GetError());
     }
     if (screen->format->BitsPerPixel != 8) {
         SDL_Surface* new_screen = SDL_CreateRGBSurface(0, vid.width, vid.height, 8, 0, 0, 0, 0);
         if (!new_screen) {
-            Sys_Error("VID: Couldn't create 8-bit surface: %s\n", SDL_GetError());
+            Common::Sys_Error("VID: Couldn't create 8-bit surface: %s\n", SDL_GetError());
         }
         SDL_Palette* pal = SDL_AllocPalette(256);
         if (!pal) {
-            Sys_Error("VID: Couldn't allocate palette: %s\n", SDL_GetError());
+            Common::Sys_Error("VID: Couldn't allocate palette: %s\n", SDL_GetError());
         }
         SDL_SetSurfaceBlendMode(new_screen, SDL_BLENDMODE_NONE);
         SDL_SetSurfacePalette(new_screen, pal);
@@ -107,18 +103,18 @@ void VID_Init(unsigned char* palette)
     vid.conheight = vid.height;
     vid.aspect = static_cast<float>(((float)vid.height / (float)vid.width) * (320.0 / 240.0));
     vid.numpages = 1;
-    vid.colormap = host_colormap;
-    vid.fullbright = 256 - LittleLong(*((int*)vid.colormap + 2048));
+    vid.colormap = Host::host_colormap;
+    vid.fullbright = 256 - Common::LittleLong(*((int*)vid.colormap + 2048));
     vid.buffer = (pixel_t*)screen->pixels;
     vid.rowbytes = screen->pitch;
     vid.conbuffer = vid.buffer;
     vid.conrowbytes = vid.rowbytes;
     const size_t zbuffer_bytes = static_cast<size_t>(vid.width) * vid.height * sizeof(*d_pzbuffer);
-    cachesize = D_SurfaceCacheForRes(vid.width, vid.height);
+    cachesize = Render::D_SurfaceCacheForRes(vid.width, vid.height);
     video_storage.assign(zbuffer_bytes + static_cast<size_t>(cachesize), 0);
     d_pzbuffer = reinterpret_cast<short*>(video_storage.data());
     cache = video_storage.data() + zbuffer_bytes;
-    D_InitCaches(cache, cachesize);
+    Render::D_InitCaches(cache, cachesize);
     SDL_ShowCursor(0);
 }
 

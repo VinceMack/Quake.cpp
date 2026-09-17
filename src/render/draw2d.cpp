@@ -12,14 +12,6 @@
 #include <cstring>
 #include <cstdio>
 
-using namespace Common;
-using namespace Render;
-using namespace Draw;
-using namespace Host;
-using namespace Vid;
-using namespace Wad;
-using namespace Audio;
-
 struct RectDesc {
     vrect_t rect;
     int width;
@@ -46,9 +38,9 @@ static std::vector<std::unique_ptr<CachePic>> menu_cachepics;
 static qpic_t* LoadCachePic(CachePic& pic)
 {
     if (pic.data.empty()) {
-        pic.data = COM_LoadFile(pic.name.c_str());
-        if (pic.data.empty()) Sys_Error("Draw_CachePic: failed to load %s", pic.name.c_str());
-        SwapPic(reinterpret_cast<qpic_t*>(pic.data.data()));
+        pic.data = Common::COM_LoadFile(pic.name.c_str());
+        if (pic.data.empty()) Common::Sys_Error("Draw_CachePic: failed to load %s", pic.name.c_str());
+        Wad::SwapPic(reinterpret_cast<qpic_t*>(pic.data.data()));
     }
     return reinterpret_cast<qpic_t*>(pic.data.data());
 }
@@ -69,9 +61,9 @@ qpic_t* Draw_CachePic(std::string_view path)
 
 void Draw_Init()
 {
-    draw_chars = (byte*)W_GetLumpName("conchars");
-    draw_disc = (qpic_t*)W_GetLumpName("disc");
-    draw_backtile = (qpic_t*)W_GetLumpName("backtile");
+    draw_chars = (byte*)Wad::W_GetLumpName("conchars");
+    draw_disc = (qpic_t*)Wad::W_GetLumpName("disc");
+    draw_backtile = (qpic_t*)Wad::W_GetLumpName("backtile");
     r_rectdesc.width = draw_backtile->width;
     r_rectdesc.height = draw_backtile->height;
     r_rectdesc.ptexbytes = draw_backtile->data;
@@ -93,13 +85,13 @@ void Draw_Character(int x, int y, int num)
     } else {
         drawline = 8;
     }
-    byte* dest = vid.conbuffer + y * vid.conrowbytes + x;
+    byte* dest = Vid::vid.conbuffer + y * Vid::vid.conrowbytes + x;
     while (drawline--) {
         for (int i = 0; i < 8; ++i) {
             if (source[i]) dest[i] = source[i];
         }
         source += 128;
-        dest += vid.conrowbytes;
+        dest += Vid::vid.conrowbytes;
     }
 }
 
@@ -114,12 +106,12 @@ void Draw_String(int x, int y, std::string_view str)
 template<bool Trans, bool Translate>
 static inline void Draw_Pic_Impl(int x, int y, qpic_t* pic, const byte* translation = nullptr)
 {
-    if (x < 0 || (unsigned)(x + pic->width) > vid.width || y < 0 || (unsigned)(y + pic->height) > vid.height) {
-        Sys_Error("Draw_Pic: bad coordinates");
+    if (x < 0 || (unsigned)(x + pic->width) > Vid::vid.width || y < 0 || (unsigned)(y + pic->height) > Vid::vid.height) {
+        Common::Sys_Error("Draw_Pic: bad coordinates");
     }
     const byte* source = pic->data;
-    byte* dest = vid.buffer + y * vid.rowbytes + x;
-    for (int v = 0; v < pic->height; v++, dest += vid.rowbytes, source += pic->width) {
+    byte* dest = Vid::vid.buffer + y * Vid::vid.rowbytes + x;
+    for (int v = 0; v < pic->height; v++, dest += Vid::vid.rowbytes, source += pic->width) {
         if constexpr (!Trans) {
             std::memcpy(dest, source, pic->width);
         } else {
@@ -172,16 +164,16 @@ void Draw_ConsoleBackground(int lines)
     for (size_t x = 0; x < ver_view.length(); x++) {
         Draw_CharToConback(ver_view[x], dest + (x << 3));
     }
-    dest = vid.conbuffer;
-    for (int y = 0; y < lines; y++, dest += vid.conrowbytes) {
-        const int v = (vid.conheight - lines + y) * 200 / vid.conheight;
+    dest = Vid::vid.conbuffer;
+    for (int y = 0; y < lines; y++, dest += Vid::vid.conrowbytes) {
+        const int v = (Vid::vid.conheight - lines + y) * 200 / Vid::vid.conheight;
         const byte* src = conback->data + v * 320;
-        if (vid.conwidth == 320) {
-            std::memcpy(dest, src, vid.conwidth);
+        if (Vid::vid.conwidth == 320) {
+            std::memcpy(dest, src, Vid::vid.conwidth);
         } else {
             int f = 0;
-            const int fstep = 320 * 0x10000 / vid.conwidth;
-            for (int x = 0; x < (int)vid.conwidth; x += 4) {
+            const int fstep = 320 * 0x10000 / Vid::vid.conwidth;
+            for (int x = 0; x < (int)Vid::vid.conwidth; x += 4) {
                 dest[x] = src[f >> 16]; f += fstep;
                 dest[x + 1] = src[f >> 16]; f += fstep;
                 dest[x + 2] = src[f >> 16]; f += fstep;
@@ -193,8 +185,8 @@ void Draw_ConsoleBackground(int lines)
 
 static void R_DrawRect8(const vrect_t* prect, int rowbytes, const byte* psrc)
 {
-    byte* pdest = vid.buffer + (prect->y * vid.rowbytes) + prect->x;
-    for (int i = 0; i < prect->height; i++, psrc += rowbytes, pdest += vid.rowbytes) {
+    byte* pdest = Vid::vid.buffer + (prect->y * Vid::vid.rowbytes) + prect->x;
+    for (int i = 0; i < prect->height; i++, psrc += rowbytes, pdest += Vid::vid.rowbytes) {
         std::memcpy(pdest, psrc, prect->width);
     }
 }
@@ -234,18 +226,18 @@ void Draw_TileClear(int x, int y, int w, int h)
 
 void Draw_Fill(int x, int y, int w, int h, int c)
 {
-    byte* dest = vid.buffer + y * vid.rowbytes + x;
-    for (int v = 0; v < h; v++, dest += vid.rowbytes) {
+    byte* dest = Vid::vid.buffer + y * Vid::vid.rowbytes + x;
+    for (int v = 0; v < h; v++, dest += Vid::vid.rowbytes) {
         std::fill_n(dest, w, static_cast<byte>(c));
     }
 }
 
 void Draw_FadeScreen()
 {
-    for (int y = 0; y < static_cast<int>(vid.height); y++) {
-        byte* pbuf = vid.buffer + vid.rowbytes * y;
+    for (int y = 0; y < static_cast<int>(Vid::vid.height); y++) {
+        byte* pbuf = Vid::vid.buffer + Vid::vid.rowbytes * y;
         const int t = (y & 1) << 1;
-        for (int x = 0; x < static_cast<int>(vid.width); x++) {
+        for (int x = 0; x < static_cast<int>(Vid::vid.width); x++) {
             if ((x & 3) != t) pbuf[x] = 0;
         }
     }
@@ -253,12 +245,12 @@ void Draw_FadeScreen()
 
 void Draw_BeginDisc()
 {
-    D_BeginDirectRect(vid.width - 24, 0, draw_disc->data, 24, 24);
+    Vid::D_BeginDirectRect(Vid::vid.width - 24, 0, draw_disc->data, 24, 24);
 }
 
 void Draw_EndDisc()
 {
-    D_EndDirectRect(vid.width - 24, 0, 24, 24);
+    Vid::D_EndDirectRect(Vid::vid.width - 24, 0, 24, 24);
 }
 
 } // namespace Draw

@@ -3,9 +3,6 @@
 #include "client/client_types.hpp"
 #include "world/bsp_format.hpp"
 
-using namespace Math;
-using namespace Client;
-
 namespace Render {
 
 std::array<int, 256> d_lightstylevalue{};
@@ -15,14 +12,14 @@ void R_AnimateLight()
 {
     // light animations
     // 'm' is normal light, 'a' is no light, 'z' is double bright
-    int i = static_cast<int>(cl.time * 10);
+    int i = static_cast<int>(Client::cl.time * 10);
     for (int j = 0; j < MAX_LIGHTSTYLES; j++) {
-        if (!cl_lightstyle[j].length) {
+        if (!Client::cl_lightstyle[j].length) {
             d_lightstylevalue[j] = 256;
             continue;
         }
-        int k = i % cl_lightstyle[j].length;
-        k = cl_lightstyle[j].map[k] - 'a';
+        int k = i % Client::cl_lightstyle[j].length;
+        k = Client::cl_lightstyle[j].map[k] - 'a';
         k = k * 22;
         d_lightstylevalue[j] = k;
     }
@@ -44,7 +41,7 @@ void R_MarkLights(dlight_t* light, int bit, mnode_t* node)
         return;
     }
     // mark the polygons
-    msurface_t* surf = cl.worldmodel->surfaces + node->firstsurface;
+    msurface_t* surf = Client::cl.worldmodel->surfaces + node->firstsurface;
     for (int i = 0; i < node->numsurfaces; i++, surf++) {
         if (surf->dlightframe != r_dlightframecount) {
             surf->dlightbits = 0;
@@ -59,12 +56,12 @@ void R_MarkLights(dlight_t* light, int bit, mnode_t* node)
 void R_PushDlights()
 {
     r_dlightframecount = r_framecount + 1; // because the count hasn't advanced yet for this frame
-    dlight_t* l = cl_dlights;
+    dlight_t* l = Client::cl_dlights;
     for (int i = 0; i < MAX_DLIGHTS; i++, l++) {
-        if (l->die < cl.time || !l->radius) {
+        if (l->die < Client::cl.time || !l->radius) {
             continue;
         }
-        R_MarkLights(l, 1 << i, cl.worldmodel->nodes);
+        R_MarkLights(l, 1 << i, Client::cl.worldmodel->nodes);
     }
 }
 
@@ -91,7 +88,7 @@ int RecursiveLightPoint(mnode_t* node, const Vector3& start, const Vector3& end)
         return -1; // didn't hit anything
     }
     // check for impact on this node
-    msurface_t* surf = cl.worldmodel->surfaces + node->firstsurface;
+    msurface_t* surf = Client::cl.worldmodel->surfaces + node->firstsurface;
     for (int i = 0; i < node->numsurfaces; i++, surf++) {
         if (surf->flags & SURF_DRAWTILED) {
             continue; // no lightmaps
@@ -131,11 +128,11 @@ int RecursiveLightPoint(mnode_t* node, const Vector3& start, const Vector3& end)
 
 int R_LightPoint(const Vector3& p)
 {
-    if (!cl.worldmodel->lightdata) {
+    if (!Client::cl.worldmodel->lightdata) {
         return 255;
     }
     Vector3 end = p - Vector3(0.0f, 0.0f, 2048.0f);
-    int r = RecursiveLightPoint(cl.worldmodel->nodes, p, end);
+    int r = RecursiveLightPoint(Client::cl.worldmodel->nodes, p, end);
     if (r == -1) {
         r = 0;
     }

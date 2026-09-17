@@ -5,20 +5,6 @@
 #include "server/world.hpp"
 #include "server/physics.hpp"
 
-using namespace Common;
-using namespace Console;
-using namespace Cvar;
-using namespace Cmd;
-using namespace Host;
-using namespace VM;
-using namespace Model;
-using namespace Net;
-using namespace Client;
-using namespace View;
-using namespace Keys;
-using namespace Math;
-using namespace Audio;
-
 namespace Server {
 
 static int fatbytes = 0;
@@ -37,25 +23,25 @@ void SV_StartParticle(const Vector3& org, const Vector3& dir, int color, int cou
 {
     if (sv.datagram.cursize > MAX_DATAGRAM - 16) return;
 
-    MSG_WriteByte(&sv.datagram, svc_particle);
-    MSG_WriteCoord(&sv.datagram, org[0]);
-    MSG_WriteCoord(&sv.datagram, org[1]);
-    MSG_WriteCoord(&sv.datagram, org[2]);
+    Common::MSG_WriteByte(&sv.datagram, svc_particle);
+    Common::MSG_WriteCoord(&sv.datagram, org[0]);
+    Common::MSG_WriteCoord(&sv.datagram, org[1]);
+    Common::MSG_WriteCoord(&sv.datagram, org[2]);
     for (int i = 0; i < 3; ++i) {
         int v = static_cast<int>(dir[i] * 16.0f);
         if (v > 127) v = 127;
         else if (v < -128) v = -128;
-        MSG_WriteChar(&sv.datagram, v);
+        Common::MSG_WriteChar(&sv.datagram, v);
     }
-    MSG_WriteByte(&sv.datagram, count);
-    MSG_WriteByte(&sv.datagram, color);
+    Common::MSG_WriteByte(&sv.datagram, count);
+    Common::MSG_WriteByte(&sv.datagram, color);
 }
 
 void SV_StartSound(edict_t* entity, int channel, const char* sample, int vol, float attenuation)
 {
-    if (vol < 0 || vol > 255) Sys_Error("SV_StartSound: volume = %i", vol);
-    if (attenuation < 0.0f || attenuation > 4.0f) Sys_Error("SV_StartSound: attenuation = %f", static_cast<double>(attenuation));
-    if (channel < 0 || channel > 7) Sys_Error("SV_StartSound: channel = %i", channel);
+    if (vol < 0 || vol > 255) Common::Sys_Error("SV_StartSound: volume = %i", vol);
+    if (attenuation < 0.0f || attenuation > 4.0f) Common::Sys_Error("SV_StartSound: attenuation = %f", static_cast<double>(attenuation));
+    if (channel < 0 || channel > 7) Common::Sys_Error("SV_StartSound: channel = %i", channel);
     if (sv.datagram.cursize > MAX_DATAGRAM - 16) return;
 
     int sound_num = 1;
@@ -64,65 +50,65 @@ void SV_StartSound(edict_t* entity, int channel, const char* sample, int vol, fl
     }
 
     if (sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num]) {
-        Con_Printf("SV_StartSound: %s not precacheed\n", sample);
+        Console::Con_Printf("SV_StartSound: %s not precacheed\n", sample);
         return;
     }
 
-    const int ent = NUM_FOR_EDICT(entity);
+    const int ent = VM::NUM_FOR_EDICT(entity);
     channel = (ent << 3) | channel;
 
     int field_mask = 0;
-    if (vol != DEFAULT_SOUND_PACKET_VOLUME) field_mask |= SND_VOLUME;
-    if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION) field_mask |= SND_ATTENUATION;
+    if (vol != Audio::DEFAULT_SOUND_PACKET_VOLUME) field_mask |= SND_VOLUME;
+    if (attenuation != Audio::DEFAULT_SOUND_PACKET_ATTENUATION) field_mask |= SND_ATTENUATION;
 
-    MSG_WriteByte(&sv.datagram, svc_sound);
-    MSG_WriteByte(&sv.datagram, field_mask);
-    if (field_mask & SND_VOLUME) MSG_WriteByte(&sv.datagram, vol);
-    if (field_mask & SND_ATTENUATION) MSG_WriteByte(&sv.datagram, static_cast<int>(attenuation * 64.0f));
+    Common::MSG_WriteByte(&sv.datagram, svc_sound);
+    Common::MSG_WriteByte(&sv.datagram, field_mask);
+    if (field_mask & SND_VOLUME) Common::MSG_WriteByte(&sv.datagram, vol);
+    if (field_mask & SND_ATTENUATION) Common::MSG_WriteByte(&sv.datagram, static_cast<int>(attenuation * 64.0f));
 
-    MSG_WriteShort(&sv.datagram, channel);
-    MSG_WriteByte(&sv.datagram, sound_num);
+    Common::MSG_WriteShort(&sv.datagram, channel);
+    Common::MSG_WriteByte(&sv.datagram, sound_num);
     const Vector3 center = entity->v.origin + (entity->v.mins + entity->v.maxs) * 0.5f;
-    for (int i = 0; i < 3; ++i) MSG_WriteCoord(&sv.datagram, center[i]);
+    for (int i = 0; i < 3; ++i) Common::MSG_WriteCoord(&sv.datagram, center[i]);
 }
 
 void SV_SendServerinfo(client_t* client)
 {
     std::array<char, 2048> message{};
 
-    MSG_WriteByte(&client->message, svc_print);
-    sprintf_s(message.data(), message.size(), "%c\nVERSION %4.2f SERVER (%i CRC)", 2, static_cast<double>(VERSION), pr_crc);
-    MSG_WriteString(&client->message, message.data());
+    Common::MSG_WriteByte(&client->message, svc_print);
+    sprintf_s(message.data(), message.size(), "%c\nVERSION %4.2f SERVER (%i CRC)", 2, static_cast<double>(VERSION), VM::pr_crc);
+    Common::MSG_WriteString(&client->message, message.data());
 
-    MSG_WriteByte(&client->message, svc_serverinfo);
-    MSG_WriteLong(&client->message, PROTOCOL_VERSION);
-    MSG_WriteByte(&client->message, svs.maxclients);
+    Common::MSG_WriteByte(&client->message, svc_serverinfo);
+    Common::MSG_WriteLong(&client->message, PROTOCOL_VERSION);
+    Common::MSG_WriteByte(&client->message, svs.maxclients);
 
-    if (!coop.value && deathmatch.value) MSG_WriteByte(&client->message, GAME_DEATHMATCH);
-    else MSG_WriteByte(&client->message, GAME_COOP);
+    if (!coop.value && deathmatch.value) Common::MSG_WriteByte(&client->message, GAME_DEATHMATCH);
+    else Common::MSG_WriteByte(&client->message, GAME_COOP);
 
-    sprintf_s(message.data(), message.size(), "%s", PR_GetString(sv.edicts->v.message));
-    MSG_WriteString(&client->message, message.data());
+    sprintf_s(message.data(), message.size(), "%s", VM::PR_GetString(sv.edicts->v.message));
+    Common::MSG_WriteString(&client->message, message.data());
 
     for (size_t i = 1; i < sv.model_precache.size() && sv.model_precache[i]; ++i) {
-        MSG_WriteString(&client->message, sv.model_precache[i]);
+        Common::MSG_WriteString(&client->message, sv.model_precache[i]);
     }
-    MSG_WriteByte(&client->message, 0);
+    Common::MSG_WriteByte(&client->message, 0);
 
     for (size_t i = 1; i < sv.sound_precache.size() && sv.sound_precache[i]; ++i) {
-        MSG_WriteString(&client->message, sv.sound_precache[i]);
+        Common::MSG_WriteString(&client->message, sv.sound_precache[i]);
     }
-    MSG_WriteByte(&client->message, 0);
+    Common::MSG_WriteByte(&client->message, 0);
 
-    MSG_WriteByte(&client->message, svc_cdtrack);
-    MSG_WriteByte(&client->message, static_cast<int>(sv.edicts->v.sounds));
-    MSG_WriteByte(&client->message, static_cast<int>(sv.edicts->v.sounds));
+    Common::MSG_WriteByte(&client->message, svc_cdtrack);
+    Common::MSG_WriteByte(&client->message, static_cast<int>(sv.edicts->v.sounds));
+    Common::MSG_WriteByte(&client->message, static_cast<int>(sv.edicts->v.sounds));
 
-    MSG_WriteByte(&client->message, svc_setview);
-    MSG_WriteShort(&client->message, NUM_FOR_EDICT(client->edict));
+    Common::MSG_WriteByte(&client->message, svc_setview);
+    Common::MSG_WriteShort(&client->message, VM::NUM_FOR_EDICT(client->edict));
 
-    MSG_WriteByte(&client->message, svc_signonnum);
-    MSG_WriteByte(&client->message, 1);
+    Common::MSG_WriteByte(&client->message, svc_signonnum);
+    Common::MSG_WriteByte(&client->message, 1);
 
     client->sendsignon = true;
     client->spawned = false;
@@ -131,10 +117,10 @@ void SV_SendServerinfo(client_t* client)
 void SV_ConnectClient(int clientnum)
 {
     client_t* client = &svs.GetClients()[static_cast<size_t>(clientnum)];
-    Con_DPrintf("Client %s connected\n", client->netconnection->address);
+    Console::Con_DPrintf("Client %s connected\n", client->netconnection->address);
 
     const int edictnum = clientnum + 1;
-    edict_t* ent = EDICT_NUM(edictnum);
+    edict_t* ent = VM::EDICT_NUM(edictnum);
     qsocket_s* netconnection = client->netconnection;
 
     std::array<float, NUM_SPAWN_PARMS> spawn_parms{};
@@ -156,9 +142,9 @@ void SV_ConnectClient(int clientnum)
     if (sv.loadgame) {
         std::copy(spawn_parms.begin(), spawn_parms.end(), client->spawn_parms.begin());
     } else {
-        PR_ExecuteProgram(pr_global_struct->SetNewParms);
+        VM::PR_ExecuteProgram(VM::pr_global_struct->SetNewParms);
         for (int i = 0; i < NUM_SPAWN_PARMS; ++i) {
-            client->spawn_parms[static_cast<size_t>(i)] = (&pr_global_struct->parm1)[i];
+            client->spawn_parms[static_cast<size_t>(i)] = (&VM::pr_global_struct->parm1)[i];
         }
     }
 
@@ -168,7 +154,7 @@ void SV_ConnectClient(int clientnum)
 void SV_CheckForNewClients()
 {
     while (true) {
-        qsocket_s* ret = NET_CheckNewConnections();
+        qsocket_s* ret = Net::NET_CheckNewConnections();
         if (!ret) break;
 
         auto clients = svs.GetClients();
@@ -176,13 +162,13 @@ void SV_CheckForNewClients()
             return !cl.active;
         });
 
-        if (it == clients.end()) Sys_Error("Host_CheckForNewClients: no free clients");
+        if (it == clients.end()) Common::Sys_Error("Host_CheckForNewClients: no free clients");
 
         const int i = static_cast<int>(std::distance(clients.begin(), it));
         it->netconnection = ret;
         SV_ConnectClient(i);
 
-        net_activeconnections++;
+        Net::net_activeconnections++;
     }
 }
 
@@ -191,7 +177,7 @@ void SV_AddToFatPVS(const Vector3& org, mnode_t* node)
     while (true) {
         if (node->contents < 0) {
             if (node->contents != CONTENTS_SOLID) {
-                const byte* pvs = Mod_LeafPVS(reinterpret_cast<mleaf_t*>(node), sv.worldmodel);
+                const byte* pvs = Model::Mod_LeafPVS(reinterpret_cast<mleaf_t*>(node), sv.worldmodel);
                 for (int i = 0; i < fatbytes; ++i) {
                     fatpvs[static_cast<size_t>(i)] |= pvs[i];
                 }
@@ -226,7 +212,7 @@ void SV_WriteEntitiesToClient(edict_t* clent, sizebuf_t* msg)
     edict_t* ent = NEXT_EDICT(sv.edicts);
     for (int e = 1; e < sv.num_edicts; ++e, ent = NEXT_EDICT(ent)) {
         if (ent != clent) {
-            if (!ent->v.modelindex || !*PR_GetString(ent->v.model)) continue;
+            if (!ent->v.modelindex || !*VM::PR_GetString(ent->v.model)) continue;
 
             int i = 0;
             for (; i < ent->num_leafs; ++i) {
@@ -236,7 +222,7 @@ void SV_WriteEntitiesToClient(edict_t* clent, sizebuf_t* msg)
         }
 
         if (msg->maxsize - msg->cursize < 16) {
-            Con_Printf("packet overflow\n");
+            Console::Con_Printf("packet overflow\n");
             return;
         }
 
@@ -259,22 +245,22 @@ void SV_WriteEntitiesToClient(edict_t* clent, sizebuf_t* msg)
         if (e >= 256) bits |= U_LONGENTITY;
         if (bits >= 256) bits |= U_MOREBITS;
 
-        MSG_WriteByte(msg, bits | U_SIGNAL);
-        if (bits & U_MOREBITS) MSG_WriteByte(msg, bits >> 8);
-        if (bits & U_LONGENTITY) MSG_WriteShort(msg, e);
-        else MSG_WriteByte(msg, e);
+        Common::MSG_WriteByte(msg, bits | U_SIGNAL);
+        if (bits & U_MOREBITS) Common::MSG_WriteByte(msg, bits >> 8);
+        if (bits & U_LONGENTITY) Common::MSG_WriteShort(msg, e);
+        else Common::MSG_WriteByte(msg, e);
 
-        if (bits & U_MODEL) MSG_WriteByte(msg, static_cast<int>(ent->v.modelindex));
-        if (bits & U_FRAME) MSG_WriteByte(msg, static_cast<int>(ent->v.frame));
-        if (bits & U_COLORMAP) MSG_WriteByte(msg, static_cast<int>(ent->v.colormap));
-        if (bits & U_SKIN) MSG_WriteByte(msg, static_cast<int>(ent->v.skin));
-        if (bits & U_EFFECTS) MSG_WriteByte(msg, static_cast<int>(ent->v.effects));
-        if (bits & U_ORIGIN1) MSG_WriteCoord(msg, ent->v.origin[0]);
-        if (bits & U_ANGLE1) MSG_WriteAngle(msg, ent->v.angles[0]);
-        if (bits & U_ORIGIN2) MSG_WriteCoord(msg, ent->v.origin[1]);
-        if (bits & U_ANGLE2) MSG_WriteAngle(msg, ent->v.angles[1]);
-        if (bits & U_ORIGIN3) MSG_WriteCoord(msg, ent->v.origin[2]);
-        if (bits & U_ANGLE3) MSG_WriteAngle(msg, ent->v.angles[2]);
+        if (bits & U_MODEL) Common::MSG_WriteByte(msg, static_cast<int>(ent->v.modelindex));
+        if (bits & U_FRAME) Common::MSG_WriteByte(msg, static_cast<int>(ent->v.frame));
+        if (bits & U_COLORMAP) Common::MSG_WriteByte(msg, static_cast<int>(ent->v.colormap));
+        if (bits & U_SKIN) Common::MSG_WriteByte(msg, static_cast<int>(ent->v.skin));
+        if (bits & U_EFFECTS) Common::MSG_WriteByte(msg, static_cast<int>(ent->v.effects));
+        if (bits & U_ORIGIN1) Common::MSG_WriteCoord(msg, ent->v.origin[0]);
+        if (bits & U_ANGLE1) Common::MSG_WriteAngle(msg, ent->v.angles[0]);
+        if (bits & U_ORIGIN2) Common::MSG_WriteCoord(msg, ent->v.origin[1]);
+        if (bits & U_ANGLE2) Common::MSG_WriteAngle(msg, ent->v.angles[1]);
+        if (bits & U_ORIGIN3) Common::MSG_WriteCoord(msg, ent->v.origin[2]);
+        if (bits & U_ANGLE3) Common::MSG_WriteAngle(msg, ent->v.angles[2]);
     }
 }
 
@@ -290,19 +276,19 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
 {
     if (ent->v.dmg_take || ent->v.dmg_save) {
         const edict_t* other = PROG_TO_EDICT(ent->v.dmg_inflictor);
-        MSG_WriteByte(msg, svc_damage);
-        MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_save));
-        MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_take));
+        Common::MSG_WriteByte(msg, svc_damage);
+        Common::MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_save));
+        Common::MSG_WriteByte(msg, static_cast<int>(ent->v.dmg_take));
         const Vector3 center = other->v.origin + (other->v.mins + other->v.maxs) * 0.5f;
-        for (int i = 0; i < 3; ++i) MSG_WriteCoord(msg, center[i]);
+        for (int i = 0; i < 3; ++i) Common::MSG_WriteCoord(msg, center[i]);
         ent->v.dmg_take = 0; ent->v.dmg_save = 0;
     }
 
     SV_SetIdealPitch();
 
     if (ent->v.fixangle) {
-        MSG_WriteByte(msg, svc_setangle);
-        for (int i = 0; i < 3; ++i) MSG_WriteAngle(msg, ent->v.angles[i]);
+        Common::MSG_WriteByte(msg, svc_setangle);
+        for (int i = 0; i < 3; ++i) Common::MSG_WriteAngle(msg, ent->v.angles[i]);
         ent->v.fixangle = 0;
     }
 
@@ -310,9 +296,9 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
     if (ent->v.view_ofs[2] != DEFAULT_VIEWHEIGHT) bits |= SU_VIEWHEIGHT;
     if (ent->v.idealpitch) bits |= SU_IDEALPITCH;
 
-    const eval_t* val = GetEdictFieldValue(ent, "items2");
+    const eval_t* val = VM::GetEdictFieldValue(ent, "items2");
     int items = val ? (static_cast<int>(ent->v.items) | (static_cast<int>(val->_float) << 23))
-                    : (static_cast<int>(ent->v.items) | (static_cast<int>(pr_global_struct->serverflags) << 28));
+                    : (static_cast<int>(ent->v.items) | (static_cast<int>(VM::pr_global_struct->serverflags) << 28));
 
     bits |= SU_ITEMS;
     if (static_cast<int>(ent->v.flags) & FL_ONGROUND) bits |= SU_ONGROUND;
@@ -327,36 +313,36 @@ void SV_WriteClientdataToMessage(edict_t* ent, sizebuf_t* msg)
     if (ent->v.armorvalue) bits |= SU_ARMOR;
     bits |= SU_WEAPON;
 
-    MSG_WriteByte(msg, svc_clientdata);
-    MSG_WriteShort(msg, bits);
+    Common::MSG_WriteByte(msg, svc_clientdata);
+    Common::MSG_WriteShort(msg, bits);
 
-    if (bits & SU_VIEWHEIGHT) MSG_WriteChar(msg, static_cast<int>(ent->v.view_ofs[2]));
-    if (bits & SU_IDEALPITCH) MSG_WriteChar(msg, static_cast<int>(ent->v.idealpitch));
+    if (bits & SU_VIEWHEIGHT) Common::MSG_WriteChar(msg, static_cast<int>(ent->v.view_ofs[2]));
+    if (bits & SU_IDEALPITCH) Common::MSG_WriteChar(msg, static_cast<int>(ent->v.idealpitch));
 
     for (int i = 0; i < 3; ++i) {
-        if (bits & (SU_PUNCH1 << i)) MSG_WriteChar(msg, static_cast<int>(ent->v.punchangle[i]));
-        if (bits & (SU_VELOCITY1 << i)) MSG_WriteChar(msg, static_cast<int>(ent->v.velocity[i] / 16.0f));
+        if (bits & (SU_PUNCH1 << i)) Common::MSG_WriteChar(msg, static_cast<int>(ent->v.punchangle[i]));
+        if (bits & (SU_VELOCITY1 << i)) Common::MSG_WriteChar(msg, static_cast<int>(ent->v.velocity[i] / 16.0f));
     }
 
-    MSG_WriteLong(msg, items);
+    Common::MSG_WriteLong(msg, items);
 
-    if (bits & SU_WEAPONFRAME) MSG_WriteByte(msg, static_cast<int>(ent->v.weaponframe));
-    if (bits & SU_ARMOR) MSG_WriteByte(msg, static_cast<int>(ent->v.armorvalue));
-    if (bits & SU_WEAPON) MSG_WriteByte(msg, SV_ModelIndex(PR_GetString(ent->v.weaponmodel)));
+    if (bits & SU_WEAPONFRAME) Common::MSG_WriteByte(msg, static_cast<int>(ent->v.weaponframe));
+    if (bits & SU_ARMOR) Common::MSG_WriteByte(msg, static_cast<int>(ent->v.armorvalue));
+    if (bits & SU_WEAPON) Common::MSG_WriteByte(msg, SV_ModelIndex(VM::PR_GetString(ent->v.weaponmodel)));
 
-    MSG_WriteShort(msg, static_cast<int>(ent->v.health));
-    MSG_WriteByte(msg, static_cast<int>(ent->v.currentammo));
-    MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_shells));
-    MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_nails));
-    MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_rockets));
-    MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_cells));
+    Common::MSG_WriteShort(msg, static_cast<int>(ent->v.health));
+    Common::MSG_WriteByte(msg, static_cast<int>(ent->v.currentammo));
+    Common::MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_shells));
+    Common::MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_nails));
+    Common::MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_rockets));
+    Common::MSG_WriteByte(msg, static_cast<int>(ent->v.ammo_cells));
 
-    if (standard_quake) {
-        MSG_WriteByte(msg, static_cast<int>(ent->v.weapon));
+    if (Common::standard_quake) {
+        Common::MSG_WriteByte(msg, static_cast<int>(ent->v.weapon));
     } else {
         for (int i = 0; i < 32; ++i) {
             if (static_cast<int>(ent->v.weapon) & (1 << i)) {
-                MSG_WriteByte(msg, i);
+                Common::MSG_WriteByte(msg, i);
                 break;
             }
         }
@@ -372,17 +358,17 @@ qboolean SV_SendClientDatagram(client_t* client)
     msg.maxsize = static_cast<int>(buf.size());
     msg.cursize = 0;
 
-    MSG_WriteByte(&msg, svc_time);
-    MSG_WriteFloat(&msg, static_cast<float>(sv.time));
+    Common::MSG_WriteByte(&msg, svc_time);
+    Common::MSG_WriteFloat(&msg, static_cast<float>(sv.time));
 
     SV_WriteClientdataToMessage(client->edict, &msg);
     SV_WriteEntitiesToClient(client->edict, &msg);
 
     if (msg.cursize + sv.datagram.cursize < msg.maxsize) {
-        SZ_Write(&msg, sv.datagram.data, sv.datagram.cursize);
+        Common::SZ_Write(&msg, sv.datagram.data, sv.datagram.cursize);
     }
 
-    if (NET_SendUnreliableMessage(client->netconnection, &msg) == -1) {
+    if (Net::NET_SendUnreliableMessage(client->netconnection, &msg) == -1) {
         SV_DropClient(true);
         return false;
     }
@@ -394,24 +380,24 @@ void SV_UpdateToReliableMessages()
 {
     auto clients = svs.GetClients();
     for (size_t i = 0; i < clients.size(); ++i) {
-        host_client = &clients[i];
-        if (host_client->old_frags != static_cast<int>(host_client->edict->v.frags)) {
+        Host::host_client = &clients[i];
+        if (Host::host_client->old_frags != static_cast<int>(Host::host_client->edict->v.frags)) {
             for (auto& client : clients) {
                 if (!client.active) continue;
-                MSG_WriteByte(&client.message, svc_updatefrags);
-                MSG_WriteByte(&client.message, static_cast<int>(i));
-                MSG_WriteShort(&client.message, static_cast<int>(host_client->edict->v.frags));
+                Common::MSG_WriteByte(&client.message, svc_updatefrags);
+                Common::MSG_WriteByte(&client.message, static_cast<int>(i));
+                Common::MSG_WriteShort(&client.message, static_cast<int>(Host::host_client->edict->v.frags));
             }
-            host_client->old_frags = static_cast<int>(host_client->edict->v.frags);
+            Host::host_client->old_frags = static_cast<int>(Host::host_client->edict->v.frags);
         }
     }
 
     for (auto& client : clients) {
         if (!client.active) continue;
-        SZ_Write(&client.message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
+        Common::SZ_Write(&client.message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
     }
 
-    SZ_Clear(&sv.reliable_datagram);
+    Common::SZ_Clear(&sv.reliable_datagram);
 }
 
 void SV_SendNop(client_t* client)
@@ -423,13 +409,13 @@ void SV_SendNop(client_t* client)
     msg.maxsize = static_cast<int>(buf.size());
     msg.cursize = 0;
 
-    MSG_WriteChar(&msg, svc_nop);
+    Common::MSG_WriteChar(&msg, svc_nop);
 
-    if (NET_SendUnreliableMessage(client->netconnection, &msg) == -1) {
+    if (Net::NET_SendUnreliableMessage(client->netconnection, &msg) == -1) {
         SV_DropClient(true);
     }
 
-    client->last_message = realtime;
+    client->last_message = Host::realtime;
 }
 
 void SV_SendClientMessages()
@@ -438,37 +424,37 @@ void SV_SendClientMessages()
 
     auto clients = svs.GetClients();
     for (auto& client : clients) {
-        host_client = &client;
-        if (!host_client->active) continue;
+        Host::host_client = &client;
+        if (!Host::host_client->active) continue;
 
-        if (host_client->spawned) {
-            if (!SV_SendClientDatagram(host_client)) continue;
+        if (Host::host_client->spawned) {
+            if (!SV_SendClientDatagram(Host::host_client)) continue;
         } else {
-            if (!host_client->sendsignon) {
-                if (realtime - host_client->last_message > 5.0) SV_SendNop(host_client);
+            if (!Host::host_client->sendsignon) {
+                if (Host::realtime - Host::host_client->last_message > 5.0) SV_SendNop(Host::host_client);
                 continue;
             }
         }
 
-        if (host_client->message.overflowed) {
+        if (Host::host_client->message.overflowed) {
             SV_DropClient(true);
-            host_client->message.overflowed = false;
+            Host::host_client->message.overflowed = false;
             continue;
         }
 
-        if (host_client->message.cursize || host_client->dropasap) {
-            if (!NET_CanSendMessage(host_client->netconnection)) continue;
+        if (Host::host_client->message.cursize || Host::host_client->dropasap) {
+            if (!Net::NET_CanSendMessage(Host::host_client->netconnection)) continue;
 
-            if (host_client->dropasap) {
+            if (Host::host_client->dropasap) {
                 SV_DropClient(false);
             } else {
-                if (NET_SendMessage(host_client->netconnection, &host_client->message) == -1) {
+                if (Net::NET_SendMessage(Host::host_client->netconnection, &Host::host_client->message) == -1) {
                     SV_DropClient(true);
                 }
 
-                SZ_Clear(&host_client->message);
-                host_client->last_message = realtime;
-                host_client->sendsignon = false;
+                Common::SZ_Clear(&Host::host_client->message);
+                Host::host_client->last_message = Host::realtime;
+                Host::host_client->sendsignon = false;
             }
         }
     }
@@ -498,7 +484,7 @@ void SV_SetIdealPitch()
         Vector3 bottom = top;
         bottom.z -= 160.0f;
 
-        const trace_t tr = SV_Move(top, vec3_origin, vec3_origin, bottom, 1, sv_player);
+        const trace_t tr = SV_Move(top, Math::vec3_origin, Math::vec3_origin, bottom, 1, sv_player);
         if (tr.allsolid || tr.fraction == 1.0f) return;
 
         z[static_cast<size_t>(i)] = top.z + tr.fraction * (bottom.z - top.z);
@@ -536,11 +522,11 @@ static void SV_UserFriction()
     Vector3 stop = start;
     stop.z -= 34.0f;
 
-    const trace_t trace = SV_Move(start, vec3_origin, vec3_origin, stop, true, sv_player);
+    const trace_t trace = SV_Move(start, Math::vec3_origin, Math::vec3_origin, stop, true, sv_player);
     const float friction = (trace.fraction == 1.0f) ? (sv_friction.value * sv_edgefriction.value) : sv_friction.value;
 
     const float control = (speed < sv_stopspeed.value) ? sv_stopspeed.value : speed;
-    float newspeed = static_cast<float>(speed - host_frametime * control * friction);
+    float newspeed = static_cast<float>(speed - Host::host_frametime * control * friction);
     if (newspeed < 0.0f) newspeed = 0.0f;
 
     newspeed /= speed;
@@ -555,7 +541,7 @@ static void SV_Accelerate()
     const float addspeed = wishspeed - currentspeed;
     if (addspeed <= 0.0f) return;
 
-    float accelspeed = static_cast<float>(sv_accelerate.value * host_frametime * wishspeed);
+    float accelspeed = static_cast<float>(sv_accelerate.value * Host::host_frametime * wishspeed);
     if (accelspeed > addspeed) accelspeed = addspeed;
 
     for (int i = 0; i < 3; ++i) velocity[i] += accelspeed * wishdir[i];
@@ -570,7 +556,7 @@ static void SV_AirAccelerate(Vector3 wishveloc)
     const float addspeed = wishspd - currentspeed;
     if (addspeed <= 0.0f) return;
 
-    float accelspeed = static_cast<float>(sv_accelerate.value * wishspeed * host_frametime);
+    float accelspeed = static_cast<float>(sv_accelerate.value * wishspeed * Host::host_frametime);
     if (accelspeed > addspeed) accelspeed = addspeed;
 
     for (int i = 0; i < 3; ++i) velocity[i] += accelspeed * wishveloc[i];
@@ -579,7 +565,7 @@ static void SV_AirAccelerate(Vector3 wishveloc)
 static void DropPunchAngle()
 {
     float len = sv_player->v.punchangle.normalize();
-    len -= static_cast<float>(10.0 * host_frametime);
+    len -= static_cast<float>(10.0 * Host::host_frametime);
     if (len < 0.0f) len = 0.0f;
     sv_player->v.punchangle *= len;
 }
@@ -587,7 +573,7 @@ static void DropPunchAngle()
 static void SV_WaterMove()
 {
     Vector3 forward{}, right{}, up{};
-    AngleVectors(sv_player->v.v_angle, forward, right, up);
+    Math::AngleVectors(sv_player->v.v_angle, forward, right, up);
 
     Vector3 wishvel = forward * cmd.forwardmove + right * cmd.sidemove;
 
@@ -602,12 +588,12 @@ static void SV_WaterMove()
 
     w_speed *= 0.7f;
 
-    const float speed = Length(velocity);
+    const float speed = Math::Length(velocity);
     float newspeed = 0.0f;
     if (speed) {
-        newspeed = speed - static_cast<float>(host_frametime * speed * sv_friction.value);
+        newspeed = speed - static_cast<float>(Host::host_frametime * speed * sv_friction.value);
         if (newspeed < 0.0f) newspeed = 0.0f;
-        VectorScale(velocity, newspeed / speed, velocity);
+        Math::VectorScale(velocity, newspeed / speed, velocity);
     }
 
     if (!w_speed) return;
@@ -616,7 +602,7 @@ static void SV_WaterMove()
     if (addspeed <= 0.0f) return;
 
     wishvel.normalize();
-    float accelspeed = static_cast<float>(sv_accelerate.value * w_speed * host_frametime);
+    float accelspeed = static_cast<float>(sv_accelerate.value * w_speed * Host::host_frametime);
     if (accelspeed > addspeed) accelspeed = addspeed;
 
     for (int i = 0; i < 3; ++i) velocity[i] += accelspeed * wishvel[i];
@@ -636,7 +622,7 @@ static void SV_WaterJump()
 static void SV_AirMove()
 {
     Vector3 forward{}, right{}, up{};
-    AngleVectors(sv_player->v.angles, forward, right, up);
+    Math::AngleVectors(sv_player->v.angles, forward, right, up);
 
     float fmove = cmd.forwardmove;
     float smove = cmd.sidemove;
@@ -676,7 +662,7 @@ void SV_ClientThink()
 
     if (sv_player->v.health <= 0.0f) return;
 
-    cmd = host_client->cmd;
+    cmd = Host::host_client->cmd;
     angles = sv_player->v.angles;
 
     const Vector3 v_angle = sv_player->v.v_angle + sv_player->v.punchangle;
@@ -701,25 +687,25 @@ void SV_ClientThink()
 
 static void SV_ReadClientMove(usercmd_t* move)
 {
-    host_client->ping_times[static_cast<size_t>(host_client->num_pings % NUM_PING_TIMES)] = static_cast<float>(sv.time) - MSG_ReadFloat();
-    host_client->num_pings++;
+    Host::host_client->ping_times[static_cast<size_t>(Host::host_client->num_pings % NUM_PING_TIMES)] = static_cast<float>(sv.time) - Common::MSG_ReadFloat();
+    Host::host_client->num_pings++;
 
     Vector3 angle{};
-    angle.x = MSG_ReadAngle();
-    angle.y = MSG_ReadAngle();
-    angle.z = MSG_ReadAngle();
-    host_client->edict->v.v_angle = angle;
+    angle.x = Common::MSG_ReadAngle();
+    angle.y = Common::MSG_ReadAngle();
+    angle.z = Common::MSG_ReadAngle();
+    Host::host_client->edict->v.v_angle = angle;
 
-    move->forwardmove = static_cast<float>(MSG_ReadShort());
-    move->sidemove = static_cast<float>(MSG_ReadShort());
-    move->upmove = static_cast<float>(MSG_ReadShort());
+    move->forwardmove = static_cast<float>(Common::MSG_ReadShort());
+    move->sidemove = static_cast<float>(Common::MSG_ReadShort());
+    move->upmove = static_cast<float>(Common::MSG_ReadShort());
 
-    const int bits = MSG_ReadByte();
-    host_client->edict->v.button0 = static_cast<float>(bits & 1);
-    host_client->edict->v.button2 = static_cast<float>((bits & 2) >> 1);
+    const int bits = Common::MSG_ReadByte();
+    Host::host_client->edict->v.button0 = static_cast<float>(bits & 1);
+    Host::host_client->edict->v.button2 = static_cast<float>((bits & 2) >> 1);
 
-    const int impulse = MSG_ReadByte();
-    if (impulse) host_client->edict->v.impulse = static_cast<float>(impulse);
+    const int impulse = Common::MSG_ReadByte();
+    if (impulse) Host::host_client->edict->v.impulse = static_cast<float>(impulse);
 }
 
 static qboolean SV_ReadClientMessage()
@@ -733,44 +719,44 @@ static qboolean SV_ReadClientMessage()
     int ret = 0;
     do {
     nextmsg:
-        ret = NET_GetMessage(host_client->netconnection);
+        ret = Net::NET_GetMessage(Host::host_client->netconnection);
         if (ret == -1) {
-            Sys_Printf("SV_ReadClientMessage: NET_GetMessage failed\n");
+            Common::Sys_Printf("SV_ReadClientMessage: NET_GetMessage failed\n");
             return false;
         }
 
         if (!ret) return true;
 
-        MSG_BeginReading();
+        Common::MSG_BeginReading();
 
         while (true) {
-            if (!host_client->active) return false;
+            if (!Host::host_client->active) return false;
 
-            if (msg_badread) {
-                Sys_Printf("SV_ReadClientMessage: badread\n");
+            if (Common::msg_badread) {
+                Common::Sys_Printf("SV_ReadClientMessage: badread\n");
                 return false;
             }
 
-            const int msg_cmd = MSG_ReadChar();
+            const int msg_cmd = Common::MSG_ReadChar();
 
             switch (msg_cmd) {
             case -1:
                 goto nextmsg;
 
             default:
-                Sys_Printf("SV_ReadClientMessage: unknown command char\n");
+                Common::Sys_Printf("SV_ReadClientMessage: unknown command char\n");
                 return false;
 
             case clc_nop:
                 break;
 
             case clc_stringcmd: {
-                const char* s = MSG_ReadString();
-                ret = host_client->privileged ? 2 : 0;
+                const char* s = Common::MSG_ReadString();
+                ret = Host::host_client->privileged ? 2 : 0;
 
                 const std::string_view cmd_sv(s);
                 for (const auto& allowed : allowed_commands) {
-                    if (cmd_sv.length() >= allowed.length() && Q_strncasecmp(s, allowed.data(), static_cast<int>(allowed.length())) == 0) {
+                    if (cmd_sv.length() >= allowed.length() && Common::Q_strncasecmp(s, allowed.data(), static_cast<int>(allowed.length())) == 0) {
                         ret = 1;
                         break;
                     }
@@ -781,7 +767,7 @@ static qboolean SV_ReadClientMessage()
                 } else if (ret == 1) {
                     Cmd::ExecuteString(s, Cmd::Source::Client);
                 } else {
-                    Con_DPrintf("%s tried to %s\n", host_client->name.data(), s);
+                    Console::Con_DPrintf("%s tried to %s\n", Host::host_client->name.data(), s);
                 }
                 break;
             }
@@ -790,7 +776,7 @@ static qboolean SV_ReadClientMessage()
                 return false;
 
             case clc_move:
-                SV_ReadClientMove(&host_client->cmd);
+                SV_ReadClientMove(&Host::host_client->cmd);
                 break;
             }
         }
@@ -803,22 +789,22 @@ void SV_RunClients()
 {
     auto clients = svs.GetClients();
     for (auto& client : clients) {
-        host_client = &client;
-        if (!host_client->active) continue;
+        Host::host_client = &client;
+        if (!Host::host_client->active) continue;
 
-        sv_player = host_client->edict;
+        sv_player = Host::host_client->edict;
 
         if (!SV_ReadClientMessage()) {
             SV_DropClient(false);
             continue;
         }
 
-        if (!host_client->spawned) {
-            host_client->cmd = usercmd_t{};
+        if (!Host::host_client->spawned) {
+            Host::host_client->cmd = usercmd_t{};
             continue;
         }
 
-        if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game)) {
+        if (!sv.paused && (svs.maxclients > 1 || Keys::key_dest == Keys::key_game)) {
             SV_ClientThink();
         }
     }
@@ -833,8 +819,8 @@ void SV_ClientPrintf(const char* fmt, ...)
     vsprintf_s(string, sizeof(string), fmt, argptr);
     va_end(argptr);
 
-    MSG_WriteByte(&host_client->message, svc_print);
-    MSG_WriteString(&host_client->message, string);
+    Common::MSG_WriteByte(&Host::host_client->message, svc_print);
+    Common::MSG_WriteString(&Host::host_client->message, string);
 }
 
 void SV_BroadcastPrintf(const char* fmt, ...)
@@ -848,8 +834,8 @@ void SV_BroadcastPrintf(const char* fmt, ...)
 
     for (int i = 0; i < svs.maxclients; i++) {
         if (svs.clients[i].active && svs.clients[i].spawned) {
-            MSG_WriteByte(&svs.clients[i].message, svc_print);
-            MSG_WriteString(&svs.clients[i].message, string);
+            Common::MSG_WriteByte(&svs.clients[i].message, svc_print);
+            Common::MSG_WriteString(&svs.clients[i].message, string);
         }
     }
 }
@@ -857,28 +843,28 @@ void SV_BroadcastPrintf(const char* fmt, ...)
 void SV_DropClient(bool crash)
 {
     if (!crash) {
-        if (NET_CanSendMessage(host_client->netconnection)) {
-            MSG_WriteByte(&host_client->message, svc_disconnect);
-            NET_SendMessage(host_client->netconnection, &host_client->message);
+        if (Net::NET_CanSendMessage(Host::host_client->netconnection)) {
+            Common::MSG_WriteByte(&Host::host_client->message, svc_disconnect);
+            Net::NET_SendMessage(Host::host_client->netconnection, &Host::host_client->message);
         }
 
-        if (host_client->edict && host_client->spawned) {
-            int saveSelf = pr_global_struct->self;
-            pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(host_client->edict));
-            PR_ExecuteProgram(pr_global_struct->ClientDisconnect);
-            pr_global_struct->self = saveSelf;
+        if (Host::host_client->edict && Host::host_client->spawned) {
+            int saveSelf = VM::pr_global_struct->self;
+            VM::pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(Host::host_client->edict));
+            VM::PR_ExecuteProgram(VM::pr_global_struct->ClientDisconnect);
+            VM::pr_global_struct->self = saveSelf;
         }
 
-        Sys_Printf("Client %s removed\n", host_client->name.data());
+        Common::Sys_Printf("Client %s removed\n", Host::host_client->name.data());
     }
 
-    NET_Close(host_client->netconnection);
-    host_client->netconnection = nullptr;
+    Net::NET_Close(Host::host_client->netconnection);
+    Host::host_client->netconnection = nullptr;
 
-    host_client->active = false;
-    host_client->name[0] = 0;
-    host_client->old_frags = -999999;
-    net_activeconnections--;
+    Host::host_client->active = false;
+    Host::host_client->name[0] = 0;
+    Host::host_client->old_frags = -999999;
+    Net::net_activeconnections--;
 
     for (int i = 0; i < svs.maxclients; i++) {
         client_t* client = &svs.clients[i];
@@ -886,18 +872,18 @@ void SV_DropClient(bool crash)
             continue;
         }
 
-        MSG_WriteByte(&client->message, svc_updatename);
-        MSG_WriteByte(&client->message, static_cast<int>(host_client - svs.clients));
-        MSG_WriteString(&client->message, "");
-        MSG_WriteByte(&client->message, svc_updatefrags);
-        MSG_WriteByte(&client->message, static_cast<int>(host_client - svs.clients));
-        MSG_WriteShort(&client->message, 0);
-        MSG_WriteByte(&client->message, svc_updatecolors);
-        MSG_WriteByte(&client->message, static_cast<int>(host_client - svs.clients));
-        MSG_WriteByte(&client->message, 0);
+        Common::MSG_WriteByte(&client->message, svc_updatename);
+        Common::MSG_WriteByte(&client->message, static_cast<int>(Host::host_client - svs.clients));
+        Common::MSG_WriteString(&client->message, "");
+        Common::MSG_WriteByte(&client->message, svc_updatefrags);
+        Common::MSG_WriteByte(&client->message, static_cast<int>(Host::host_client - svs.clients));
+        Common::MSG_WriteShort(&client->message, 0);
+        Common::MSG_WriteByte(&client->message, svc_updatecolors);
+        Common::MSG_WriteByte(&client->message, static_cast<int>(Host::host_client - svs.clients));
+        Common::MSG_WriteByte(&client->message, 0);
     }
 
-    host_client->netconnection = nullptr;
+    Host::host_client->netconnection = nullptr;
 }
 
 } // namespace Server

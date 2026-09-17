@@ -6,12 +6,6 @@
 
 #include <cmath>
 
-using namespace Math;
-using namespace Common;
-using namespace Console;
-using namespace Client;
-using namespace Model;
-
 namespace Render {
 
 inline constexpr int LIGHT_MIN = 5;
@@ -157,13 +151,13 @@ bool R_AliasCheckBBox()
 
     currententity->trivial_accept = 0;
     pmodel = currententity->model;
-    aliashdr_t* pahdr = (aliashdr_t*)Mod_Extradata(pmodel);
+    aliashdr_t* pahdr = (aliashdr_t*)Model::Mod_Extradata(pmodel);
     pmdl = reinterpret_cast<mdl_t*>(reinterpret_cast<byte*>(pahdr) + pahdr->model);
     R_AliasSetUpTransform(0);
 
     int frame = currententity->frame;
     if ((frame >= pmdl->numframes) || (frame < 0)) {
-        Con_DPrintf("No such frame %d %s\n", frame, pmodel->name);
+        Console::Con_DPrintf("No such frame %d %s\n", frame, pmodel->name);
         frame = 0;
     }
     maliasframedesc_t* pframedesc = &pahdr->frames[frame];
@@ -315,7 +309,7 @@ void R_AliasSetUpTransform(int trivial_accept)
     angles[ROLL] = currententity->angles[ROLL];
     angles[PITCH] = -currententity->angles[PITCH];
     angles[YAW] = currententity->angles[YAW];
-    AngleVectors(angles, alias_forward, alias_right, alias_up);
+    Math::AngleVectors(angles, alias_forward, alias_right, alias_up);
 
     tmatrix[0][0] = pmdl->scale[0];
     tmatrix[1][1] = pmdl->scale[1];
@@ -333,14 +327,14 @@ void R_AliasSetUpTransform(int trivial_accept)
     t2matrix[1][3] = -modelorg[1];
     t2matrix[2][3] = -modelorg[2];
 
-    R_ConcatTransforms(t2matrix, tmatrix, rotationmatrix);
+    Math::R_ConcatTransforms(t2matrix, tmatrix, rotationmatrix);
 
     VectorCopy(vright, viewmatrix[0]);
     VectorCopy(vup, viewmatrix[1]);
-    VectorInverse(viewmatrix[1]);
+    Math::VectorInverse(viewmatrix[1]);
     VectorCopy(vpn, viewmatrix[2]);
 
-    R_ConcatTransforms(viewmatrix, rotationmatrix, aliastransform);
+    Math::R_ConcatTransforms(viewmatrix, rotationmatrix, aliastransform);
 
     if (trivial_accept) {
         for (int i = 0; i < 4; i++) {
@@ -424,7 +418,7 @@ void R_AliasSetupSkin()
 {
     int skinnum = currententity->skinnum;
     if ((skinnum >= pmdl->numskins) || (skinnum < 0)) {
-        Con_DPrintf("R_AliasSetupSkin: no such skin # %d\n", skinnum);
+        Console::Con_DPrintf("R_AliasSetupSkin: no such skin # %d\n", skinnum);
         skinnum = 0;
     }
     pskindesc = reinterpret_cast<maliasskindesc_t*>(reinterpret_cast<byte*>(paliashdr) + paliashdr->skindesc) + skinnum;
@@ -434,7 +428,7 @@ void R_AliasSetupSkin()
         float* pskinintervals = reinterpret_cast<float*>(reinterpret_cast<byte*>(paliashdr) + paliasskingroup->intervals);
         int numskins = paliasskingroup->numskins;
         float fullskininterval = pskinintervals[numskins - 1];
-        float skintime = static_cast<float>(cl.time + currententity->syncbase);
+        float skintime = static_cast<float>(Client::cl.time + currententity->syncbase);
         float skintargettime = skintime - ((int)(skintime / fullskininterval)) * fullskininterval;
         int i = 0;
         for (; i < (numskins - 1); i++) {
@@ -476,7 +470,7 @@ void R_AliasSetupFrame()
 {
     int frame = currententity->frame;
     if ((frame >= pmdl->numframes) || (frame < 0)) {
-        Con_DPrintf("R_AliasSetupFrame: no such frame %d\n", frame);
+        Console::Con_DPrintf("R_AliasSetupFrame: no such frame %d\n", frame);
         frame = 0;
     }
     if (paliashdr->frames[frame].type == aliasframetype_t::ALIAS_SINGLE) {
@@ -487,7 +481,7 @@ void R_AliasSetupFrame()
     float* pintervals = reinterpret_cast<float*>(reinterpret_cast<byte*>(paliashdr) + paliasgroup->intervals);
     int numframes = paliasgroup->numframes;
     float fullinterval = pintervals[numframes - 1];
-    float time = static_cast<float>(cl.time + currententity->syncbase);
+    float time = static_cast<float>(Client::cl.time + currententity->syncbase);
     float targettime = time - ((int)(time / fullinterval)) * fullinterval;
     int i = 0;
     for (; i < (numframes - 1); i++) {
@@ -506,7 +500,7 @@ void R_AliasDrawModel(alight_t* plighting)
 
     pfinalverts = (finalvert_t*)(((size_t)&finalverts[0] + CACHE_SIZE - 1) & ~(size_t)(CACHE_SIZE - 1));
     pauxverts = &auxverts[0];
-    paliashdr = (aliashdr_t*)Mod_Extradata(currententity->model);
+    paliashdr = (aliashdr_t*)Model::Mod_Extradata(currententity->model);
     pmdl = reinterpret_cast<mdl_t*>(reinterpret_cast<byte*>(paliashdr) + paliashdr->model);
 
     R_AliasSetupSkin();
@@ -515,14 +509,14 @@ void R_AliasDrawModel(alight_t* plighting)
     R_AliasSetupFrame();
 
     if (!currententity->colormap) {
-        Sys_Error("R_AliasDrawModel: !currententity->colormap");
+        Common::Sys_Error("R_AliasDrawModel: !currententity->colormap");
     }
     r_affinetridesc.drawtype = (currententity->trivial_accept == 3) && r_recursiveaffinetriangles;
     if (r_affinetridesc.drawtype) {
         D_PolysetUpdateTables();
     }
     acolormap = currententity->colormap;
-    if (currententity != &cl.viewent) {
+    if (currententity != &Client::cl.viewent) {
         ziscale = (float)0x8000 * (float)0x10000;
     } else {
         ziscale = (float)0x8000 * (float)0x10000 * 3.0f;

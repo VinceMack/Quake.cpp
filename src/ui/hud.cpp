@@ -12,29 +12,6 @@
 #include <cstdio>
 #include <charconv>
 
-using namespace Client;
-using namespace Common;
-using namespace Console;
-using namespace Render;
-using namespace Draw;
-using namespace Host;
-using namespace Input;
-using namespace Keys;
-using namespace Math;
-using namespace Menu;
-using namespace Model;
-using namespace Net;
-using namespace VM;
-using namespace Sbar;
-using namespace Screen;
-using namespace Server;
-using namespace Audio;
-using namespace Vid;
-using namespace View;
-using namespace Wad;
-using namespace Cvar;
-using namespace Cmd;
-
 int sb_lines; // scan lines to draw
 
 namespace Sbar {
@@ -104,153 +81,153 @@ void Sbar_Changed()
 void Sbar_Init()
 {
     for (int i = 0; i < 10; i++) {
-        sb_nums[0][i] = Draw_PicFromWad(va("num_%i", i));
-        sb_nums[1][i] = Draw_PicFromWad(va("anum_%i", i));
+        sb_nums[0][i] = Draw::Draw_PicFromWad(Common::va("num_%i", i));
+        sb_nums[1][i] = Draw::Draw_PicFromWad(Common::va("anum_%i", i));
     }
-    sb_nums[0][10] = Draw_PicFromWad("num_minus");
-    sb_nums[1][10] = Draw_PicFromWad("anum_minus");
-    sb_colon = Draw_PicFromWad("num_colon");
-    sb_slash = Draw_PicFromWad("num_slash");
-    sb_weapons[0][0] = Draw_PicFromWad("inv_shotgun");
-    sb_weapons[0][1] = Draw_PicFromWad("inv_sshotgun");
-    sb_weapons[0][2] = Draw_PicFromWad("inv_nailgun");
-    sb_weapons[0][3] = Draw_PicFromWad("inv_snailgun");
-    sb_weapons[0][4] = Draw_PicFromWad("inv_rlaunch");
-    sb_weapons[0][5] = Draw_PicFromWad("inv_srlaunch");
-    sb_weapons[0][6] = Draw_PicFromWad("inv_lightng");
-    sb_weapons[1][0] = Draw_PicFromWad("inv2_shotgun");
-    sb_weapons[1][1] = Draw_PicFromWad("inv2_sshotgun");
-    sb_weapons[1][2] = Draw_PicFromWad("inv2_nailgun");
-    sb_weapons[1][3] = Draw_PicFromWad("inv2_snailgun");
-    sb_weapons[1][4] = Draw_PicFromWad("inv2_rlaunch");
-    sb_weapons[1][5] = Draw_PicFromWad("inv2_srlaunch");
-    sb_weapons[1][6] = Draw_PicFromWad("inv2_lightng");
+    sb_nums[0][10] = Draw::Draw_PicFromWad("num_minus");
+    sb_nums[1][10] = Draw::Draw_PicFromWad("anum_minus");
+    sb_colon = Draw::Draw_PicFromWad("num_colon");
+    sb_slash = Draw::Draw_PicFromWad("num_slash");
+    sb_weapons[0][0] = Draw::Draw_PicFromWad("inv_shotgun");
+    sb_weapons[0][1] = Draw::Draw_PicFromWad("inv_sshotgun");
+    sb_weapons[0][2] = Draw::Draw_PicFromWad("inv_nailgun");
+    sb_weapons[0][3] = Draw::Draw_PicFromWad("inv_snailgun");
+    sb_weapons[0][4] = Draw::Draw_PicFromWad("inv_rlaunch");
+    sb_weapons[0][5] = Draw::Draw_PicFromWad("inv_srlaunch");
+    sb_weapons[0][6] = Draw::Draw_PicFromWad("inv_lightng");
+    sb_weapons[1][0] = Draw::Draw_PicFromWad("inv2_shotgun");
+    sb_weapons[1][1] = Draw::Draw_PicFromWad("inv2_sshotgun");
+    sb_weapons[1][2] = Draw::Draw_PicFromWad("inv2_nailgun");
+    sb_weapons[1][3] = Draw::Draw_PicFromWad("inv2_snailgun");
+    sb_weapons[1][4] = Draw::Draw_PicFromWad("inv2_rlaunch");
+    sb_weapons[1][5] = Draw::Draw_PicFromWad("inv2_srlaunch");
+    sb_weapons[1][6] = Draw::Draw_PicFromWad("inv2_lightng");
     for (int i = 0; i < 5; i++) {
-        sb_weapons[2 + i][0] = Draw_PicFromWad(va("inva%i_shotgun", i + 1));
-        sb_weapons[2 + i][1] = Draw_PicFromWad(va("inva%i_sshotgun", i + 1));
-        sb_weapons[2 + i][2] = Draw_PicFromWad(va("inva%i_nailgun", i + 1));
-        sb_weapons[2 + i][3] = Draw_PicFromWad(va("inva%i_snailgun", i + 1));
-        sb_weapons[2 + i][4] = Draw_PicFromWad(va("inva%i_rlaunch", i + 1));
-        sb_weapons[2 + i][5] = Draw_PicFromWad(va("inva%i_srlaunch", i + 1));
-        sb_weapons[2 + i][6] = Draw_PicFromWad(va("inva%i_lightng", i + 1));
+        sb_weapons[2 + i][0] = Draw::Draw_PicFromWad(Common::va("inva%i_shotgun", i + 1));
+        sb_weapons[2 + i][1] = Draw::Draw_PicFromWad(Common::va("inva%i_sshotgun", i + 1));
+        sb_weapons[2 + i][2] = Draw::Draw_PicFromWad(Common::va("inva%i_nailgun", i + 1));
+        sb_weapons[2 + i][3] = Draw::Draw_PicFromWad(Common::va("inva%i_snailgun", i + 1));
+        sb_weapons[2 + i][4] = Draw::Draw_PicFromWad(Common::va("inva%i_rlaunch", i + 1));
+        sb_weapons[2 + i][5] = Draw::Draw_PicFromWad(Common::va("inva%i_srlaunch", i + 1));
+        sb_weapons[2 + i][6] = Draw::Draw_PicFromWad(Common::va("inva%i_lightng", i + 1));
     }
-    sb_ammo[0] = Draw_PicFromWad("sb_shells");
-    sb_ammo[1] = Draw_PicFromWad("sb_nails");
-    sb_ammo[2] = Draw_PicFromWad("sb_rocket");
-    sb_ammo[3] = Draw_PicFromWad("sb_cells");
-    sb_armor[0] = Draw_PicFromWad("sb_armor1");
-    sb_armor[1] = Draw_PicFromWad("sb_armor2");
-    sb_armor[2] = Draw_PicFromWad("sb_armor3");
-    sb_items[0] = Draw_PicFromWad("sb_key1");
-    sb_items[1] = Draw_PicFromWad("sb_key2");
-    sb_items[2] = Draw_PicFromWad("sb_invis");
-    sb_items[3] = Draw_PicFromWad("sb_invuln");
-    sb_items[4] = Draw_PicFromWad("sb_suit");
-    sb_items[5] = Draw_PicFromWad("sb_quad");
-    sb_sigil[0] = Draw_PicFromWad("sb_sigil1");
-    sb_sigil[1] = Draw_PicFromWad("sb_sigil2");
-    sb_sigil[2] = Draw_PicFromWad("sb_sigil3");
-    sb_sigil[3] = Draw_PicFromWad("sb_sigil4");
-    sb_faces[4][0] = Draw_PicFromWad("face1");
-    sb_faces[4][1] = Draw_PicFromWad("face_p1");
-    sb_faces[3][0] = Draw_PicFromWad("face2");
-    sb_faces[3][1] = Draw_PicFromWad("face_p2");
-    sb_faces[2][0] = Draw_PicFromWad("face3");
-    sb_faces[2][1] = Draw_PicFromWad("face_p3");
-    sb_faces[1][0] = Draw_PicFromWad("face4");
-    sb_faces[1][1] = Draw_PicFromWad("face_p4");
-    sb_faces[0][0] = Draw_PicFromWad("face5");
-    sb_faces[0][1] = Draw_PicFromWad("face_p5");
-    sb_face_invis = Draw_PicFromWad("face_invis");
-    sb_face_invuln = Draw_PicFromWad("face_invul2");
-    sb_face_invis_invuln = Draw_PicFromWad("face_inv2");
-    sb_face_quad = Draw_PicFromWad("face_quad");
+    sb_ammo[0] = Draw::Draw_PicFromWad("sb_shells");
+    sb_ammo[1] = Draw::Draw_PicFromWad("sb_nails");
+    sb_ammo[2] = Draw::Draw_PicFromWad("sb_rocket");
+    sb_ammo[3] = Draw::Draw_PicFromWad("sb_cells");
+    sb_armor[0] = Draw::Draw_PicFromWad("sb_armor1");
+    sb_armor[1] = Draw::Draw_PicFromWad("sb_armor2");
+    sb_armor[2] = Draw::Draw_PicFromWad("sb_armor3");
+    sb_items[0] = Draw::Draw_PicFromWad("sb_key1");
+    sb_items[1] = Draw::Draw_PicFromWad("sb_key2");
+    sb_items[2] = Draw::Draw_PicFromWad("sb_invis");
+    sb_items[3] = Draw::Draw_PicFromWad("sb_invuln");
+    sb_items[4] = Draw::Draw_PicFromWad("sb_suit");
+    sb_items[5] = Draw::Draw_PicFromWad("sb_quad");
+    sb_sigil[0] = Draw::Draw_PicFromWad("sb_sigil1");
+    sb_sigil[1] = Draw::Draw_PicFromWad("sb_sigil2");
+    sb_sigil[2] = Draw::Draw_PicFromWad("sb_sigil3");
+    sb_sigil[3] = Draw::Draw_PicFromWad("sb_sigil4");
+    sb_faces[4][0] = Draw::Draw_PicFromWad("face1");
+    sb_faces[4][1] = Draw::Draw_PicFromWad("face_p1");
+    sb_faces[3][0] = Draw::Draw_PicFromWad("face2");
+    sb_faces[3][1] = Draw::Draw_PicFromWad("face_p2");
+    sb_faces[2][0] = Draw::Draw_PicFromWad("face3");
+    sb_faces[2][1] = Draw::Draw_PicFromWad("face_p3");
+    sb_faces[1][0] = Draw::Draw_PicFromWad("face4");
+    sb_faces[1][1] = Draw::Draw_PicFromWad("face_p4");
+    sb_faces[0][0] = Draw::Draw_PicFromWad("face5");
+    sb_faces[0][1] = Draw::Draw_PicFromWad("face_p5");
+    sb_face_invis = Draw::Draw_PicFromWad("face_invis");
+    sb_face_invuln = Draw::Draw_PicFromWad("face_invul2");
+    sb_face_invis_invuln = Draw::Draw_PicFromWad("face_inv2");
+    sb_face_quad = Draw::Draw_PicFromWad("face_quad");
     Cmd::AddCommand("+showscores", Sbar_ShowScores);
     Cmd::AddCommand("-showscores", Sbar_DontShowScores);
-    sb_sbar = Draw_PicFromWad("sbar");
-    sb_ibar = Draw_PicFromWad("ibar");
-    sb_scorebar = Draw_PicFromWad("scorebar");
+    sb_sbar = Draw::Draw_PicFromWad("sbar");
+    sb_ibar = Draw::Draw_PicFromWad("ibar");
+    sb_scorebar = Draw::Draw_PicFromWad("scorebar");
     //MED 01/04/97 added new hipnotic weapons
-    if (hipnotic) {
-        hsb_weapons[0][0] = Draw_PicFromWad("inv_laser");
-        hsb_weapons[0][1] = Draw_PicFromWad("inv_mjolnir");
-        hsb_weapons[0][2] = Draw_PicFromWad("inv_gren_prox");
-        hsb_weapons[0][3] = Draw_PicFromWad("inv_prox_gren");
-        hsb_weapons[0][4] = Draw_PicFromWad("inv_prox");
-        hsb_weapons[1][0] = Draw_PicFromWad("inv2_laser");
-        hsb_weapons[1][1] = Draw_PicFromWad("inv2_mjolnir");
-        hsb_weapons[1][2] = Draw_PicFromWad("inv2_gren_prox");
-        hsb_weapons[1][3] = Draw_PicFromWad("inv2_prox_gren");
-        hsb_weapons[1][4] = Draw_PicFromWad("inv2_prox");
+    if (Common::hipnotic) {
+        hsb_weapons[0][0] = Draw::Draw_PicFromWad("inv_laser");
+        hsb_weapons[0][1] = Draw::Draw_PicFromWad("inv_mjolnir");
+        hsb_weapons[0][2] = Draw::Draw_PicFromWad("inv_gren_prox");
+        hsb_weapons[0][3] = Draw::Draw_PicFromWad("inv_prox_gren");
+        hsb_weapons[0][4] = Draw::Draw_PicFromWad("inv_prox");
+        hsb_weapons[1][0] = Draw::Draw_PicFromWad("inv2_laser");
+        hsb_weapons[1][1] = Draw::Draw_PicFromWad("inv2_mjolnir");
+        hsb_weapons[1][2] = Draw::Draw_PicFromWad("inv2_gren_prox");
+        hsb_weapons[1][3] = Draw::Draw_PicFromWad("inv2_prox_gren");
+        hsb_weapons[1][4] = Draw::Draw_PicFromWad("inv2_prox");
         for (int i = 0; i < 5; i++) {
-            hsb_weapons[2 + i][0] = Draw_PicFromWad(va("inva%i_laser", i + 1));
-            hsb_weapons[2 + i][1] = Draw_PicFromWad(va("inva%i_mjolnir", i + 1));
-            hsb_weapons[2 + i][2] = Draw_PicFromWad(va("inva%i_gren_prox", i + 1));
-            hsb_weapons[2 + i][3] = Draw_PicFromWad(va("inva%i_prox_gren", i + 1));
-            hsb_weapons[2 + i][4] = Draw_PicFromWad(va("inva%i_prox", i + 1));
+            hsb_weapons[2 + i][0] = Draw::Draw_PicFromWad(Common::va("inva%i_laser", i + 1));
+            hsb_weapons[2 + i][1] = Draw::Draw_PicFromWad(Common::va("inva%i_mjolnir", i + 1));
+            hsb_weapons[2 + i][2] = Draw::Draw_PicFromWad(Common::va("inva%i_gren_prox", i + 1));
+            hsb_weapons[2 + i][3] = Draw::Draw_PicFromWad(Common::va("inva%i_prox_gren", i + 1));
+            hsb_weapons[2 + i][4] = Draw::Draw_PicFromWad(Common::va("inva%i_prox", i + 1));
         }
-        hsb_items[0] = Draw_PicFromWad("sb_wsuit");
-        hsb_items[1] = Draw_PicFromWad("sb_eshld");
+        hsb_items[0] = Draw::Draw_PicFromWad("sb_wsuit");
+        hsb_items[1] = Draw::Draw_PicFromWad("sb_eshld");
     }
-    if (rogue) {
-        rsb_invbar[0] = Draw_PicFromWad("r_invbar1");
-        rsb_invbar[1] = Draw_PicFromWad("r_invbar2");
-        rsb_weapons[0] = Draw_PicFromWad("r_lava");
-        rsb_weapons[1] = Draw_PicFromWad("r_superlava");
-        rsb_weapons[2] = Draw_PicFromWad("r_gren");
-        rsb_weapons[3] = Draw_PicFromWad("r_multirock");
-        rsb_weapons[4] = Draw_PicFromWad("r_plasma");
-        rsb_items[0] = Draw_PicFromWad("r_shield1");
-        rsb_items[1] = Draw_PicFromWad("r_agrav1");
+    if (Common::rogue) {
+        rsb_invbar[0] = Draw::Draw_PicFromWad("r_invbar1");
+        rsb_invbar[1] = Draw::Draw_PicFromWad("r_invbar2");
+        rsb_weapons[0] = Draw::Draw_PicFromWad("r_lava");
+        rsb_weapons[1] = Draw::Draw_PicFromWad("r_superlava");
+        rsb_weapons[2] = Draw::Draw_PicFromWad("r_gren");
+        rsb_weapons[3] = Draw::Draw_PicFromWad("r_multirock");
+        rsb_weapons[4] = Draw::Draw_PicFromWad("r_plasma");
+        rsb_items[0] = Draw::Draw_PicFromWad("r_shield1");
+        rsb_items[1] = Draw::Draw_PicFromWad("r_agrav1");
         // PGM 01/19/97 - team color border
-        rsb_teambord = Draw_PicFromWad("r_teambord");
+        rsb_teambord = Draw::Draw_PicFromWad("r_teambord");
         // PGM 01/19/97 - team color border
-        rsb_ammo[0] = Draw_PicFromWad("r_ammolava");
-        rsb_ammo[1] = Draw_PicFromWad("r_ammomulti");
-        rsb_ammo[2] = Draw_PicFromWad("r_ammoplasma");
+        rsb_ammo[0] = Draw::Draw_PicFromWad("r_ammolava");
+        rsb_ammo[1] = Draw::Draw_PicFromWad("r_ammomulti");
+        rsb_ammo[2] = Draw::Draw_PicFromWad("r_ammoplasma");
     }
 }
 // drawing routines are relative to the status bar location
 
 void Sbar_DrawPic(int x, int y, qpic_t* pic)
 {
-    if (cl.gametype == GAME_DEATHMATCH) {
-        Draw_Pic(x , y + (vid.height - SBAR_HEIGHT),
+    if (Client::cl.gametype == GAME_DEATHMATCH) {
+        Draw::Draw_Pic(x , y + (Vid::vid.height - SBAR_HEIGHT),
             pic);
     } else {
-        Draw_Pic(x + ((vid.width - 320) >> 1), y + (vid.height - SBAR_HEIGHT), pic);
+        Draw::Draw_Pic(x + ((Vid::vid.width - 320) >> 1), y + (Vid::vid.height - SBAR_HEIGHT), pic);
     }
 }
 
 void Sbar_DrawTransPic(int x, int y, qpic_t* pic)
 {
-    if (cl.gametype == GAME_DEATHMATCH) {
-        Draw_TransPic(x ,
-            y + (vid.height - SBAR_HEIGHT), pic);
+    if (Client::cl.gametype == GAME_DEATHMATCH) {
+        Draw::Draw_TransPic(x ,
+            y + (Vid::vid.height - SBAR_HEIGHT), pic);
     } else {
-        Draw_TransPic(x + ((vid.width - 320) >> 1), y + (vid.height - SBAR_HEIGHT),
+        Draw::Draw_TransPic(x + ((Vid::vid.width - 320) >> 1), y + (Vid::vid.height - SBAR_HEIGHT),
             pic);
     }
 }
 
 void Sbar_DrawCharacter(int x, int y, int num)
 {
-    if (cl.gametype == GAME_DEATHMATCH) {
-        Draw_Character(x + 4,
-            y + vid.height - SBAR_HEIGHT, num);
+    if (Client::cl.gametype == GAME_DEATHMATCH) {
+        Draw::Draw_Character(x + 4,
+            y + Vid::vid.height - SBAR_HEIGHT, num);
     } else {
-        Draw_Character(x + ((vid.width - 320) >> 1) + 4,
-            y + vid.height - SBAR_HEIGHT, num);
+        Draw::Draw_Character(x + ((Vid::vid.width - 320) >> 1) + 4,
+            y + Vid::vid.height - SBAR_HEIGHT, num);
     }
 }
 
 void Sbar_DrawString(int x, int y, std::string_view str)
 {
-    if (cl.gametype == GAME_DEATHMATCH) {
-        Draw_String(x , y + vid.height - SBAR_HEIGHT,
+    if (Client::cl.gametype == GAME_DEATHMATCH) {
+        Draw::Draw_String(x , y + Vid::vid.height - SBAR_HEIGHT,
             str);
     } else {
-        Draw_String(x + ((vid.width - 320) >> 1), y + vid.height - SBAR_HEIGHT,
+        Draw::Draw_String(x + ((Vid::vid.width - 320) >> 1), y + Vid::vid.height - SBAR_HEIGHT,
             str);
     }
 }
@@ -293,14 +270,14 @@ void Sbar_SortFrags()
 {
     // sort by frags
     scoreboardlines = 0;
-    for (int i = 0; i < cl.maxclients; i++) {
-        if (cl.scores[i].name[0]) {
+    for (int i = 0; i < Client::cl.maxclients; i++) {
+        if (Client::cl.scores[i].name[0]) {
             fragsort[scoreboardlines] = i;
             scoreboardlines++;
         }
     }
     std::sort(fragsort.begin(), fragsort.begin() + scoreboardlines, [](int a, int b) {
-        return cl.scores[a].frags > cl.scores[b].frags;
+        return Client::cl.scores[a].frags > Client::cl.scores[b].frags;
     });
 }
 
@@ -314,28 +291,28 @@ void Sbar_SoloScoreboard(void)
     char str[80];
     int minutes, seconds, tens, units;
     int l;
-    sprintf_s(str, sizeof(str), "Monsters:%3i /%3i", cl.stats[STAT_MONSTERS],
-        cl.stats[STAT_TOTALMONSTERS]);
+    sprintf_s(str, sizeof(str), "Monsters:%3i /%3i", Client::cl.stats[STAT_MONSTERS],
+        Client::cl.stats[STAT_TOTALMONSTERS]);
     Sbar_DrawString(8, 4, str);
-    sprintf_s(str, sizeof(str), "Secrets :%3i /%3i", cl.stats[STAT_SECRETS],
-        cl.stats[STAT_TOTALSECRETS]);
+    sprintf_s(str, sizeof(str), "Secrets :%3i /%3i", Client::cl.stats[STAT_SECRETS],
+        Client::cl.stats[STAT_TOTALSECRETS]);
     Sbar_DrawString(8, 12, str);
     // time
-    minutes = static_cast<int>(cl.time / 60);
-    seconds = static_cast<int>(cl.time - 60 * minutes);
+    minutes = static_cast<int>(Client::cl.time / 60);
+    seconds = static_cast<int>(Client::cl.time - 60 * minutes);
     tens = seconds / 10;
     units = seconds - 10 * tens;
     sprintf_s(str, sizeof(str), "Time :%3i:%i%i", minutes, tens, units);
     Sbar_DrawString(184, 4, str);
     // draw level name
-    l = static_cast<int>(strlen(cl.levelname));
-    Sbar_DrawString(232 - l * 4, 12, cl.levelname);
+    l = static_cast<int>(strlen(Client::cl.levelname));
+    Sbar_DrawString(232 - l * 4, 12, Client::cl.levelname);
 }
 
 void Sbar_DrawScoreboard()
 {
     Sbar_SoloScoreboard();
-    if (cl.gametype == GAME_DEATHMATCH) {
+    if (Client::cl.gametype == GAME_DEATHMATCH) {
         Sbar_DeathmatchOverlay();
     }
 }
@@ -344,8 +321,8 @@ void Sbar_DrawInventory()
     char num[6];
     float time;
     int flashon;
-    if (rogue) {
-        if (static_cast<uint32_t>(cl.stats[STAT_ACTIVEWEAPON]) >= RIT_LAVA_NAILGUN) {
+    if (Common::rogue) {
+        if (static_cast<uint32_t>(Client::cl.stats[STAT_ACTIVEWEAPON]) >= RIT_LAVA_NAILGUN) {
             Sbar_DrawPic(0, -24, rsb_invbar[0]);
         } else {
             Sbar_DrawPic(0, -24, rsb_invbar[1]);
@@ -355,11 +332,11 @@ void Sbar_DrawInventory()
     }
     // weapons
     for (int i = 0; i < 7; i++) {
-        if (cl.items & (IT_SHOTGUN << i)) {
-            time = cl.item_gettime[i];
-            flashon = static_cast<int>((cl.time - time) * 10);
+        if (Client::cl.items & (IT_SHOTGUN << i)) {
+            time = Client::cl.item_gettime[i];
+            flashon = static_cast<int>((Client::cl.time - time) * 10);
             if (flashon >= 10) {
-                if (static_cast<uint32_t>(cl.stats[STAT_ACTIVEWEAPON]) == (IT_SHOTGUN << i)) {
+                if (static_cast<uint32_t>(Client::cl.stats[STAT_ACTIVEWEAPON]) == (IT_SHOTGUN << i)) {
                     flashon = 1;
                 } else {
                     flashon = 0;
@@ -375,14 +352,14 @@ void Sbar_DrawInventory()
     }
     // MED 01/04/97
     // hipnotic weapons
-    if (hipnotic) {
+    if (Common::hipnotic) {
         int grenadeflashing = 0;
         for (int i = 0; i < 4; i++) {
-            if (cl.items & (1 << hipweapons[i])) {
-                time = cl.item_gettime[hipweapons[i]];
-                flashon = static_cast<int>((cl.time - time) * 10);
+            if (Client::cl.items & (1 << hipweapons[i])) {
+                time = Client::cl.item_gettime[hipweapons[i]];
+                flashon = static_cast<int>((Client::cl.time - time) * 10);
                 if (flashon >= 10) {
-                    if (cl.stats[STAT_ACTIVEWEAPON] == (1 << hipweapons[i])) {
+                    if (Client::cl.stats[STAT_ACTIVEWEAPON] == (1 << hipweapons[i])) {
                         flashon = 1;
                     } else {
                         flashon = 0;
@@ -392,14 +369,14 @@ void Sbar_DrawInventory()
                 }
                 // check grenade launcher
                 if (i == 2) {
-                    if (cl.items & HIT_PROXIMITY_GUN) {
+                    if (Client::cl.items & HIT_PROXIMITY_GUN) {
                         if (flashon) {
                             grenadeflashing = 1;
                             Sbar_DrawPic(96, -16, hsb_weapons[flashon][2]);
                         }
                     }
                 } else if (i == 3) {
-                    if (cl.items & (IT_SHOTGUN << 4)) {
+                    if (Client::cl.items & (IT_SHOTGUN << 4)) {
                         if (flashon && !grenadeflashing) {
                             Sbar_DrawPic(96, -16, hsb_weapons[flashon][3]);
                         } else if (!grenadeflashing) {
@@ -417,11 +394,11 @@ void Sbar_DrawInventory()
             }
         }
     }
-    if (rogue) {
+    if (Common::rogue) {
         // check for powered up weapon.
-        if (static_cast<uint32_t>(cl.stats[STAT_ACTIVEWEAPON]) >= RIT_LAVA_NAILGUN) {
+        if (static_cast<uint32_t>(Client::cl.stats[STAT_ACTIVEWEAPON]) >= RIT_LAVA_NAILGUN) {
             for (int i = 0; i < 5; i++) {
-                if (static_cast<uint32_t>(cl.stats[STAT_ACTIVEWEAPON]) == (RIT_LAVA_NAILGUN << i)) {
+                if (static_cast<uint32_t>(Client::cl.stats[STAT_ACTIVEWEAPON]) == (RIT_LAVA_NAILGUN << i)) {
                     Sbar_DrawPic((i + 2) * 24, -16, rsb_weapons[i]);
                 }
             }
@@ -429,7 +406,7 @@ void Sbar_DrawInventory()
     }
     // ammo counts
     for (int i = 0; i < 4; i++) {
-        sprintf_s(num, sizeof(num), "%3i", cl.stats[STAT_SHELLS + i]);
+        sprintf_s(num, sizeof(num), "%3i", Client::cl.stats[STAT_SHELLS + i]);
         if (num[0] != ' ') {
             Sbar_DrawCharacter((6 * i + 1) * 8 - 2, -24, 18 + num[0] - '0');
         }
@@ -443,49 +420,49 @@ void Sbar_DrawInventory()
     flashon = 0;
     // items
     for (int i = 0; i < 6; i++) {
-        if (cl.items & (1 << (17 + i))) {
-            time = cl.item_gettime[17 + i];
-            if (time && time > cl.time - 2 && flashon) { // flash frame
+        if (Client::cl.items & (1 << (17 + i))) {
+            time = Client::cl.item_gettime[17 + i];
+            if (time && time > Client::cl.time - 2 && flashon) { // flash frame
                 sb_updates = 0;
             } else {
                 //MED 01/04/97 changed keys
-                if (!hipnotic || (i > 1)) {
+                if (!Common::hipnotic || (i > 1)) {
                     Sbar_DrawPic(192 + i * 16, -16, sb_items[i]);
                 }
             }
-            if (time && time > cl.time - 2) {
+            if (time && time > Client::cl.time - 2) {
                 sb_updates = 0;
             }
         }
     }
     //MED 01/04/97 added hipnotic items
     // hipnotic items
-    if (hipnotic) {
+    if (Common::hipnotic) {
         for (int i = 0; i < 2; i++) {
-            if (cl.items & (1 << (24 + i))) {
-                time = cl.item_gettime[24 + i];
-                if (time && time > cl.time - 2 && flashon) { // flash frame
+            if (Client::cl.items & (1 << (24 + i))) {
+                time = Client::cl.item_gettime[24 + i];
+                if (time && time > Client::cl.time - 2 && flashon) { // flash frame
                     sb_updates = 0;
                 } else {
                     Sbar_DrawPic(288 + i * 16, -16, hsb_items[i]);
                 }
-                if (time && time > cl.time - 2) {
+                if (time && time > Client::cl.time - 2) {
                     sb_updates = 0;
                 }
             }
         }
     }
-    if (rogue) {
+    if (Common::rogue) {
         // new rogue items
         for (int i = 0; i < 2; i++) {
-            if (cl.items & (1 << (29 + i))) {
-                time = cl.item_gettime[29 + i];
-                if (time && time > cl.time - 2 && flashon) { // flash frame
+            if (Client::cl.items & (1 << (29 + i))) {
+                time = Client::cl.item_gettime[29 + i];
+                if (time && time > Client::cl.time - 2 && flashon) { // flash frame
                     sb_updates = 0;
                 } else {
                     Sbar_DrawPic(288 + i * 16, -16, rsb_items[i]);
                 }
-                if (time && time > cl.time - 2) {
+                if (time && time > Client::cl.time - 2) {
                     sb_updates = 0;
                 }
             }
@@ -493,14 +470,14 @@ void Sbar_DrawInventory()
     } else {
         // sigils
         for (int i = 0; i < 4; i++) {
-            if (cl.items & (1 << (28 + i))) {
-                time = cl.item_gettime[28 + i];
-                if (time && time > cl.time - 2 && flashon) { // flash frame
+            if (Client::cl.items & (1 << (28 + i))) {
+                time = Client::cl.item_gettime[28 + i];
+                if (time && time > Client::cl.time - 2 && flashon) { // flash frame
                     sb_updates = 0;
                 } else {
                     Sbar_DrawPic(320 - 32 + i * 8, -16, sb_sigil[i]);
                 }
-                if (time && time > cl.time - 2) {
+                if (time && time > Client::cl.time - 2) {
                     sb_updates = 0;
                 }
             }
@@ -514,15 +491,15 @@ void Sbar_DrawFrags()
     int l = scoreboardlines <= 4 ? scoreboardlines : 4;
     int x = 23;
     int xofs;
-    if (cl.gametype == GAME_DEATHMATCH) {
+    if (Client::cl.gametype == GAME_DEATHMATCH) {
         xofs = 0;
     } else {
-        xofs = (vid.width - 320) >> 1;
+        xofs = (Vid::vid.width - 320) >> 1;
     }
-    int y = vid.height - SBAR_HEIGHT - 23;
+    int y = Vid::vid.height - SBAR_HEIGHT - 23;
     for (int i = 0; i < l; i++) {
         int k = fragsort[i];
-        scoreboard_t* s = &cl.scores[k];
+        scoreboard_t* s = &Client::cl.scores[k];
         if (!s->name[0]) {
             continue;
         }
@@ -531,8 +508,8 @@ void Sbar_DrawFrags()
         int bottom = (s->colors & 15) << 4;
         top = Sbar_ColorForMap(top);
         bottom = Sbar_ColorForMap(bottom);
-        Draw_Fill(xofs + x * 8 + 10, y, 28, 4, top);
-        Draw_Fill(xofs + x * 8 + 10, y + 4, 28, 3, bottom);
+        Draw::Draw_Fill(xofs + x * 8 + 10, y, 28, 4, top);
+        Draw::Draw_Fill(xofs + x * 8 + 10, y + 4, 28, 3, bottom);
         // draw number
         int f = s->frags;
         char num[12];
@@ -540,7 +517,7 @@ void Sbar_DrawFrags()
         Sbar_DrawCharacter((x + 1) * 8, -24, num[0]);
         Sbar_DrawCharacter((x + 2) * 8, -24, num[1]);
         Sbar_DrawCharacter((x + 3) * 8, -24, num[2]);
-        if (k == cl.viewentity - 1) {
+        if (k == Client::cl.viewentity - 1) {
             Sbar_DrawCharacter(x * 8 + 2, -24, 16);
             Sbar_DrawCharacter((x + 4) * 8 - 4, -24, 17);
         }
@@ -552,22 +529,22 @@ void Sbar_DrawFace()
     int f, anim;
     // PGM 01/19/97 - team color drawing
     // PGM 03/02/97 - fixed so color swatch only appears in CTF modes
-    if (rogue && (cl.maxclients != 1) && (teamplay.value > 3) && (teamplay.value < 7)) {
-        scoreboard_t* s = &cl.scores[cl.viewentity - 1];
+    if (Common::rogue && (Client::cl.maxclients != 1) && (Server::teamplay.value > 3) && (Server::teamplay.value < 7)) {
+        scoreboard_t* s = &Client::cl.scores[Client::cl.viewentity - 1];
         // draw background
         int top = s->colors & 0xf0;
         int bottom = (s->colors & 15) << 4;
         top = Sbar_ColorForMap(top);
         bottom = Sbar_ColorForMap(bottom);
         int xofs;
-        if (cl.gametype == GAME_DEATHMATCH) {
+        if (Client::cl.gametype == GAME_DEATHMATCH) {
             xofs = 113;
         } else {
-            xofs = ((vid.width - 320) >> 1) + 113;
+            xofs = ((Vid::vid.width - 320) >> 1) + 113;
         }
         Sbar_DrawPic(112, 0, rsb_teambord);
-        Draw_Fill(xofs, vid.height - SBAR_HEIGHT + 3, 22, 9, top);
-        Draw_Fill(xofs, vid.height - SBAR_HEIGHT + 12, 22, 9, bottom);
+        Draw::Draw_Fill(xofs, Vid::vid.height - SBAR_HEIGHT + 3, 22, 9, top);
+        Draw::Draw_Fill(xofs, Vid::vid.height - SBAR_HEIGHT + 12, 22, 9, bottom);
         // draw number
         int frag_val = s->frags;
         char num[12];
@@ -590,28 +567,28 @@ void Sbar_DrawFace()
         return;
     }
     // PGM 01/19/97 - team color drawing
-    if ((cl.items & (IT_INVISIBILITY | IT_INVULNERABILITY)) == (IT_INVISIBILITY | IT_INVULNERABILITY)) {
+    if ((Client::cl.items & (IT_INVISIBILITY | IT_INVULNERABILITY)) == (IT_INVISIBILITY | IT_INVULNERABILITY)) {
         Sbar_DrawPic(112, 0, sb_face_invis_invuln);
         return;
     }
-    if (cl.items & IT_QUAD) {
+    if (Client::cl.items & IT_QUAD) {
         Sbar_DrawPic(112, 0, sb_face_quad);
         return;
     }
-    if (cl.items & IT_INVISIBILITY) {
+    if (Client::cl.items & IT_INVISIBILITY) {
         Sbar_DrawPic(112, 0, sb_face_invis);
         return;
     }
-    if (cl.items & IT_INVULNERABILITY) {
+    if (Client::cl.items & IT_INVULNERABILITY) {
         Sbar_DrawPic(112, 0, sb_face_invuln);
         return;
     }
-    if (cl.stats[STAT_HEALTH] >= 100) {
+    if (Client::cl.stats[STAT_HEALTH] >= 100) {
         f = 4;
     } else {
-        f = cl.stats[STAT_HEALTH] / 20;
+        f = Client::cl.stats[STAT_HEALTH] / 20;
     }
-    if (cl.time <= cl.faceanimtime) {
+    if (Client::cl.time <= Client::cl.faceanimtime) {
         anim = 1;
         sb_updates = 0; // make sure the anim gets drawn over
     } else {
@@ -622,24 +599,24 @@ void Sbar_DrawFace()
 
 void Sbar_Draw()
 {
-    if (Screen::GetScreenSystem().GetConCurrent() == vid.height) {
+    if (Screen::GetScreenSystem().GetConCurrent() == Vid::vid.height) {
         return; // console is full screen
     }
-    if (sb_updates >= vid.numpages) {
+    if (sb_updates >= Vid::vid.numpages) {
         return;
     }
     Screen::GetScreenSystem().SetCopyeverything(1);
     sb_updates++;
-    if (sb_lines && vid.width > 320) {
-        Draw_TileClear(0, vid.height - sb_lines, vid.width, sb_lines);
+    if (sb_lines && Vid::vid.width > 320) {
+        Draw::Draw_TileClear(0, Vid::vid.height - sb_lines, Vid::vid.width, sb_lines);
     }
     if (sb_lines > 24) {
         Sbar_DrawInventory();
-        if (cl.maxclients != 1) {
+        if (Client::cl.maxclients != 1) {
             Sbar_DrawFrags();
         }
     }
-    if (sb_showscores || cl.stats[STAT_HEALTH] <= 0) {
+    if (sb_showscores || Client::cl.stats[STAT_HEALTH] <= 0) {
         Sbar_DrawPic(0, 0, sb_scorebar);
         Sbar_DrawScoreboard();
         sb_updates = 0;
@@ -647,37 +624,37 @@ void Sbar_Draw()
         Sbar_DrawPic(0, 0, sb_sbar);
         // keys (hipnotic only)
         //MED 01/04/97 moved keys here so they would not be overwritten
-        if (hipnotic) {
-            if (cl.items & IT_KEY1) {
+        if (Common::hipnotic) {
+            if (Client::cl.items & IT_KEY1) {
                 Sbar_DrawPic(209, 3, sb_items[0]);
             }
-            if (cl.items & IT_KEY2) {
+            if (Client::cl.items & IT_KEY2) {
                 Sbar_DrawPic(209, 12, sb_items[1]);
             }
         }
         // armor
-        if (cl.items & IT_INVULNERABILITY) {
+        if (Client::cl.items & IT_INVULNERABILITY) {
             Sbar_DrawNum(24, 0, 666, 3, 1);
-            Sbar_DrawPic(0, 0, draw_disc);
+            Sbar_DrawPic(0, 0, Draw::draw_disc);
         } else {
-            if (rogue) {
-                Sbar_DrawNum(24, 0, cl.stats[STAT_ARMOR], 3,
-                    cl.stats[STAT_ARMOR] <= 25);
-                if (cl.items & RIT_ARMOR3) {
+            if (Common::rogue) {
+                Sbar_DrawNum(24, 0, Client::cl.stats[STAT_ARMOR], 3,
+                    Client::cl.stats[STAT_ARMOR] <= 25);
+                if (Client::cl.items & RIT_ARMOR3) {
                     Sbar_DrawPic(0, 0, sb_armor[2]);
-                } else if (cl.items & RIT_ARMOR2) {
+                } else if (Client::cl.items & RIT_ARMOR2) {
                     Sbar_DrawPic(0, 0, sb_armor[1]);
-                } else if (cl.items & RIT_ARMOR1) {
+                } else if (Client::cl.items & RIT_ARMOR1) {
                     Sbar_DrawPic(0, 0, sb_armor[0]);
                 }
             } else {
-                Sbar_DrawNum(24, 0, cl.stats[STAT_ARMOR], 3,
-                    cl.stats[STAT_ARMOR] <= 25);
-                if (cl.items & IT_ARMOR3) {
+                Sbar_DrawNum(24, 0, Client::cl.stats[STAT_ARMOR], 3,
+                    Client::cl.stats[STAT_ARMOR] <= 25);
+                if (Client::cl.items & IT_ARMOR3) {
                     Sbar_DrawPic(0, 0, sb_armor[2]);
-                } else if (cl.items & IT_ARMOR2) {
+                } else if (Client::cl.items & IT_ARMOR2) {
                     Sbar_DrawPic(0, 0, sb_armor[1]);
-                } else if (cl.items & IT_ARMOR1) {
+                } else if (Client::cl.items & IT_ARMOR1) {
                     Sbar_DrawPic(0, 0, sb_armor[0]);
                 }
             }
@@ -685,39 +662,39 @@ void Sbar_Draw()
         // face
         Sbar_DrawFace();
         // health
-        Sbar_DrawNum(136, 0, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
+        Sbar_DrawNum(136, 0, Client::cl.stats[STAT_HEALTH], 3, Client::cl.stats[STAT_HEALTH] <= 25);
         // ammo icon
-        if (rogue) {
-            if (cl.items & RIT_SHELLS) {
+        if (Common::rogue) {
+            if (Client::cl.items & RIT_SHELLS) {
                 Sbar_DrawPic(224, 0, sb_ammo[0]);
-            } else if (cl.items & RIT_NAILS) {
+            } else if (Client::cl.items & RIT_NAILS) {
                 Sbar_DrawPic(224, 0, sb_ammo[1]);
-            } else if (cl.items & RIT_ROCKETS) {
+            } else if (Client::cl.items & RIT_ROCKETS) {
                 Sbar_DrawPic(224, 0, sb_ammo[2]);
-            } else if (cl.items & RIT_CELLS) {
+            } else if (Client::cl.items & RIT_CELLS) {
                 Sbar_DrawPic(224, 0, sb_ammo[3]);
-            } else if (cl.items & RIT_LAVA_NAILS) {
+            } else if (Client::cl.items & RIT_LAVA_NAILS) {
                 Sbar_DrawPic(224, 0, rsb_ammo[0]);
-            } else if (cl.items & RIT_PLASMA_AMMO) {
+            } else if (Client::cl.items & RIT_PLASMA_AMMO) {
                 Sbar_DrawPic(224, 0, rsb_ammo[1]);
-            } else if (cl.items & RIT_MULTI_ROCKETS) {
+            } else if (Client::cl.items & RIT_MULTI_ROCKETS) {
                 Sbar_DrawPic(224, 0, rsb_ammo[2]);
             }
         } else {
-            if (cl.items & IT_SHELLS) {
+            if (Client::cl.items & IT_SHELLS) {
                 Sbar_DrawPic(224, 0, sb_ammo[0]);
-            } else if (cl.items & IT_NAILS) {
+            } else if (Client::cl.items & IT_NAILS) {
                 Sbar_DrawPic(224, 0, sb_ammo[1]);
-            } else if (cl.items & IT_ROCKETS) {
+            } else if (Client::cl.items & IT_ROCKETS) {
                 Sbar_DrawPic(224, 0, sb_ammo[2]);
-            } else if (cl.items & IT_CELLS) {
+            } else if (Client::cl.items & IT_CELLS) {
                 Sbar_DrawPic(224, 0, sb_ammo[3]);
             }
         }
-        Sbar_DrawNum(248, 0, cl.stats[STAT_AMMO], 3, cl.stats[STAT_AMMO] <= 10);
+        Sbar_DrawNum(248, 0, Client::cl.stats[STAT_AMMO], 3, Client::cl.stats[STAT_AMMO] <= 10);
     }
-    if (vid.width > 320) {
-        if (cl.gametype == GAME_DEATHMATCH) {
+    if (Vid::vid.width > 320) {
+        if (Client::cl.gametype == GAME_DEATHMATCH) {
             Sbar_MiniDeathmatchOverlay();
         }
     }
@@ -740,7 +717,7 @@ void Sbar_IntermissionNumber(int x, int y, int num, int digits, int color)
         } else {
             frame = *ptr - '0';
         }
-        Draw_TransPic(x, y, sb_nums[color][frame]);
+        Draw::Draw_TransPic(x, y, sb_nums[color][frame]);
         x += 24;
         ptr++;
     }
@@ -750,17 +727,17 @@ void Sbar_DeathmatchOverlay()
 {
     Screen::GetScreenSystem().SetCopyeverything(1);
     Screen::GetScreenSystem().SetFullupdate(0);
-    qpic_t* pic = Draw_CachePic("gfx/ranking.lmp");
-    M_DrawPic((320 - pic->width) / 2, 8, pic);
+    qpic_t* pic = Draw::Draw_CachePic("gfx/ranking.lmp");
+    Menu::M_DrawPic((320 - pic->width) / 2, 8, pic);
     // scores
     Sbar_SortFrags();
     // draw the text
     int l = scoreboardlines;
-    int x = 80 + ((vid.width - 320) >> 1);
+    int x = 80 + ((Vid::vid.width - 320) >> 1);
     int y = 40;
     for (int i = 0; i < l; i++) {
         int k = fragsort[i];
-        scoreboard_t* s = &cl.scores[k];
+        scoreboard_t* s = &Client::cl.scores[k];
         if (!s->name[0]) {
             continue;
         }
@@ -769,27 +746,27 @@ void Sbar_DeathmatchOverlay()
         int bottom = (s->colors & 15) << 4;
         top = Sbar_ColorForMap(top);
         bottom = Sbar_ColorForMap(bottom);
-        Draw_Fill(x, y, 40, 4, top);
-        Draw_Fill(x, y + 4, 40, 4, bottom);
+        Draw::Draw_Fill(x, y, 40, 4, top);
+        Draw::Draw_Fill(x, y + 4, 40, 4, bottom);
         // draw number
         int f = s->frags;
         char num[12];
         sprintf_s(num, sizeof(num), "%3i", f);
-        Draw_Character(x + 8, y, num[0]);
-        Draw_Character(x + 16, y, num[1]);
-        Draw_Character(x + 24, y, num[2]);
-        if (k == cl.viewentity - 1) {
-            Draw_Character(x - 8, y, 12);
+        Draw::Draw_Character(x + 8, y, num[0]);
+        Draw::Draw_Character(x + 16, y, num[1]);
+        Draw::Draw_Character(x + 24, y, num[2]);
+        if (k == Client::cl.viewentity - 1) {
+            Draw::Draw_Character(x - 8, y, 12);
         }
         // draw name
-        Draw_String(x + 64, y, s->name);
+        Draw::Draw_String(x + 64, y, s->name);
         y += 10;
     }
 }
 
 void Sbar_MiniDeathmatchOverlay()
 {
-    if (vid.width < 512 || !sb_lines) {
+    if (Vid::vid.width < 512 || !sb_lines) {
         return;
     }
     Screen::GetScreenSystem().SetCopyeverything(1);
@@ -797,7 +774,7 @@ void Sbar_MiniDeathmatchOverlay()
     // scores
     Sbar_SortFrags();
     // draw the text
-    int y = vid.height - sb_lines;
+    int y = Vid::vid.height - sb_lines;
     int numlines = sb_lines / 8;
     if (numlines < 3) {
         return;
@@ -805,7 +782,7 @@ void Sbar_MiniDeathmatchOverlay()
     //find us
     int i = 0;
     for (; i < scoreboardlines; i++) {
-        if (fragsort[i] == cl.viewentity - 1) {
+        if (fragsort[i] == Client::cl.viewentity - 1) {
             break;
         }
     }
@@ -821,9 +798,9 @@ void Sbar_MiniDeathmatchOverlay()
         i = 0;
     }
     int x = 324;
-    for (; i < scoreboardlines && y < static_cast<int>(vid.height) - 8; i++) {
+    for (; i < scoreboardlines && y < static_cast<int>(Vid::vid.height) - 8; i++) {
         int k = fragsort[i];
-        scoreboard_t* s = &cl.scores[k];
+        scoreboard_t* s = &Client::cl.scores[k];
         if (!s->name[0]) {
             continue;
         }
@@ -832,21 +809,21 @@ void Sbar_MiniDeathmatchOverlay()
         int bottom = (s->colors & 15) << 4;
         top = Sbar_ColorForMap(top);
         bottom = Sbar_ColorForMap(bottom);
-        Draw_Fill(x, y + 1, 40, 3, top);
-        Draw_Fill(x, y + 4, 40, 4, bottom);
+        Draw::Draw_Fill(x, y + 1, 40, 3, top);
+        Draw::Draw_Fill(x, y + 4, 40, 4, bottom);
         // draw number
         int f = s->frags;
         char num[12];
         sprintf_s(num, sizeof(num), "%3i", f);
-        Draw_Character(x + 8, y, num[0]);
-        Draw_Character(x + 16, y, num[1]);
-        Draw_Character(x + 24, y, num[2]);
-        if (k == cl.viewentity - 1) {
-            Draw_Character(x, y, 16);
-            Draw_Character(x + 32, y, 17);
+        Draw::Draw_Character(x + 8, y, num[0]);
+        Draw::Draw_Character(x + 16, y, num[1]);
+        Draw::Draw_Character(x + 24, y, num[2]);
+        if (k == Client::cl.viewentity - 1) {
+            Draw::Draw_Character(x, y, 16);
+            Draw::Draw_Character(x + 32, y, 17);
         }
         // draw name
-        Draw_String(x + 48, y, s->name);
+        Draw::Draw_String(x + 48, y, s->name);
         y += 8;
     }
 }
@@ -855,34 +832,34 @@ void Sbar_IntermissionOverlay()
 {
     Screen::GetScreenSystem().SetCopyeverything(1);
     Screen::GetScreenSystem().SetFullupdate(0);
-    if (cl.gametype == GAME_DEATHMATCH) {
+    if (Client::cl.gametype == GAME_DEATHMATCH) {
         Sbar_DeathmatchOverlay();
         return;
     }
-    qpic_t* pic = Draw_CachePic("gfx/complete.lmp");
-    Draw_Pic(64, 24, pic);
-    pic = Draw_CachePic("gfx/inter.lmp");
-    Draw_TransPic(0, 56, pic);
+    qpic_t* pic = Draw::Draw_CachePic("gfx/complete.lmp");
+    Draw::Draw_Pic(64, 24, pic);
+    pic = Draw::Draw_CachePic("gfx/inter.lmp");
+    Draw::Draw_TransPic(0, 56, pic);
     // time
-    int dig = cl.completed_time / 60;
+    int dig = Client::cl.completed_time / 60;
     Sbar_IntermissionNumber(160, 64, dig, 3, 0);
-    int num = cl.completed_time - dig * 60;
-    Draw_TransPic(234, 64, sb_colon);
-    Draw_TransPic(246, 64, sb_nums[0][num / 10]);
-    Draw_TransPic(266, 64, sb_nums[0][num % 10]);
-    Sbar_IntermissionNumber(160, 104, cl.stats[STAT_SECRETS], 3, 0);
-    Draw_TransPic(232, 104, sb_slash);
-    Sbar_IntermissionNumber(240, 104, cl.stats[STAT_TOTALSECRETS], 3, 0);
-    Sbar_IntermissionNumber(160, 144, cl.stats[STAT_MONSTERS], 3, 0);
-    Draw_TransPic(232, 144, sb_slash);
-    Sbar_IntermissionNumber(240, 144, cl.stats[STAT_TOTALMONSTERS], 3, 0);
+    int num = Client::cl.completed_time - dig * 60;
+    Draw::Draw_TransPic(234, 64, sb_colon);
+    Draw::Draw_TransPic(246, 64, sb_nums[0][num / 10]);
+    Draw::Draw_TransPic(266, 64, sb_nums[0][num % 10]);
+    Sbar_IntermissionNumber(160, 104, Client::cl.stats[STAT_SECRETS], 3, 0);
+    Draw::Draw_TransPic(232, 104, sb_slash);
+    Sbar_IntermissionNumber(240, 104, Client::cl.stats[STAT_TOTALSECRETS], 3, 0);
+    Sbar_IntermissionNumber(160, 144, Client::cl.stats[STAT_MONSTERS], 3, 0);
+    Draw::Draw_TransPic(232, 144, sb_slash);
+    Sbar_IntermissionNumber(240, 144, Client::cl.stats[STAT_TOTALMONSTERS], 3, 0);
 }
 
 void Sbar_FinaleOverlay()
 {
     Screen::GetScreenSystem().SetCopyeverything(1);
-    qpic_t* pic = Draw_CachePic("gfx/finale.lmp");
-    Draw_TransPic((vid.width - pic->width) / 2, 16, pic);
+    qpic_t* pic = Draw::Draw_CachePic("gfx/finale.lmp");
+    Draw::Draw_TransPic((Vid::vid.width - pic->width) / 2, 16, pic);
 }
 
 } // namespace Sbar

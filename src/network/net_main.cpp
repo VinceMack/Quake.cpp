@@ -7,13 +7,6 @@
 
 #include <memory>
 
-using namespace Common;
-using namespace Console;
-using namespace Cvar;
-using namespace Cmd;
-using namespace Server;
-using namespace Client;
-
 namespace Net {
 
 std::vector<std::unique_ptr<NetDriver>> net_drivers;
@@ -55,12 +48,12 @@ cvar_t net_messagetimeout = { "net_messagetimeout", "300", {}, {}, {}, {} };
 cvar_t hostname = { "hostname", "UNNAMED", {}, {}, {}, {} };
 
 double SetNetTime() {
-    net_time = Sys_FloatTime();
+    net_time = Common::Sys_FloatTime();
     return net_time;
 }
 
 qsocket_t* NET_NewQSocket() {
-    if (!net_freeSockets || net_activeconnections >= svs.maxclients) return nullptr;
+    if (!net_freeSockets || net_activeconnections >= Server::svs.maxclients) return nullptr;
 
     qsocket_t* sock = net_freeSockets;
     net_freeSockets = sock->next;
@@ -68,7 +61,7 @@ qsocket_t* NET_NewQSocket() {
     net_activeSockets = sock;
     sock->disconnected = false;
     sock->connecttime = net_time;
-    Q_strcpy(sock->address, "UNSET ADDRESS");
+    Common::Q_strcpy(sock->address, "UNSET ADDRESS");
     sock->driver = net_driverlevel;
     sock->socket = 0;
     sock->driverdata = nullptr;
@@ -91,7 +84,7 @@ void NET_FreeQSocket(qsocket_t* sock) {
                 break;
             }
         }
-        if (!s) Sys_Error("NET_FreeQSocket: not active\n");
+        if (!s) Common::Sys_Error("NET_FreeQSocket: not active\n");
     }
     sock->next = net_freeSockets;
     net_freeSockets = sock;
@@ -100,10 +93,10 @@ void NET_FreeQSocket(qsocket_t* sock) {
 
 static void NET_Listen_f() {
     if (Cmd::Argc() != 2) {
-        Con_Printf("\"listen\" is \"%u\"\n", listening ? 1 : 0);
+        Console::Con_Printf("\"listen\" is \"%u\"\n", listening ? 1 : 0);
         return;
     }
-    listening = Q_atoi(Cmd::Argv(1)) ? true : false;
+    listening = Common::Q_atoi(Cmd::Argv(1)) ? true : false;
     for (net_driverlevel = 0; net_driverlevel < net_numdrivers; net_driverlevel++) {
         if (DriverFunc(net_driverlevel).IsInitialized()) DriverFunc(net_driverlevel).Listen(listening);
     }
@@ -111,33 +104,33 @@ static void NET_Listen_f() {
 
 static void MaxPlayers_f() {
     if (Cmd::Argc() != 2) {
-        Con_Printf("\"maxplayers\" is \"%u\"\n", svs.maxclients);
+        Console::Con_Printf("\"maxplayers\" is \"%u\"\n", Server::svs.maxclients);
         return;
     }
-    if (sv.active) {
-        Con_Printf("maxplayers can not be changed while a server is running.\n");
+    if (Server::sv.active) {
+        Console::Con_Printf("maxplayers can not be changed while a server is running.\n");
         return;
     }
-    int n = Q_atoi(Cmd::Argv(1));
+    int n = Common::Q_atoi(Cmd::Argv(1));
     if (n < 1) n = 1;
-    if (n > svs.maxclientslimit) {
-        n = svs.maxclientslimit;
-        Con_Printf("\"maxplayers\" set to \"%u\"\n", n);
+    if (n > Server::svs.maxclientslimit) {
+        n = Server::svs.maxclientslimit;
+        Console::Con_Printf("\"maxplayers\" set to \"%u\"\n", n);
     }
     if (n == 1 && listening) Cmd::BufferAddText("listen 0\n");
     if (n > 1 && !listening) Cmd::BufferAddText("listen 1\n");
-    svs.maxclients = n;
+    Server::svs.maxclients = n;
     Cvar::Set("deathmatch", (n == 1) ? "0" : "1");
 }
 
 static void NET_Port_f() {
     if (Cmd::Argc() != 2) {
-        Con_Printf("\"port\" is \"%u\"\n", net_hostport);
+        Console::Con_Printf("\"port\" is \"%u\"\n", net_hostport);
         return;
     }
-    int n = Q_atoi(Cmd::Argv(1));
+    int n = Common::Q_atoi(Cmd::Argv(1));
     if (n < 1 || n > 65534) {
-        Con_Printf("Bad value, must be between 1 and 65534\n");
+        Console::Con_Printf("Bad value, must be between 1 and 65534\n");
         return;
     }
     DEFAULTnet_hostport = net_hostport = n;
@@ -148,7 +141,7 @@ static void NET_Port_f() {
 }
 
 static void PrintSlistHeader() {
-    Con_Printf("Server          Map             Users\n--------------- --------------- -----\n");
+    Console::Con_Printf("Server          Map             Users\n--------------- --------------- -----\n");
     slistLastShown = 0;
 }
 
@@ -156,16 +149,16 @@ static void PrintSlist() {
     int n;
     for (n = slistLastShown; n < hostCacheCount; n++) {
         if (hostcache[n].maxusers) {
-            Con_Printf("%-15.15s %-15.15s %2u/%2u\n", hostcache[n].name, hostcache[n].map, hostcache[n].users, hostcache[n].maxusers);
+            Console::Con_Printf("%-15.15s %-15.15s %2u/%2u\n", hostcache[n].name, hostcache[n].map, hostcache[n].users, hostcache[n].maxusers);
         } else {
-            Con_Printf("%-15.15s %-15.15s\n", hostcache[n].name, hostcache[n].map);
+            Console::Con_Printf("%-15.15s %-15.15s\n", hostcache[n].name, hostcache[n].map);
         }
     }
     slistLastShown = n;
 }
 
 static void PrintSlistTrailer() {
-    Con_Printf(hostCacheCount ? "== end list ==\n\n" : "No Quake servers found.\n\n");
+    Console::Con_Printf(hostCacheCount ? "== end list ==\n\n" : "No Quake servers found.\n\n");
 }
 
 static void Slist_Send();
@@ -176,11 +169,11 @@ static PollProcedure slistPollProcedure = { nullptr, 0.0, Slist_Poll };
 void NET_Slist_f() {
     if (slistInProgress) return;
     if (!slistSilent) {
-        Con_Printf("Looking for Quake servers...\n");
+        Console::Con_Printf("Looking for Quake servers...\n");
         PrintSlistHeader();
     }
     slistInProgress = true;
-    slistStartTime = Sys_FloatTime();
+    slistStartTime = Common::Sys_FloatTime();
     SchedulePollProcedure(&slistSendProcedure, 0.0);
     SchedulePollProcedure(&slistPollProcedure, 0.1);
     hostCacheCount = 0;
@@ -191,7 +184,7 @@ static void Slist_Send() {
         if (!slistLocal && net_driverlevel == 0) continue;
         if (DriverFunc(net_driverlevel).IsInitialized()) DriverFunc(net_driverlevel).SearchForHosts(true);
     }
-    if ((Sys_FloatTime() - slistStartTime) < 0.5) SchedulePollProcedure(&slistSendProcedure, 0.75);
+    if ((Common::Sys_FloatTime() - slistStartTime) < 0.5) SchedulePollProcedure(&slistSendProcedure, 0.75);
 }
 
 static void Slist_Poll() {
@@ -200,7 +193,7 @@ static void Slist_Poll() {
         if (DriverFunc(net_driverlevel).IsInitialized()) DriverFunc(net_driverlevel).SearchForHosts(false);
     }
     if (!slistSilent) PrintSlist();
-    if ((Sys_FloatTime() - slistStartTime) < 1.5) {
+    if ((Common::Sys_FloatTime() - slistStartTime) < 1.5) {
         SchedulePollProcedure(&slistPollProcedure, 0.1);
         return;
     }
@@ -215,13 +208,13 @@ qsocket_t* NET_Connect(const char* host) {
     int numdrivers = net_numdrivers;
 
     if (host) {
-        if (Q_strcasecmp(host, "local") == 0) {
+        if (Common::Q_strcasecmp(host, "local") == 0) {
             numdrivers = 1;
             goto JustDoIt;
         }
         if (hostCacheCount) {
             for (int n = 0; n < hostCacheCount; n++) {
-                if (Q_strcasecmp(host, hostcache[n].name) == 0) {
+                if (Common::Q_strcasecmp(host, hostcache[n].name) == 0) {
                     host = hostcache[n].cname;
                     break;
                 }
@@ -236,11 +229,11 @@ qsocket_t* NET_Connect(const char* host) {
     if (!host) {
         if (hostCacheCount != 1) return nullptr;
         host = hostcache[0].cname;
-        Con_Printf("Connecting to...\n%s @ %s\n\n", hostcache[0].name, host);
+        Console::Con_Printf("Connecting to...\n%s @ %s\n\n", hostcache[0].name, host);
     }
     if (hostCacheCount) {
         for (int n = 0; n < hostCacheCount; n++) {
-            if (Q_strcasecmp(host, hostcache[n].name) == 0) {
+            if (Common::Q_strcasecmp(host, hostcache[n].name) == 0) {
                 host = hostcache[n].cname;
                 break;
             }
@@ -255,7 +248,7 @@ JustDoIt:
     }
 
     if (host) {
-        Con_Printf("\n");
+        Console::Con_Printf("\n");
         PrintSlistHeader();
         PrintSlist();
         PrintSlistTrailer();
@@ -283,7 +276,7 @@ void NET_Close(qsocket_t* sock) {
 int NET_GetMessage(qsocket_t* sock) {
     if (!sock) return -1;
     if (sock->disconnected) {
-        Con_Printf("NET_GetMessage: disconnected socket\n");
+        Console::Con_Printf("NET_GetMessage: disconnected socket\n");
         return -1;
     }
     SetNetTime();
@@ -303,7 +296,7 @@ int NET_GetMessage(qsocket_t* sock) {
 int NET_SendMessage(qsocket_t* sock, sizebuf_t* data) {
     if (!sock) return -1;
     if (sock->disconnected) {
-        Con_Printf("NET_SendMessage: disconnected socket\n");
+        Console::Con_Printf("NET_SendMessage: disconnected socket\n");
         return -1;
     }
     SetNetTime();
@@ -315,7 +308,7 @@ int NET_SendMessage(qsocket_t* sock, sizebuf_t* data) {
 int NET_SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data) {
     if (!sock) return -1;
     if (sock->disconnected) {
-        Con_Printf("NET_SendMessage: disconnected socket\n");
+        Console::Con_Printf("NET_SendMessage: disconnected socket\n");
         return -1;
     }
     SetNetTime();
@@ -335,8 +328,8 @@ int NET_SendToAll(sizebuf_t* data, int blocktime) {
     qboolean state1[MAX_SCOREBOARD], state2[MAX_SCOREBOARD];
     int count = 0;
 
-    for (int i = 0; i < svs.maxclients; i++) {
-        client_t* client = &svs.clients[i];
+    for (int i = 0; i < Server::svs.maxclients; i++) {
+        client_t* client = &Server::svs.clients[i];
         if (!client->netconnection) continue;
         if (client->active) {
             if (client->netconnection->driver == 0) {
@@ -351,11 +344,11 @@ int NET_SendToAll(sizebuf_t* data, int blocktime) {
         }
     }
 
-    double start = Sys_FloatTime();
+    double start = Common::Sys_FloatTime();
     while (count) {
         count = 0;
-        for (int i = 0; i < svs.maxclients; i++) {
-            client_t* client = &svs.clients[i];
+        for (int i = 0; i < Server::svs.maxclients; i++) {
+            client_t* client = &Server::svs.clients[i];
             if (!state1[i]) {
                 if (NET_CanSendMessage(client->netconnection)) {
                     state1[i] = true;
@@ -376,7 +369,7 @@ int NET_SendToAll(sizebuf_t* data, int blocktime) {
                 continue;
             }
         }
-        if ((Sys_FloatTime() - start) > blocktime) break;
+        if ((Common::Sys_FloatTime() - start) > blocktime) break;
     }
     return count;
 }
@@ -391,17 +384,17 @@ void NET_Init() {
     net_landrivers.push_back(std::make_unique<UDPDriver>());
     net_numlandrivers = 1;
 
-    int i = COM_CheckParm("-port");
-    if (!i) i = COM_CheckParm("-udpport");
+    int i = Common::COM_CheckParm("-port");
+    if (!i) i = Common::COM_CheckParm("-udpport");
     if (i) {
-        if (i < com_argc - 1) DEFAULTnet_hostport = Q_atoi(com_argv[i + 1]);
-        else Sys_Error("NET_Init: you must specify a number after -port");
+        if (i < Common::com_argc - 1) DEFAULTnet_hostport = Common::Q_atoi(Common::com_argv[i + 1]);
+        else Common::Sys_Error("NET_Init: you must specify a number after -port");
     }
     net_hostport = DEFAULTnet_hostport;
-    if (COM_CheckParm("-listen") || cls.state == ca_dedicated) listening = true;
+    if (Common::COM_CheckParm("-listen") || Client::cls.state == ca_dedicated) listening = true;
 
-    net_numsockets = svs.maxclientslimit;
-    if (cls.state != ca_dedicated) net_numsockets++;
+    net_numsockets = Server::svs.maxclientslimit;
+    if (Client::cls.state != ca_dedicated) net_numsockets++;
     SetNetTime();
 
     socket_pool.clear();
@@ -415,7 +408,7 @@ void NET_Init() {
         s->disconnected = true;
     }
 
-    SZ_Init(&net_message, net_message_buf);
+    Common::SZ_Init(&net_message, net_message_buf);
     cvar_t* cvars[] = { &net_messagetimeout, &hostname };
     for (auto* c : cvars) Cvar::Register(c);
 
@@ -431,7 +424,7 @@ void NET_Init() {
         DriverFunc(net_driverlevel).SetControlSocket(controlSocket);
         if (listening) DriverFunc(net_driverlevel).Listen(true);
     }
-    if (*my_tcpip_address) Con_DPrintf("TCP/IP address %s\n", my_tcpip_address);
+    if (*my_tcpip_address) Console::Con_DPrintf("TCP/IP address %s\n", my_tcpip_address);
 }
 
 void NET_Shutdown() {

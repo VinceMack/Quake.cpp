@@ -3,9 +3,6 @@
 #include "client/client_types.hpp"
 #include "core/math.hpp"
 
-using namespace Client;
-using namespace Math;
-
 namespace Render {
 
 int iskyspeed = 8;
@@ -71,11 +68,11 @@ void R_SetSkyFrame()
 {
     skyspeed = static_cast<float>(iskyspeed);
     skyspeed2 = static_cast<float>(iskyspeed2);
-    int g = GreatestCommonDivisor(iskyspeed, iskyspeed2);
+    int g = Math::GreatestCommonDivisor(iskyspeed, iskyspeed2);
     int s1 = iskyspeed / g;
     int s2 = iskyspeed2 / g;
     float temp = static_cast<float>(SKYSIZE * s1 * s2);
-    skytime = static_cast<float>(cl.time - ((int)(cl.time / temp) * temp));
+    skytime = static_cast<float>(Client::cl.time - ((int)(Client::cl.time / temp) * temp));
     r_skymade = 0;
 }
 

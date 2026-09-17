@@ -7,12 +7,6 @@
 #include <cmath>
 #include <numbers>
 
-using namespace Common;
-using namespace Cvar;
-using namespace Math;
-using namespace Render;
-using namespace Server;
-
 namespace Client {
 
 namespace {
@@ -38,15 +32,15 @@ void Chase_Init() {
 
 void Chase_Update() {
     Vector3 forward, up, right;
-    AngleVectors(cl.viewangles, forward, right, up);
-    chase_dest = r_refdef.vieworg - forward * chase_back.value - right * chase_right.value;
-    chase_dest.z = r_refdef.vieworg.z + chase_up.value;
+    Math::AngleVectors(cl.viewangles, forward, right, up);
+    chase_dest = Render::r_refdef.vieworg - forward * chase_back.value - right * chase_right.value;
+    chase_dest.z = Render::r_refdef.vieworg.z + chase_up.value;
     Vector3 stop;
-    TraceLine(r_refdef.vieworg, r_refdef.vieworg + forward * 4096.0f, stop);
-    stop = stop - r_refdef.vieworg;
+    TraceLine(Render::r_refdef.vieworg, Render::r_refdef.vieworg + forward * 4096.0f, stop);
+    stop = stop - Render::r_refdef.vieworg;
     float dist = std::max(1.0f, stop.dot(forward));
-    r_refdef.viewangles[PITCH] = static_cast<float>(-std::atan(stop.z / dist) / std::numbers::pi * 180.0f);
-    r_refdef.vieworg = chase_dest;
+    Render::r_refdef.viewangles[PITCH] = static_cast<float>(-std::atan(stop.z / dist) / std::numbers::pi * 180.0f);
+    Render::r_refdef.vieworg = chase_dest;
 }
 
 } // namespace Client

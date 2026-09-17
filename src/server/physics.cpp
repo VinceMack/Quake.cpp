@@ -3,12 +3,6 @@
 #include "server/physics.hpp"
 #include "server/world.hpp"
 
-using namespace Common;
-using namespace Console;
-using namespace VM;
-using namespace Host;
-using namespace Math;
-
 namespace VM {
 void PF_changeyaw();
 }
@@ -24,12 +18,12 @@ void SV_CheckVelocity(edict_t* ent)
 {
     for (int i = 0; i < 3; ++i) {
         if (IS_NAN(ent->v.velocity[i])) {
-            Con_Printf("Got a NaN velocity on %s\n", PR_GetString(ent->v.classname));
+            Console::Con_Printf("Got a NaN velocity on %s\n", VM::PR_GetString(ent->v.classname));
             ent->v.velocity[i] = 0.0f;
         }
 
         if (IS_NAN(ent->v.origin[i])) {
-            Con_Printf("Got a NaN origin on %s\n", PR_GetString(ent->v.classname));
+            Console::Con_Printf("Got a NaN origin on %s\n", VM::PR_GetString(ent->v.classname));
             ent->v.origin[i] = 0.0f;
         }
 
@@ -41,39 +35,39 @@ void SV_CheckVelocity(edict_t* ent)
 qboolean SV_RunThink(edict_t* ent)
 {
     float thinktime = ent->v.nextthink;
-    if (thinktime <= 0.0f || thinktime > sv.time + host_frametime) return true;
+    if (thinktime <= 0.0f || thinktime > sv.time + Host::host_frametime) return true;
 
     if (thinktime < sv.time) thinktime = static_cast<float>(sv.time);
 
     ent->v.nextthink = 0;
-    pr_global_struct->time = thinktime;
-    pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
-    pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
-    PR_ExecuteProgram(ent->v.think);
+    VM::pr_global_struct->time = thinktime;
+    VM::pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
+    VM::pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
+    VM::PR_ExecuteProgram(ent->v.think);
 
     return !ent->free;
 }
 
 void SV_Impact(edict_t* e1, edict_t* e2)
 {
-    const int old_self = pr_global_struct->self;
-    const int old_other = pr_global_struct->other;
+    const int old_self = VM::pr_global_struct->self;
+    const int old_other = VM::pr_global_struct->other;
 
-    pr_global_struct->time = static_cast<float>(sv.time);
+    VM::pr_global_struct->time = static_cast<float>(sv.time);
     if (e1->v.touch && e1->v.solid != SOLID_NOT) {
-        pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(e1));
-        pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(e2));
-        PR_ExecuteProgram(e1->v.touch);
+        VM::pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(e1));
+        VM::pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(e2));
+        VM::PR_ExecuteProgram(e1->v.touch);
     }
 
     if (e2->v.touch && e2->v.solid != SOLID_NOT) {
-        pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(e2));
-        pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(e1));
-        PR_ExecuteProgram(e2->v.touch);
+        VM::pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(e2));
+        VM::pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(e1));
+        VM::PR_ExecuteProgram(e2->v.touch);
     }
 
-    pr_global_struct->self = old_self;
-    pr_global_struct->other = old_other;
+    VM::pr_global_struct->self = old_self;
+    VM::pr_global_struct->other = old_other;
 }
 
 constexpr float STOP_EPSILON = 0.1f;
@@ -107,13 +101,13 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
     float time_left = time;
 
     for (int bumpcount = 0; bumpcount < numbumps; ++bumpcount) {
-        if (ent->v.velocity == vec3_origin) break;
+        if (ent->v.velocity == Math::vec3_origin) break;
 
         const Vector3 end = ent->v.origin + ent->v.velocity * time_left;
         trace_t trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, end, false, ent);
 
         if (trace.allsolid) {
-            ent->v.velocity = vec3_origin;
+            ent->v.velocity = Math::vec3_origin;
             return 3;
         }
 
@@ -124,7 +118,7 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
         }
 
         if (trace.fraction == 1.0f) break;
-        if (!trace.ent) Sys_Error("SV_FlyMove: !trace.ent");
+        if (!trace.ent) Common::Sys_Error("SV_FlyMove: !trace.ent");
 
         if (trace.plane.normal.z > 0.7f) {
             blocked |= 1;
@@ -145,7 +139,7 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
         time_left -= time_left * trace.fraction;
 
         if (numplanes >= MAX_CLIP_PLANES) {
-            ent->v.velocity = vec3_origin;
+            ent->v.velocity = Math::vec3_origin;
             return 3;
         }
 
@@ -168,7 +162,7 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
             ent->v.velocity = new_velocity;
         } else {
             if (numplanes != 2) {
-                ent->v.velocity = vec3_origin;
+                ent->v.velocity = Math::vec3_origin;
                 return 7;
             }
 
@@ -178,7 +172,7 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
         }
 
         if (ent->v.velocity.dot(primal_velocity) <= 0.0f) {
-            ent->v.velocity = vec3_origin;
+            ent->v.velocity = Math::vec3_origin;
             return blocked;
         }
     }
@@ -189,10 +183,10 @@ int SV_FlyMove(edict_t* ent, float time, trace_t* steptrace)
 void SV_AddGravity(edict_t* ent)
 {
     float ent_gravity = 1.0f;
-    const eval_t* val = GetEdictFieldValue(ent, "gravity");
+    const eval_t* val = VM::GetEdictFieldValue(ent, "gravity");
     if (val && val->_float) ent_gravity = val->_float;
 
-    ent->v.velocity[2] -= static_cast<float>(ent_gravity * sv_gravity.value * host_frametime);
+    ent->v.velocity[2] -= static_cast<float>(ent_gravity * sv_gravity.value * Host::host_frametime);
 }
 
 trace_t SV_PushEntity(edict_t* ent, const Vector3& push)
@@ -218,7 +212,7 @@ trace_t SV_PushEntity(edict_t* ent, const Vector3& push)
 
 void SV_PushMove(edict_t* pusher, float movetime)
 {
-    if (pusher->v.velocity == vec3_origin) {
+    if (pusher->v.velocity == Math::vec3_origin) {
         pusher->v.ltime += movetime;
         return;
     }
@@ -279,9 +273,9 @@ void SV_PushMove(edict_t* pusher, float movetime)
             pusher->v.ltime -= movetime;
 
             if (pusher->v.blocked) {
-                pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(pusher));
-                pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(check));
-                PR_ExecuteProgram(pusher->v.blocked);
+                VM::pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(pusher));
+                VM::pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(check));
+                VM::PR_ExecuteProgram(pusher->v.blocked);
             }
 
             for (int i = 0; i < num_moved; ++i) {
@@ -299,21 +293,21 @@ void SV_Physics_Pusher(edict_t* ent)
     float oldltime = ent->v.ltime;
     float movetime;
 
-    if (thinktime < ent->v.ltime + host_frametime) {
+    if (thinktime < ent->v.ltime + Host::host_frametime) {
         movetime = thinktime - ent->v.ltime;
         if (movetime < 0) movetime = 0;
     } else {
-        movetime = static_cast<float>(host_frametime);
+        movetime = static_cast<float>(Host::host_frametime);
     }
 
     if (movetime) SV_PushMove(ent, movetime);
 
     if (thinktime > oldltime && thinktime <= ent->v.ltime) {
         ent->v.nextthink = 0;
-        pr_global_struct->time = static_cast<float>(sv.time);
-        pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
-        pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
-        PR_ExecuteProgram(ent->v.think);
+        VM::pr_global_struct->time = static_cast<float>(sv.time);
+        VM::pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
+        VM::pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
+        VM::PR_ExecuteProgram(ent->v.think);
         if (ent->free) return;
     }
 }
@@ -331,7 +325,7 @@ void SV_CheckStuck(edict_t* ent)
     org = ent->v.origin;
     ent->v.origin = ent->v.oldorigin;
     if (!SV_TestEntityPosition(ent)) {
-        Con_DPrintf("Unstuck.\n");
+        Console::Con_DPrintf("Unstuck.\n");
         SV_LinkEdict(ent, true);
         return;
     }
@@ -343,7 +337,7 @@ void SV_CheckStuck(edict_t* ent)
                 ent->v.origin.y = org.y + j;
                 ent->v.origin.z = org.z + z;
                 if (!SV_TestEntityPosition(ent)) {
-                    Con_DPrintf("Unstuck.\n");
+                    Console::Con_DPrintf("Unstuck.\n");
                     SV_LinkEdict(ent, true);
                     return;
                 }
@@ -352,7 +346,7 @@ void SV_CheckStuck(edict_t* ent)
     }
 
     ent->v.origin = org;
-    Con_DPrintf("player is stuck.\n");
+    Console::Con_DPrintf("player is stuck.\n");
 }
 
 qboolean SV_CheckWater(edict_t* ent)
@@ -385,7 +379,7 @@ void SV_WallFriction(edict_t* ent, trace_t* trace)
     Vector3 forward, right, up, into, side;
     float d, i;
 
-    AngleVectors(ent->v.v_angle, forward, right, up);
+    Math::AngleVectors(ent->v.v_angle, forward, right, up);
     d = trace->plane.normal.dot(forward);
 
     d += 0.5f;
@@ -406,7 +400,7 @@ int SV_TryUnstick(edict_t* ent, const Vector3& oldvel)
     trace_t steptrace;
 
     oldorg = ent->v.origin;
-    dir = vec3_origin;
+    dir = Math::vec3_origin;
 
     for (i = 0; i < 8; i++) {
         switch (i) {
@@ -431,7 +425,7 @@ int SV_TryUnstick(edict_t* ent, const Vector3& oldvel)
         ent->v.origin = oldorg;
     }
 
-    ent->v.velocity = vec3_origin;
+    ent->v.velocity = Math::vec3_origin;
     return 7;
 }
 
@@ -447,7 +441,7 @@ void SV_WalkMove(edict_t* ent)
     oldorg = ent->v.origin;
     oldvel = ent->v.velocity;
 
-    clip = SV_FlyMove(ent, static_cast<float>(host_frametime), &steptrace);
+    clip = SV_FlyMove(ent, static_cast<float>(Host::host_frametime), &steptrace);
 
     if (!(clip & 2)) return;
     if (!oldonground && ent->v.waterlevel == 0) return;
@@ -460,15 +454,15 @@ void SV_WalkMove(edict_t* ent)
 
     ent->v.origin = oldorg;
 
-    upmove = vec3_origin;
-    downmove = vec3_origin;
+    upmove = Math::vec3_origin;
+    downmove = Math::vec3_origin;
     upmove.z = STEPSIZE;
-    downmove.z = static_cast<float>(-STEPSIZE + oldvel.z * host_frametime);
+    downmove.z = static_cast<float>(-STEPSIZE + oldvel.z * Host::host_frametime);
 
     SV_PushEntity(ent, upmove);
 
     ent->v.velocity = Vector3(oldvel.x, oldvel.y, 0.0f);
-    clip = SV_FlyMove(ent, static_cast<float>(host_frametime), &steptrace);
+    clip = SV_FlyMove(ent, static_cast<float>(Host::host_frametime), &steptrace);
 
     if (clip) {
         if (fabs(oldorg.y - ent->v.origin.y) < 0.03125 && fabs(oldorg.x - ent->v.origin.x) < 0.03125) {
@@ -495,9 +489,9 @@ void SV_Physics_Client(edict_t* ent, int num)
 {
     if (!svs.GetClients()[static_cast<size_t>(num - 1)].active) return;
 
-    pr_global_struct->time = static_cast<float>(sv.time);
-    pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
-    PR_ExecuteProgram(pr_global_struct->PlayerPreThink);
+    VM::pr_global_struct->time = static_cast<float>(sv.time);
+    VM::pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
+    VM::PR_ExecuteProgram(VM::pr_global_struct->PlayerPreThink);
 
     SV_CheckVelocity(ent);
 
@@ -522,22 +516,22 @@ void SV_Physics_Client(edict_t* ent, int num)
 
     case MOVETYPE_FLY:
         if (!SV_RunThink(ent)) return;
-        SV_FlyMove(ent, static_cast<float>(host_frametime), nullptr);
+        SV_FlyMove(ent, static_cast<float>(Host::host_frametime), nullptr);
         break;
 
     case MOVETYPE_NOCLIP:
         if (!SV_RunThink(ent)) return;
-        VectorMA(ent->v.origin, static_cast<float>(host_frametime), ent->v.velocity, ent->v.origin);
+        Math::VectorMA(ent->v.origin, static_cast<float>(Host::host_frametime), ent->v.velocity, ent->v.origin);
         break;
 
     default:
-        Sys_Error("SV_Physics_client: bad movetype %i", static_cast<int>(ent->v.movetype));
+        Common::Sys_Error("SV_Physics_client: bad movetype %i", static_cast<int>(ent->v.movetype));
     }
 
     SV_LinkEdict(ent, true);
-    pr_global_struct->time = static_cast<float>(sv.time);
-    pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
-    PR_ExecuteProgram(pr_global_struct->PlayerPostThink);
+    VM::pr_global_struct->time = static_cast<float>(sv.time);
+    VM::pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(ent));
+    VM::PR_ExecuteProgram(VM::pr_global_struct->PlayerPostThink);
 }
 
 void SV_Physics_None(edict_t* ent)
@@ -549,8 +543,8 @@ void SV_Physics_Noclip(edict_t* ent)
 {
     if (!SV_RunThink(ent)) return;
 
-    VectorMA(ent->v.angles, static_cast<float>(host_frametime), ent->v.avelocity, ent->v.angles);
-    VectorMA(ent->v.origin, static_cast<float>(host_frametime), ent->v.velocity, ent->v.origin);
+    Math::VectorMA(ent->v.angles, static_cast<float>(Host::host_frametime), ent->v.avelocity, ent->v.angles);
+    Math::VectorMA(ent->v.origin, static_cast<float>(Host::host_frametime), ent->v.velocity, ent->v.origin);
     SV_LinkEdict(ent, false);
 }
 
@@ -585,9 +579,9 @@ void SV_Physics_Toss(edict_t* ent)
         SV_AddGravity(ent);
     }
 
-    ent->v.angles += ent->v.avelocity * static_cast<float>(host_frametime);
+    ent->v.angles += ent->v.avelocity * static_cast<float>(Host::host_frametime);
 
-    const Vector3 move = ent->v.velocity * static_cast<float>(host_frametime);
+    const Vector3 move = ent->v.velocity * static_cast<float>(Host::host_frametime);
     const trace_t trace = SV_PushEntity(ent, move);
     if (trace.fraction == 1.0f || ent->free) return;
 
@@ -598,8 +592,8 @@ void SV_Physics_Toss(edict_t* ent)
         if (ent->v.velocity.z < 60.0f || ent->v.movetype != MOVETYPE_BOUNCE) {
             ent->v.flags = static_cast<float>(static_cast<int>(ent->v.flags) | FL_ONGROUND);
             ent->v.groundentity = static_cast<int>(EDICT_TO_PROG(trace.ent));
-            ent->v.velocity = vec3_origin;
-            ent->v.avelocity = vec3_origin;
+            ent->v.velocity = Math::vec3_origin;
+            ent->v.avelocity = Math::vec3_origin;
         }
     }
 
@@ -613,7 +607,7 @@ void SV_Physics_Step(edict_t* ent)
 
         SV_AddGravity(ent);
         SV_CheckVelocity(ent);
-        SV_FlyMove(ent, static_cast<float>(host_frametime), nullptr);
+        SV_FlyMove(ent, static_cast<float>(Host::host_frametime), nullptr);
         SV_LinkEdict(ent, true);
 
         if (static_cast<int>(ent->v.flags) & FL_ONGROUND) {
@@ -627,15 +621,15 @@ void SV_Physics_Step(edict_t* ent)
 
 void SV_Physics()
 {
-    pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(sv.edicts));
-    pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
-    pr_global_struct->time = static_cast<float>(sv.time);
-    PR_ExecuteProgram(pr_global_struct->StartFrame);
+    VM::pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(sv.edicts));
+    VM::pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(sv.edicts));
+    VM::pr_global_struct->time = static_cast<float>(sv.time);
+    VM::PR_ExecuteProgram(VM::pr_global_struct->StartFrame);
 
     edict_t* ent = sv.edicts;
     for (int i = 0; i < sv.num_edicts; ++i, ent = NEXT_EDICT(ent)) {
         if (ent->free) continue;
-        if (pr_global_struct->force_retouch) SV_LinkEdict(ent, true);
+        if (VM::pr_global_struct->force_retouch) SV_LinkEdict(ent, true);
 
         if (i > 0 && i <= svs.maxclients) {
             SV_Physics_Client(ent, i);
@@ -651,13 +645,13 @@ void SV_Physics()
             || ent->v.movetype == MOVETYPE_FLY || ent->v.movetype == MOVETYPE_FLYMISSILE) {
             SV_Physics_Toss(ent);
         } else {
-            Sys_Error("SV_Physics: bad movetype %i", static_cast<int>(ent->v.movetype));
+            Common::Sys_Error("SV_Physics: bad movetype %i", static_cast<int>(ent->v.movetype));
         }
     }
 
-    if (pr_global_struct->force_retouch) pr_global_struct->force_retouch--;
+    if (VM::pr_global_struct->force_retouch) VM::pr_global_struct->force_retouch--;
 
-    sv.time += host_frametime;
+    sv.time += Host::host_frametime;
 }
 
 bool SV_CheckBottom(edict_t* ent)
@@ -684,7 +678,7 @@ realcheck:
     start.x = stop.x = (mins.x + maxs.x) * 0.5f;
     start.y = stop.y = (mins.y + maxs.y) * 0.5f;
     stop.z = start.z - 2.0f * STEPSIZE;
-    trace_t trace = SV_Move(start, vec3_origin, vec3_origin, stop, true, ent);
+    trace_t trace = SV_Move(start, Math::vec3_origin, Math::vec3_origin, stop, true, ent);
 
     if (trace.fraction == 1.0f) return false;
 
@@ -696,7 +690,7 @@ realcheck:
             start.x = stop.x = x ? maxs.x : mins.x;
             start.y = stop.y = y ? maxs.y : mins.y;
 
-            trace = SV_Move(start, vec3_origin, vec3_origin, stop, true, ent);
+            trace = SV_Move(start, Math::vec3_origin, Math::vec3_origin, stop, true, ent);
 
             if (trace.fraction != 1.0f && trace.endpos.z > bottom) bottom = trace.endpos.z;
             if (trace.fraction == 1.0f || mid - trace.endpos.z > STEPSIZE) return false;
@@ -822,8 +816,8 @@ void SV_NewChaseDir(edict_t* actor, edict_t* enemy, float dist)
 {
     std::array<float, 3> d{0.0f, DI_NODIR, DI_NODIR};
 
-    const float olddir = anglemod(static_cast<float>(static_cast<int>(actor->v.ideal_yaw / 45.0f) * 45));
-    const float turnaround = anglemod(olddir - 180.0f);
+    const float olddir = Math::anglemod(static_cast<float>(static_cast<int>(actor->v.ideal_yaw / 45.0f) * 45));
+    const float turnaround = Math::anglemod(olddir - 180.0f);
 
     const float deltax = enemy->v.origin[0] - actor->v.origin[0];
     const float deltay = enemy->v.origin[1] - actor->v.origin[1];
@@ -877,7 +871,7 @@ qboolean SV_CloseEnough(edict_t* ent, edict_t* goal, float dist)
 
 void SV_MoveToGoal()
 {
-    edict_t* ent = PROG_TO_EDICT(pr_global_struct->self);
+    edict_t* ent = PROG_TO_EDICT(VM::pr_global_struct->self);
     edict_t* goal = PROG_TO_EDICT(ent->v.goalentity);
     const float dist = G_FLOAT(OFS_PARM0);
 

@@ -10,29 +10,6 @@
 
 #include <cmath>
 
-using namespace Common;
-using namespace Console;
-using namespace Render;
-using namespace Draw;
-using namespace Host;
-using namespace Input;
-using namespace Keys;
-using namespace Math;
-using namespace Menu;
-using namespace Model;
-using namespace Net;
-using namespace VM;
-using namespace Sbar;
-using namespace Screen;
-using namespace Server;
-using namespace Audio;
-using namespace Vid;
-using namespace View;
-using namespace Wad;
-using namespace Cvar;
-using namespace Cmd;
-using namespace Client;
-
 namespace View {
 
 cvar_t lcd_x = { "lcd_x", "0" };
@@ -75,7 +52,7 @@ float V_CalcRoll(const Vector3& angles, const Vector3& velocity)
     float sign;
     float side;
     float value;
-    AngleVectors(angles, forward, right, up);
+    Math::AngleVectors(angles, forward, right, up);
     side = velocity.dot(right);
     sign = static_cast<float>(side < 0 ? -1 : 1);
     side = std::abs(side);
@@ -92,14 +69,14 @@ float V_CalcBob(void)
 {
     float bob;
     float cycle;
-    cycle = static_cast<float>(cl.time - (int)(cl.time / cl_bobcycle.value) * cl_bobcycle.value);
+    cycle = static_cast<float>(Client::cl.time - (int)(Client::cl.time / cl_bobcycle.value) * cl_bobcycle.value);
     cycle /= cl_bobcycle.value;
     if (cycle < cl_bobup.value) {
         cycle = static_cast<float>(M_PI * cycle / cl_bobup.value);
     } else {
         cycle = static_cast<float>(M_PI + M_PI * (cycle - cl_bobup.value) / (1.0 - cl_bobup.value));
     }
-    bob = std::sqrt(cl.velocity[0] * cl.velocity[0] + cl.velocity[1] * cl.velocity[1]) * cl_bob.value;
+    bob = std::sqrt(Client::cl.velocity[0] * Client::cl.velocity[0] + Client::cl.velocity[1] * Client::cl.velocity[1]) * cl_bob.value;
     bob = static_cast<float>(bob * 0.3 + bob * 0.7 * std::sin(cycle));
     if (bob > 4) {
         bob = 4;
@@ -114,67 +91,67 @@ cvar_t v_centerspeed = { "v_centerspeed", "500" };
 
 void V_StartPitchDrift(void)
 {
-    if (cl.laststop == cl.time) {
+    if (Client::cl.laststop == Client::cl.time) {
         return;
     }
-    if (cl.nodrift || !cl.pitchvel) {
-        cl.pitchvel = v_centerspeed.value;
-        cl.nodrift = false;
-        cl.driftmove = 0;
+    if (Client::cl.nodrift || !Client::cl.pitchvel) {
+        Client::cl.pitchvel = v_centerspeed.value;
+        Client::cl.nodrift = false;
+        Client::cl.driftmove = 0;
     }
 }
 
 void V_StopPitchDrift(void)
 {
-    cl.laststop = cl.time;
-    cl.nodrift = true;
-    cl.pitchvel = 0;
+    Client::cl.laststop = Client::cl.time;
+    Client::cl.nodrift = true;
+    Client::cl.pitchvel = 0;
 }
 
 void V_DriftPitch(void)
 {
     float delta, move;
-    if (noclip_anglehack || !cl.onground || cls.demoplayback) {
-        cl.driftmove = 0;
-        cl.pitchvel = 0;
+    if (Host::noclip_anglehack || !Client::cl.onground || Client::cls.demoplayback) {
+        Client::cl.driftmove = 0;
+        Client::cl.pitchvel = 0;
         return;
     }
-    if (cl.nodrift) {
-        if (std::abs(cl.cmd.forwardmove) < cl_forwardspeed.value) {
-            cl.driftmove = 0;
+    if (Client::cl.nodrift) {
+        if (std::abs(Client::cl.cmd.forwardmove) < Client::cl_forwardspeed.value) {
+            Client::cl.driftmove = 0;
         } else {
-            cl.driftmove += static_cast<float>(host_frametime);
+            Client::cl.driftmove += static_cast<float>(Host::host_frametime);
         }
-        if (cl.driftmove > v_centermove.value) {
+        if (Client::cl.driftmove > v_centermove.value) {
             V_StartPitchDrift();
         }
         return;
     }
-    delta = cl.idealpitch - cl.viewangles[PITCH];
+    delta = Client::cl.idealpitch - Client::cl.viewangles[PITCH];
     if (!delta) {
-        cl.pitchvel = 0;
+        Client::cl.pitchvel = 0;
         return;
     }
-    move = static_cast<float>(host_frametime * cl.pitchvel);
-    cl.pitchvel += static_cast<float>(host_frametime * v_centerspeed.value);
+    move = static_cast<float>(Host::host_frametime * Client::cl.pitchvel);
+    Client::cl.pitchvel += static_cast<float>(Host::host_frametime * v_centerspeed.value);
     if (delta > 0) {
         if (move > delta) {
-            cl.pitchvel = 0;
+            Client::cl.pitchvel = 0;
             move = delta;
         }
-        cl.viewangles[PITCH] += move;
+        Client::cl.viewangles[PITCH] += move;
     } else if (delta < 0) {
         if (move > -delta) {
-            cl.pitchvel = 0;
+            Client::cl.pitchvel = 0;
             move = -delta;
         }
-        cl.viewangles[PITCH] -= move;
+        Client::cl.viewangles[PITCH] -= move;
     }
 }
 
 static float angledelta(float a)
 {
-    a = anglemod(a);
+    a = Math::anglemod(a);
     if (a > 180) {
         a -= 360;
     }
@@ -186,23 +163,23 @@ static void CalcGunAngle(void)
     float yaw, pitch, move;
     static float oldyaw = 0;
     static float oldpitch = 0;
-    yaw = r_refdef.viewangles[YAW];
-    pitch = -r_refdef.viewangles[PITCH];
-    yaw = static_cast<float>(angledelta(yaw - r_refdef.viewangles[YAW]) * 0.4);
+    yaw = Render::r_refdef.viewangles[YAW];
+    pitch = -Render::r_refdef.viewangles[PITCH];
+    yaw = static_cast<float>(angledelta(yaw - Render::r_refdef.viewangles[YAW]) * 0.4);
     if (yaw > 10) {
         yaw = 10;
     }
     if (yaw < -10) {
         yaw = -10;
     }
-    pitch = static_cast<float>(angledelta(-pitch - r_refdef.viewangles[PITCH]) * 0.4);
+    pitch = static_cast<float>(angledelta(-pitch - Render::r_refdef.viewangles[PITCH]) * 0.4);
     if (pitch > 10) {
         pitch = 10;
     }
     if (pitch < -10) {
         pitch = -10;
     }
-    move = static_cast<float>(host_frametime * 20);
+    move = static_cast<float>(Host::host_frametime * 20);
     if (yaw > oldyaw) {
         if (oldyaw + move < yaw) {
             yaw = oldyaw + move;
@@ -223,53 +200,53 @@ static void CalcGunAngle(void)
     }
     oldyaw = yaw;
     oldpitch = pitch;
-    cl.viewent.angles[YAW] = r_refdef.viewangles[YAW] + yaw;
-    cl.viewent.angles[PITCH] = -(r_refdef.viewangles[PITCH] + pitch);
-    cl.viewent.angles[ROLL] -= static_cast<float>(v_idlescale.value * std::sin(cl.time * v_iroll_cycle.value) * v_iroll_level.value);
-    cl.viewent.angles[PITCH] -= static_cast<float>(v_idlescale.value * std::sin(cl.time * v_ipitch_cycle.value) * v_ipitch_level.value);
-    cl.viewent.angles[YAW] -= static_cast<float>(v_idlescale.value * std::sin(cl.time * v_iyaw_cycle.value) * v_iyaw_level.value);
+    Client::cl.viewent.angles[YAW] = Render::r_refdef.viewangles[YAW] + yaw;
+    Client::cl.viewent.angles[PITCH] = -(Render::r_refdef.viewangles[PITCH] + pitch);
+    Client::cl.viewent.angles[ROLL] -= static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_iroll_cycle.value) * v_iroll_level.value);
+    Client::cl.viewent.angles[PITCH] -= static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_ipitch_cycle.value) * v_ipitch_level.value);
+    Client::cl.viewent.angles[YAW] -= static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_iyaw_cycle.value) * v_iyaw_level.value);
 }
 
 static void V_BoundOffsets(void)
 {
     entity_t* ent;
-    ent = &cl_entities[cl.viewentity];
-    if (r_refdef.vieworg[0] < ent->origin[0] - 14) {
-        r_refdef.vieworg[0] = ent->origin[0] - 14;
-    } else if (r_refdef.vieworg[0] > ent->origin[0] + 14) {
-        r_refdef.vieworg[0] = ent->origin[0] + 14;
+    ent = &Client::cl_entities[Client::cl.viewentity];
+    if (Render::r_refdef.vieworg[0] < ent->origin[0] - 14) {
+        Render::r_refdef.vieworg[0] = ent->origin[0] - 14;
+    } else if (Render::r_refdef.vieworg[0] > ent->origin[0] + 14) {
+        Render::r_refdef.vieworg[0] = ent->origin[0] + 14;
     }
-    if (r_refdef.vieworg[1] < ent->origin[1] - 14) {
-        r_refdef.vieworg[1] = ent->origin[1] - 14;
-    } else if (r_refdef.vieworg[1] > ent->origin[1] + 14) {
-        r_refdef.vieworg[1] = ent->origin[1] + 14;
+    if (Render::r_refdef.vieworg[1] < ent->origin[1] - 14) {
+        Render::r_refdef.vieworg[1] = ent->origin[1] - 14;
+    } else if (Render::r_refdef.vieworg[1] > ent->origin[1] + 14) {
+        Render::r_refdef.vieworg[1] = ent->origin[1] + 14;
     }
-    if (r_refdef.vieworg[2] < ent->origin[2] - 22) {
-        r_refdef.vieworg[2] = ent->origin[2] - 22;
-    } else if (r_refdef.vieworg[2] > ent->origin[2] + 30) {
-        r_refdef.vieworg[2] = ent->origin[2] + 30;
+    if (Render::r_refdef.vieworg[2] < ent->origin[2] - 22) {
+        Render::r_refdef.vieworg[2] = ent->origin[2] - 22;
+    } else if (Render::r_refdef.vieworg[2] > ent->origin[2] + 30) {
+        Render::r_refdef.vieworg[2] = ent->origin[2] + 30;
     }
 }
 
 static void V_AddIdle(void)
 {
-    r_refdef.viewangles[ROLL] += static_cast<float>(v_idlescale.value * std::sin(cl.time * v_iroll_cycle.value) * v_iroll_level.value);
-    r_refdef.viewangles[PITCH] += static_cast<float>(v_idlescale.value * std::sin(cl.time * v_ipitch_cycle.value) * v_ipitch_level.value);
-    r_refdef.viewangles[YAW] += static_cast<float>(v_idlescale.value * std::sin(cl.time * v_iyaw_cycle.value) * v_iyaw_level.value);
+    Render::r_refdef.viewangles[ROLL] += static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_iroll_cycle.value) * v_iroll_level.value);
+    Render::r_refdef.viewangles[PITCH] += static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_ipitch_cycle.value) * v_ipitch_level.value);
+    Render::r_refdef.viewangles[YAW] += static_cast<float>(v_idlescale.value * std::sin(Client::cl.time * v_iyaw_cycle.value) * v_iyaw_level.value);
 }
 
 static void V_CalcViewRoll(void)
 {
     float side;
-    side = V_CalcRoll(cl_entities[cl.viewentity].angles, cl.velocity);
-    r_refdef.viewangles[ROLL] += side;
+    side = V_CalcRoll(Client::cl_entities[Client::cl.viewentity].angles, Client::cl.velocity);
+    Render::r_refdef.viewangles[ROLL] += side;
     if (v_dmg_time > 0) {
-        r_refdef.viewangles[ROLL] += v_dmg_time / v_kicktime.value * v_dmg_roll;
-        r_refdef.viewangles[PITCH] += v_dmg_time / v_kicktime.value * v_dmg_pitch;
-        v_dmg_time -= static_cast<float>(host_frametime);
+        Render::r_refdef.viewangles[ROLL] += v_dmg_time / v_kicktime.value * v_dmg_roll;
+        Render::r_refdef.viewangles[PITCH] += v_dmg_time / v_kicktime.value * v_dmg_pitch;
+        v_dmg_time -= static_cast<float>(Host::host_frametime);
     }
-    if (cl.stats[STAT_HEALTH] <= 0) {
-        r_refdef.viewangles[ROLL] = 80;
+    if (Client::cl.stats[STAT_HEALTH] <= 0) {
+        Render::r_refdef.viewangles[ROLL] = 80;
         return;
     }
 }
@@ -278,10 +255,10 @@ static void V_CalcIntermissionRefdef(void)
 {
     entity_t *ent, *view;
     float old;
-    ent = &cl_entities[cl.viewentity];
-    view = &cl.viewent;
-    VectorCopy(ent->origin, r_refdef.vieworg);
-    VectorCopy(ent->angles, r_refdef.viewangles);
+    ent = &Client::cl_entities[Client::cl.viewentity];
+    view = &Client::cl.viewent;
+    VectorCopy(ent->origin, Render::r_refdef.vieworg);
+    VectorCopy(ent->angles, Render::r_refdef.viewangles);
     view->model = NULL;
     old = v_idlescale.value;
     v_idlescale.value = 1;
@@ -297,27 +274,27 @@ static void V_CalcRefdef(void)
     float bob;
     static float oldz = 0;
     V_DriftPitch();
-    ent = &cl_entities[cl.viewentity];
-    view = &cl.viewent;
-    ent->angles[YAW] = cl.viewangles[YAW];
-    ent->angles[PITCH] = -cl.viewangles[PITCH];
+    ent = &Client::cl_entities[Client::cl.viewentity];
+    view = &Client::cl.viewent;
+    ent->angles[YAW] = Client::cl.viewangles[YAW];
+    ent->angles[PITCH] = -Client::cl.viewangles[PITCH];
     bob = V_CalcBob();
-    r_refdef.vieworg = ent->origin;
-    r_refdef.vieworg.z += cl.viewheight + bob;
-    r_refdef.vieworg += Vector3(1.0f / 32.0f, 1.0f / 32.0f, 1.0f / 32.0f);
-    r_refdef.viewangles = cl.viewangles;
+    Render::r_refdef.vieworg = ent->origin;
+    Render::r_refdef.vieworg.z += Client::cl.viewheight + bob;
+    Render::r_refdef.vieworg += Vector3(1.0f / 32.0f, 1.0f / 32.0f, 1.0f / 32.0f);
+    Render::r_refdef.viewangles = Client::cl.viewangles;
     V_CalcViewRoll();
     V_AddIdle();
     angles[PITCH] = -ent->angles[PITCH];
     angles[YAW] = ent->angles[YAW];
     angles[ROLL] = ent->angles[ROLL];
-    AngleVectors(angles, v_forward, v_right, v_up);
-    r_refdef.vieworg += v_forward * scr_ofsx.value + v_right * scr_ofsy.value + v_up * scr_ofsz.value;
+    Math::AngleVectors(angles, v_forward, v_right, v_up);
+    Render::r_refdef.vieworg += v_forward * scr_ofsx.value + v_right * scr_ofsy.value + v_up * scr_ofsz.value;
     V_BoundOffsets();
-    view->angles = cl.viewangles;
+    view->angles = Client::cl.viewangles;
     CalcGunAngle();
     view->origin = ent->origin;
-    view->origin.z += cl.viewheight;
+    view->origin.z += Client::cl.viewheight;
     view->origin += forward * (bob * 0.4f);
     view->origin.z += bob;
     float viewsize_val = Screen::GetScreenSystem().GetViewsize().value;
@@ -330,13 +307,13 @@ static void V_CalcRefdef(void)
     } else if (viewsize_val == 80) {
         view->origin[2] += 0.5f;
     }
-    view->model = cl.model_precache[cl.stats[STAT_WEAPON]];
-    view->frame = cl.stats[STAT_WEAPONFRAME];
-    view->colormap = vid.colormap;
-    VectorAdd(r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
-    if (cl.onground && ent->origin[2] - oldz > 0) {
+    view->model = Client::cl.model_precache[Client::cl.stats[STAT_WEAPON]];
+    view->frame = Client::cl.stats[STAT_WEAPONFRAME];
+    view->colormap = Vid::vid.colormap;
+    VectorAdd(Render::r_refdef.viewangles, Client::cl.punchangle, Render::r_refdef.viewangles);
+    if (Client::cl.onground && ent->origin[2] - oldz > 0) {
         float steptime;
-        steptime = static_cast<float>(cl.time - cl.oldtime);
+        steptime = static_cast<float>(Client::cl.time - Client::cl.oldtime);
         if (steptime < 0) {
             steptime = 0;
         }
@@ -347,60 +324,60 @@ static void V_CalcRefdef(void)
         if (ent->origin[2] - oldz > 12) {
             oldz = ent->origin[2] - 12;
         }
-        r_refdef.vieworg[2] += oldz - ent->origin[2];
+        Render::r_refdef.vieworg[2] += oldz - ent->origin[2];
         view->origin[2] += oldz - ent->origin[2];
     } else {
         oldz = ent->origin[2];
     }
-    if (chase_active.value) {
-        Chase_Update();
+    if (Client::chase_active.value) {
+        Client::Chase_Update();
     }
 }
 
 void V_RenderView(void)
 {
-    if (GetConsoleSystem().IsForcedUp()) {
+    if (Console::GetConsoleSystem().IsForcedUp()) {
         return;
     }
-    if (cl.maxclients > 1) {
+    if (Client::cl.maxclients > 1) {
         Cvar::Set("scr_ofsx", "0");
         Cvar::Set("scr_ofsy", "0");
         Cvar::Set("scr_ofsz", "0");
     }
-    if (cl.intermission) {
+    if (Client::cl.intermission) {
         V_CalcIntermissionRefdef();
     } else {
-        if (!cl.paused) {
+        if (!Client::cl.paused) {
             V_CalcRefdef();
         }
     }
-    R_PushDlights();
+    Render::R_PushDlights();
     if (lcd_x.value) {
         int i;
-        vid.rowbytes <<= 1;
-        vid.aspect *= 0.5;
-        r_refdef.viewangles[YAW] -= lcd_yaw.value;
+        Vid::vid.rowbytes <<= 1;
+        Vid::vid.aspect *= 0.5;
+        Render::r_refdef.viewangles[YAW] -= lcd_yaw.value;
         for (i = 0; i < 3; i++) {
-            r_refdef.vieworg[i] -= right[i] * lcd_x.value;
+            Render::r_refdef.vieworg[i] -= right[i] * lcd_x.value;
         }
-        R_RenderView();
-        vid.buffer += vid.rowbytes >> 1;
-        R_PushDlights();
-        r_refdef.viewangles[YAW] += lcd_yaw.value * 2;
+        Render::R_RenderView();
+        Vid::vid.buffer += Vid::vid.rowbytes >> 1;
+        Render::R_PushDlights();
+        Render::r_refdef.viewangles[YAW] += lcd_yaw.value * 2;
         for (i = 0; i < 3; i++) {
-            r_refdef.vieworg[i] += 2 * right[i] * lcd_x.value;
+            Render::r_refdef.vieworg[i] += 2 * right[i] * lcd_x.value;
         }
-        R_RenderView();
-        vid.buffer -= vid.rowbytes >> 1;
-        r_refdef.vrect.height <<= 1;
-        vid.rowbytes >>= 1;
-        vid.aspect *= 2;
+        Render::R_RenderView();
+        Vid::vid.buffer -= Vid::vid.rowbytes >> 1;
+        Render::r_refdef.vrect.height <<= 1;
+        Vid::vid.rowbytes >>= 1;
+        Vid::vid.aspect *= 2;
     } else {
-        R_RenderView();
+        Render::R_RenderView();
     }
     if (crosshair.value) {
         const auto& vrect = Screen::GetScreenSystem().GetVrect();
-        Draw_Character(static_cast<int>(vrect.x + vrect.width / 2 + cl_crossx.value),
+        Draw::Draw_Character(static_cast<int>(vrect.x + vrect.width / 2 + cl_crossx.value),
             static_cast<int>(vrect.y + vrect.height / 2 + cl_crossy.value), '+');
     }
 }

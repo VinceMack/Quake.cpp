@@ -2,14 +2,6 @@
 #include "quakedef.hpp"
 #include "network/datagram.hpp"
 
-using namespace Common;
-using namespace Console;
-using namespace Cvar;
-using namespace Cmd;
-using namespace Menu;
-using namespace Keys;
-using namespace Server;
-
 #ifdef _WIN32
 #include <windows.h>
 #ifdef GetMessage
@@ -25,15 +17,15 @@ using namespace Server;
 namespace Net {
 
 void WriteControlHeader(sizebuf_t* buf) {
-    *((int*)buf->data) = BigLong(NETFLAG_CTL | (buf->cursize & NETFLAG_LENGTH_MASK));
+    *((int*)buf->data) = Common::BigLong(NETFLAG_CTL | (buf->cursize & NETFLAG_LENGTH_MASK));
 }
 
 bool ReadControlHeader(int len, int& control) {
     if (len < static_cast<int>(sizeof(int))) return false;
     net_message.cursize = len;
-    MSG_BeginReading();
-    control = BigLong(*((int*)net_message.data));
-    MSG_ReadLong();
+    Common::MSG_BeginReading();
+    control = Common::BigLong(*((int*)net_message.data));
+    Common::MSG_ReadLong();
     return (control != -1) &&
            ((static_cast<unsigned int>(control) & (~NETFLAG_LENGTH_MASK)) == NETFLAG_CTL) &&
            ((control & NETFLAG_LENGTH_MASK) == len);
@@ -58,9 +50,9 @@ static int SendDatagramPacket(qsocket_t* sock, unsigned int sequence, bool isRes
     unsigned int eom = (sock->sendMessageLength <= MAX_DATAGRAM) ? NETFLAG_EOM : 0;
     unsigned int packetLen = NET_HEADERSIZE + dataLen;
 
-    packetBuffer.length = BigLong(packetLen | (NETFLAG_DATA | eom));
-    packetBuffer.sequence = BigLong(sequence);
-    Q_memcpy(packetBuffer.data, sock->sendMessage.data(), dataLen);
+    packetBuffer.length = Common::BigLong(packetLen | (NETFLAG_DATA | eom));
+    packetBuffer.sequence = Common::BigLong(sequence);
+    Common::Q_memcpy(packetBuffer.data, sock->sendMessage.data(), dataLen);
 
     sock->sendNext = false;
     if (lan.Write(sock->socket, (byte*)&packetBuffer, packetLen, &sock->addr) == -1) return -1;
@@ -70,20 +62,20 @@ static int SendDatagramPacket(qsocket_t* sock, unsigned int sequence, bool isRes
 }
 
 static void PrintStats(qsocket_t* s) {
-    Con_Printf("canSend = %4u   \nsendSeq = %4u   recvSeq = %4u   \n\n", s->canSend, s->sendSequence, s->receiveSequence);
+    Console::Con_Printf("canSend = %4u   \nsendSeq = %4u   recvSeq = %4u   \n\n", s->canSend, s->sendSequence, s->receiveSequence);
 }
 
 static void NET_Stats_f() {
     if (Cmd::Argc() == 1) {
-        Con_Printf("unreliable messages sent   = %i\nunreliable messages recv   = %i\nreliable messages sent     = %i\nreliable messages received = %i\npacketsSent                = %i\npacketsReSent              = %i\npacketsReceived            = %i\nreceivedDuplicateCount     = %i\nshortPacketCount           = %i\ndroppedDatagrams           = %i\n",
+        Console::Con_Printf("unreliable messages sent   = %i\nunreliable messages recv   = %i\nreliable messages sent     = %i\nreliable messages received = %i\npacketsSent                = %i\npacketsReSent              = %i\npacketsReceived            = %i\nreceivedDuplicateCount     = %i\nshortPacketCount           = %i\ndroppedDatagrams           = %i\n",
             unreliableMessagesSent, unreliableMessagesReceived, messagesSent, messagesReceived, packetsSent, packetsReSent, packetsReceived, receivedDuplicateCount, shortPacketCount, droppedDatagrams);
-    } else if (Q_strcmp(Cmd::Argv(1), "*") == 0) {
+    } else if (Common::Q_strcmp(Cmd::Argv(1), "*") == 0) {
         for (qsocket_t* s = net_activeSockets; s; s = s->next) PrintStats(s);
         for (qsocket_t* s = net_freeSockets; s; s = s->next) PrintStats(s);
     } else {
         qsocket_t* s = nullptr;
-        for (s = net_activeSockets; s; s = s->next) if (Q_strcasecmp(Cmd::Argv(1), s->address) == 0) break;
-        if (!s) for (s = net_freeSockets; s; s = s->next) if (Q_strcasecmp(Cmd::Argv(1), s->address) == 0) break;
+        for (s = net_activeSockets; s; s = s->next) if (Common::Q_strcasecmp(Cmd::Argv(1), s->address) == 0) break;
+        if (!s) for (s = net_freeSockets; s; s = s->next) if (Common::Q_strcasecmp(Cmd::Argv(1), s->address) == 0) break;
         if (s) PrintStats(s);
     }
 }
@@ -95,13 +87,13 @@ static void Test_Poll() {
     while (1) {
         int len = lan.Read(testSocket, net_message.data, net_message.maxsize, &clientaddr);
         if (!ReadControlHeader(len, control)) break;
-        if (MSG_ReadByte() != CCREP_PLAYER_INFO) Sys_Error("Unexpected repsonse to Player Info request\n");
+        if (Common::MSG_ReadByte() != CCREP_PLAYER_INFO) Common::Sys_Error("Unexpected repsonse to Player Info request\n");
 
-        MSG_ReadByte(); char name[32], address[64];
-        Q_strncpy(name, MSG_ReadString(), sizeof(name));
-        int colors = MSG_ReadLong(), frags = MSG_ReadLong(), connectTime = MSG_ReadLong();
-        Q_strncpy(address, MSG_ReadString(), sizeof(address));
-        Con_Printf("%s\n  frags:%3i  colors:%u %u  time:%u\n  %s\n", name, frags, colors >> 4, colors & 0x0f, connectTime / 60, address);
+        Common::MSG_ReadByte(); char name[32], address[64];
+        Common::Q_strncpy(name, Common::MSG_ReadString(), sizeof(name));
+        int colors = Common::MSG_ReadLong(), frags = Common::MSG_ReadLong(), connectTime = Common::MSG_ReadLong();
+        Common::Q_strncpy(address, Common::MSG_ReadString(), sizeof(address));
+        Console::Con_Printf("%s\n  frags:%3i  colors:%u %u  time:%u\n  %s\n", name, frags, colors >> 4, colors & 0x0f, connectTime / 60, address);
     }
 
     if (--testPollCount) SchedulePollProcedure(&testPollProcedure, 0.1);
@@ -114,10 +106,10 @@ static void Test_f() {
 
     if (!host.empty() && hostCacheCount) {
         for (int n = 0; n < hostCacheCount; n++) {
-            if (Q_strcasecmp(host, hostcache[n].name) == 0) {
+            if (Common::Q_strcasecmp(host, hostcache[n].name) == 0) {
                 if (hostcache[n].driver != myDriverLevel) continue;
                 net_landriverlevel = hostcache[n].ldriver; max = hostcache[n].maxusers;
-                Q_memcpy(&sendaddr, &hostcache[n].addr, sizeof(struct qsockaddr)); goto JustDoIt;
+                Common::Q_memcpy(&sendaddr, &hostcache[n].addr, sizeof(struct qsockaddr)); goto JustDoIt;
             }
         }
     }
@@ -133,11 +125,11 @@ JustDoIt:
     testInProgress = true; testPollCount = 20; testDriver = net_landriverlevel;
 
     for (int n = 0; n < max; n++) {
-        SZ_Clear(&net_message); MSG_WriteLong(&net_message, 0); MSG_WriteByte(&net_message, CCREQ_PLAYER_INFO);
-        MSG_WriteByte(&net_message, n); WriteControlHeader(&net_message);
+        Common::SZ_Clear(&net_message); Common::MSG_WriteLong(&net_message, 0); Common::MSG_WriteByte(&net_message, CCREQ_PLAYER_INFO);
+        Common::MSG_WriteByte(&net_message, n); WriteControlHeader(&net_message);
         LANFunc(testDriver).Write(testSocket, net_message.data, net_message.cursize, &sendaddr);
     }
-    SZ_Clear(&net_message); SchedulePollProcedure(&testPollProcedure, 0.1);
+    Common::SZ_Clear(&net_message); SchedulePollProcedure(&testPollProcedure, 0.1);
 }
 
 static void Test2_Poll() {
@@ -146,20 +138,20 @@ static void Test2_Poll() {
 
     int len = lan.Read(test2Socket, net_message.data, net_message.maxsize, &clientaddr);
     if (len < static_cast<int>(sizeof(int))) goto Reschedule;
-    if (!ReadControlHeader(len, control) || MSG_ReadByte() != CCREP_RULE_INFO) goto Error;
+    if (!ReadControlHeader(len, control) || Common::MSG_ReadByte() != CCREP_RULE_INFO) goto Error;
 
-    char name[256], value[256]; Q_strncpy(name, MSG_ReadString(), sizeof(name));
+    char name[256], value[256]; Common::Q_strncpy(name, Common::MSG_ReadString(), sizeof(name));
     if (name[0] == 0) goto Done;
 
-    Q_strncpy(value, MSG_ReadString(), sizeof(value)); Con_Printf("%-16.16s  %-16.16s\n", name, value);
-    SZ_Clear(&net_message); MSG_WriteLong(&net_message, 0); MSG_WriteByte(&net_message, CCREQ_RULE_INFO);
-    MSG_WriteString(&net_message, name); WriteControlHeader(&net_message);
-    lan.Write(test2Socket, net_message.data, net_message.cursize, &clientaddr); SZ_Clear(&net_message);
+    Common::Q_strncpy(value, Common::MSG_ReadString(), sizeof(value)); Console::Con_Printf("%-16.16s  %-16.16s\n", name, value);
+    Common::SZ_Clear(&net_message); Common::MSG_WriteLong(&net_message, 0); Common::MSG_WriteByte(&net_message, CCREQ_RULE_INFO);
+    Common::MSG_WriteString(&net_message, name); WriteControlHeader(&net_message);
+    lan.Write(test2Socket, net_message.data, net_message.cursize, &clientaddr); Common::SZ_Clear(&net_message);
 
 Reschedule:
     SchedulePollProcedure(&test2PollProcedure, 0.05); return;
 Error:
-    Con_Printf("Unexpected repsonse to Rule Info request\n");
+    Console::Con_Printf("Unexpected repsonse to Rule Info request\n");
 Done:
     lan.CloseSocket(test2Socket); test2InProgress = false;
 }
@@ -170,10 +162,10 @@ static void Test2_f() {
 
     if (!host.empty() && hostCacheCount) {
         for (int n = 0; n < hostCacheCount; n++) {
-            if (Q_strcasecmp(host, hostcache[n].name) == 0) {
+            if (Common::Q_strcasecmp(host, hostcache[n].name) == 0) {
                 if (hostcache[n].driver != myDriverLevel) continue;
                 net_landriverlevel = hostcache[n].ldriver;
-                Q_memcpy(&sendaddr, &hostcache[n].addr, sizeof(struct qsockaddr)); goto JustDoIt;
+                Common::Q_memcpy(&sendaddr, &hostcache[n].addr, sizeof(struct qsockaddr)); goto JustDoIt;
             }
         }
     }
@@ -188,15 +180,15 @@ JustDoIt:
     if ((test2Socket = LANFunc(net_landriverlevel).OpenSocket(0)) == -1) return;
     test2InProgress = true; test2Driver = net_landriverlevel;
 
-    SZ_Clear(&net_message); MSG_WriteLong(&net_message, 0); MSG_WriteByte(&net_message, CCREQ_RULE_INFO);
-    MSG_WriteString(&net_message, ""); WriteControlHeader(&net_message);
+    Common::SZ_Clear(&net_message); Common::MSG_WriteLong(&net_message, 0); Common::MSG_WriteByte(&net_message, CCREQ_RULE_INFO);
+    Common::MSG_WriteString(&net_message, ""); WriteControlHeader(&net_message);
     LANFunc(test2Driver).Write(test2Socket, net_message.data, net_message.cursize, &sendaddr);
-    SZ_Clear(&net_message); SchedulePollProcedure(&test2PollProcedure, 0.05);
+    Common::SZ_Clear(&net_message); SchedulePollProcedure(&test2PollProcedure, 0.05);
 }
 
 int DatagramDriver::Init() {
     myDriverLevel = net_driverlevel; Cmd::AddCommand("net_stats", NET_Stats_f);
-    if (COM_CheckParm("-nolan")) return -1;
+    if (Common::COM_CheckParm("-nolan")) return -1;
     for (int i = 0; i < net_numlandrivers; i++) {
         int csock = LANFunc(i).Init(); if (csock == -1) continue;
         LANFunc(i).SetInitialized(true); LANFunc(i).SetControlSocket(csock);
@@ -220,7 +212,7 @@ void DatagramDriver::Listen(qboolean state) {
 void DatagramDriver::Close(qsocket_t* sock) { LANFunc(sock->landriver).CloseSocket(sock->socket); }
 
 int DatagramDriver::SendMessage(qsocket_t* sock, sizebuf_t* data) {
-    Q_memcpy(sock->sendMessage.data(), data->data, data->cursize);
+    Common::Q_memcpy(sock->sendMessage.data(), data->data, data->cursize);
     sock->sendMessageLength = data->cursize; sock->canSend = false;
     return SendDatagramPacket(sock, sock->sendSequence++, false);
 }
@@ -228,9 +220,9 @@ int DatagramDriver::SendMessage(qsocket_t* sock, sizebuf_t* data) {
 int DatagramDriver::SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data) {
     NetLanDriver& lan = LANFunc(sock->landriver);
     int packetLen = NET_HEADERSIZE + data->cursize;
-    packetBuffer.length = BigLong(packetLen | NETFLAG_UNRELIABLE);
-    packetBuffer.sequence = BigLong(sock->unreliableSendSequence++);
-    Q_memcpy(packetBuffer.data, data->data, data->cursize);
+    packetBuffer.length = Common::BigLong(packetLen | NETFLAG_UNRELIABLE);
+    packetBuffer.sequence = Common::BigLong(sock->unreliableSendSequence++);
+    Common::Q_memcpy(packetBuffer.data, data->data, data->cursize);
     if (lan.Write(sock->socket, (byte*)&packetBuffer, packetLen, &sock->addr) == -1) return -1;
     packetsSent++; return 1;
 }
@@ -252,16 +244,16 @@ int DatagramDriver::GetMessage(qsocket_t* sock) {
         if (lan.AddrCompare(&readaddr, &sock->addr) != 0) continue;
         if (length < NET_HEADERSIZE) { shortPacketCount++; continue; }
 
-        length = BigLong(packetBuffer.length);
+        length = Common::BigLong(packetBuffer.length);
         unsigned int flags = length & (~NETFLAG_LENGTH_MASK); length &= NETFLAG_LENGTH_MASK;
         if (flags & NETFLAG_CTL) continue;
 
-        unsigned int sequence = BigLong(packetBuffer.sequence); packetsReceived++;
+        unsigned int sequence = Common::BigLong(packetBuffer.sequence); packetsReceived++;
         if (flags & NETFLAG_UNRELIABLE) {
             if (sequence < sock->unreliableReceiveSequence) break;
             if (sequence != sock->unreliableReceiveSequence) droppedDatagrams += (sequence - sock->unreliableReceiveSequence);
             sock->unreliableReceiveSequence = sequence + 1; length -= NET_HEADERSIZE;
-            SZ_Clear(&net_message); SZ_Write(&net_message, packetBuffer.data, length);
+            Common::SZ_Clear(&net_message); Common::SZ_Write(&net_message, packetBuffer.data, length);
             ret = 2; break;
         }
 
@@ -270,23 +262,23 @@ int DatagramDriver::GetMessage(qsocket_t* sock) {
             if (sequence == sock->ackSequence) sock->ackSequence++; else continue;
             sock->sendMessageLength -= MAX_DATAGRAM;
             if (sock->sendMessageLength > 0) {
-                Q_memcpy(sock->sendMessage.data(), sock->sendMessage.data() + MAX_DATAGRAM, sock->sendMessageLength);
+                Common::Q_memcpy(sock->sendMessage.data(), sock->sendMessage.data() + MAX_DATAGRAM, sock->sendMessageLength);
                 sock->sendNext = true;
             } else { sock->sendMessageLength = 0; sock->canSend = true; }
             continue;
         }
 
         if (flags & NETFLAG_DATA) {
-            packetBuffer.length = BigLong(NET_HEADERSIZE | NETFLAG_ACK); packetBuffer.sequence = BigLong(sequence);
+            packetBuffer.length = Common::BigLong(NET_HEADERSIZE | NETFLAG_ACK); packetBuffer.sequence = Common::BigLong(sequence);
             lan.Write(sock->socket, (byte*)&packetBuffer, NET_HEADERSIZE, &readaddr);
             if (sequence != sock->receiveSequence) { receivedDuplicateCount++; continue; }
             sock->receiveSequence++; length -= NET_HEADERSIZE;
             if (flags & NETFLAG_EOM) {
-                SZ_Clear(&net_message); SZ_Write(&net_message, sock->receiveMessage.data(), sock->receiveMessageLength);
-                SZ_Write(&net_message, packetBuffer.data, length); sock->receiveMessageLength = 0;
+                Common::SZ_Clear(&net_message); Common::SZ_Write(&net_message, sock->receiveMessage.data(), sock->receiveMessageLength);
+                Common::SZ_Write(&net_message, packetBuffer.data, length); sock->receiveMessageLength = 0;
                 ret = 1; break;
             }
-            Q_memcpy(sock->receiveMessage.data() + sock->receiveMessageLength, packetBuffer.data, length);
+            Common::Q_memcpy(sock->receiveMessage.data() + sock->receiveMessageLength, packetBuffer.data, length);
             sock->receiveMessageLength += length; continue;
         }
     }
@@ -301,56 +293,56 @@ qsocket_t* DatagramDriver::CheckNewConnections() {
         NetLanDriver& lan = LANFunc(net_landriverlevel);
         int acceptsock = lan.CheckNewConnections(); if (acceptsock == -1) continue;
 
-        SZ_Clear(&net_message); struct qsockaddr clientaddr;
+        Common::SZ_Clear(&net_message); struct qsockaddr clientaddr;
         int len = lan.Read(acceptsock, net_message.data, net_message.maxsize, &clientaddr); int control;
         if (!ReadControlHeader(len, control)) continue;
 
         auto SendReply = [&](byte repCmd, auto&& writePayload) {
-            SZ_Clear(&net_message); MSG_WriteLong(&net_message, 0); MSG_WriteByte(&net_message, repCmd);
+            Common::SZ_Clear(&net_message); Common::MSG_WriteLong(&net_message, 0); Common::MSG_WriteByte(&net_message, repCmd);
             writePayload(); WriteControlHeader(&net_message);
-            lan.Write(acceptsock, net_message.data, net_message.cursize, &clientaddr); SZ_Clear(&net_message);
+            lan.Write(acceptsock, net_message.data, net_message.cursize, &clientaddr); Common::SZ_Clear(&net_message);
         };
 
-        int command = MSG_ReadByte();
+        int command = Common::MSG_ReadByte();
         if (command == CCREQ_SERVER_INFO) {
-            if (Q_strcmp(MSG_ReadString(), "QUAKE") != 0) continue;
+            if (Common::Q_strcmp(Common::MSG_ReadString(), "QUAKE") != 0) continue;
             struct qsockaddr newaddr; lan.GetSocketAddr(acceptsock, &newaddr);
             SendReply(CCREP_SERVER_INFO, [&]() {
-                MSG_WriteString(&net_message, lan.AddrToString(&newaddr));
-                MSG_WriteString(&net_message, hostname.string.c_str()); MSG_WriteString(&net_message, sv.name.data());
-                MSG_WriteByte(&net_message, net_activeconnections); MSG_WriteByte(&net_message, svs.maxclients);
-                MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
+                Common::MSG_WriteString(&net_message, lan.AddrToString(&newaddr));
+                Common::MSG_WriteString(&net_message, hostname.string.c_str()); Common::MSG_WriteString(&net_message, Server::sv.name.data());
+                Common::MSG_WriteByte(&net_message, net_activeconnections); Common::MSG_WriteByte(&net_message, Server::svs.maxclients);
+                Common::MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
             });
             continue;
         }
 
         if (command == CCREQ_PLAYER_INFO) {
-            int pNum = MSG_ReadByte(), activeNum = -1, cNum = 0; client_t* client = svs.clients;
-            for (; cNum < svs.maxclients; cNum++, client++) if (client->active && ++activeNum == pNum) break;
-            if (cNum == svs.maxclients) continue;
+            int pNum = Common::MSG_ReadByte(), activeNum = -1, cNum = 0; client_t* client = Server::svs.clients;
+            for (; cNum < Server::svs.maxclients; cNum++, client++) if (client->active && ++activeNum == pNum) break;
+            if (cNum == Server::svs.maxclients) continue;
             SendReply(CCREP_PLAYER_INFO, [&]() {
-                MSG_WriteByte(&net_message, pNum); MSG_WriteString(&net_message, client->name.data());
-                MSG_WriteLong(&net_message, client->colors); MSG_WriteLong(&net_message, (int)client->edict->v.frags);
-                MSG_WriteLong(&net_message, (int)(net_time - client->netconnection->connecttime));
-                MSG_WriteString(&net_message, client->netconnection->address);
+                Common::MSG_WriteByte(&net_message, pNum); Common::MSG_WriteString(&net_message, client->name.data());
+                Common::MSG_WriteLong(&net_message, client->colors); Common::MSG_WriteLong(&net_message, (int)client->edict->v.frags);
+                Common::MSG_WriteLong(&net_message, (int)(net_time - client->netconnection->connecttime));
+                Common::MSG_WriteString(&net_message, client->netconnection->address);
             });
             continue;
         }
 
         if (command == CCREQ_RULE_INFO) {
-            char* pName = MSG_ReadString(); cvar_t* var = *pName ? Cvar::FindVar(pName) : Cvar::state.vars;
+            char* pName = Common::MSG_ReadString(); cvar_t* var = *pName ? Cvar::FindVar(pName) : Cvar::state.vars;
             if (*pName && var) var = var->next;
             while (var && !var->server) var = var->next;
             SendReply(CCREP_RULE_INFO, [&]() {
-                if (var) { MSG_WriteString(&net_message, var->name.c_str()); MSG_WriteString(&net_message, var->string.c_str()); }
+                if (var) { Common::MSG_WriteString(&net_message, var->name.c_str()); Common::MSG_WriteString(&net_message, var->string.c_str()); }
             });
             continue;
         }
 
-        if (command != CCREQ_CONNECT || Q_strcmp(MSG_ReadString(), "QUAKE") != 0) continue;
+        if (command != CCREQ_CONNECT || Common::Q_strcmp(Common::MSG_ReadString(), "QUAKE") != 0) continue;
 
-        if (MSG_ReadByte() != NET_PROTOCOL_VERSION) {
-            SendReply(CCREP_REJECT, [&]() { MSG_WriteString(&net_message, "Incompatible version.\n"); });
+        if (Common::MSG_ReadByte() != NET_PROTOCOL_VERSION) {
+            SendReply(CCREP_REJECT, [&]() { Common::MSG_WriteString(&net_message, "Incompatible version.\n"); });
             continue;
         }
 
@@ -360,7 +352,7 @@ qsocket_t* DatagramDriver::CheckNewConnections() {
                 if (net_time - s->connecttime < 2.0) {
                     SendReply(CCREP_ACCEPT, [&]() {
                         struct qsockaddr newaddr; lan.GetSocketAddr(s->socket, &newaddr);
-                        MSG_WriteLong(&net_message, lan.GetSocketPort(&newaddr));
+                        Common::MSG_WriteLong(&net_message, lan.GetSocketPort(&newaddr));
                     });
                     return nullptr;
                 }
@@ -370,7 +362,7 @@ qsocket_t* DatagramDriver::CheckNewConnections() {
 
         qsocket_t* sock = NET_NewQSocket();
         if (!sock) {
-            SendReply(CCREP_REJECT, [&]() { MSG_WriteString(&net_message, "Server is full.\n"); });
+            SendReply(CCREP_REJECT, [&]() { Common::MSG_WriteString(&net_message, "Server is full.\n"); });
             continue;
         }
 
@@ -380,10 +372,10 @@ qsocket_t* DatagramDriver::CheckNewConnections() {
         if (lan.Connect(newsock, &clientaddr) == -1) { lan.CloseSocket(newsock); NET_FreeQSocket(sock); continue; }
 
         sock->socket = newsock; sock->landriver = net_landriverlevel; sock->addr = clientaddr;
-        Q_strncpy(sock->address, lan.AddrToString(&clientaddr), sizeof(sock->address));
+        Common::Q_strncpy(sock->address, lan.AddrToString(&clientaddr), sizeof(sock->address));
         SendReply(CCREP_ACCEPT, [&]() {
             struct qsockaddr newaddr; lan.GetSocketAddr(newsock, &newaddr);
-            MSG_WriteLong(&net_message, lan.GetSocketPort(&newaddr));
+            Common::MSG_WriteLong(&net_message, lan.GetSocketPort(&newaddr));
         });
         ret = sock; break;
     }
@@ -398,38 +390,38 @@ void DatagramDriver::SearchForHosts(qboolean xmit) {
 
         struct qsockaddr readaddr, myaddr; lan.GetSocketAddr(lan.GetControlSocket(), &myaddr);
         if (xmit) {
-            SZ_Clear(&net_message); MSG_WriteLong(&net_message, 0); MSG_WriteByte(&net_message, CCREQ_SERVER_INFO);
-            MSG_WriteString(&net_message, "QUAKE"); MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
+            Common::SZ_Clear(&net_message); Common::MSG_WriteLong(&net_message, 0); Common::MSG_WriteByte(&net_message, CCREQ_SERVER_INFO);
+            Common::MSG_WriteString(&net_message, "QUAKE"); Common::MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
             WriteControlHeader(&net_message);
-            lan.Broadcast(lan.GetControlSocket(), net_message.data, net_message.cursize); SZ_Clear(&net_message);
+            lan.Broadcast(lan.GetControlSocket(), net_message.data, net_message.cursize); Common::SZ_Clear(&net_message);
         }
 
         int ret;
         while ((ret = lan.Read(lan.GetControlSocket(), net_message.data, net_message.maxsize, &readaddr)) > 0) {
             int control; if (!ReadControlHeader(ret, control)) continue;
             if (lan.AddrCompare(&readaddr, &myaddr) >= 0 || hostCacheCount == HOSTCACHESIZE) continue;
-            if (MSG_ReadByte() != CCREP_SERVER_INFO) continue;
+            if (Common::MSG_ReadByte() != CCREP_SERVER_INFO) continue;
 
-            lan.GetAddrFromName(MSG_ReadString(), &readaddr); int n;
+            lan.GetAddrFromName(Common::MSG_ReadString(), &readaddr); int n;
             for (n = 0; n < hostCacheCount; n++) if (lan.AddrCompare(&readaddr, &hostcache[n].addr) == 0) break;
             if (n < hostCacheCount) continue;
 
             hostCacheCount++;
-            Q_strncpy(hostcache[n].name, MSG_ReadString(), sizeof(hostcache[n].name));
-            Q_strncpy(hostcache[n].map, MSG_ReadString(), sizeof(hostcache[n].map));
-            hostcache[n].users = MSG_ReadByte(); hostcache[n].maxusers = MSG_ReadByte();
-            if (MSG_ReadByte() != NET_PROTOCOL_VERSION) {
-                Q_strcpy(hostcache[n].cname, hostcache[n].name); hostcache[n].cname[14] = 0;
-                Q_strcpy(hostcache[n].name, "*"); Q_strcat(hostcache[n].name, hostcache[n].cname);
+            Common::Q_strncpy(hostcache[n].name, Common::MSG_ReadString(), sizeof(hostcache[n].name));
+            Common::Q_strncpy(hostcache[n].map, Common::MSG_ReadString(), sizeof(hostcache[n].map));
+            hostcache[n].users = Common::MSG_ReadByte(); hostcache[n].maxusers = Common::MSG_ReadByte();
+            if (Common::MSG_ReadByte() != NET_PROTOCOL_VERSION) {
+                Common::Q_strcpy(hostcache[n].cname, hostcache[n].name); hostcache[n].cname[14] = 0;
+                Common::Q_strcpy(hostcache[n].name, "*"); Common::Q_strcat(hostcache[n].name, hostcache[n].cname);
             }
-            Q_memcpy(&hostcache[n].addr, &readaddr, sizeof(struct qsockaddr));
+            Common::Q_memcpy(&hostcache[n].addr, &readaddr, sizeof(struct qsockaddr));
             hostcache[n].driver = net_driverlevel; hostcache[n].ldriver = net_landriverlevel;
-            Q_strncpy(hostcache[n].cname, lan.AddrToString(&readaddr), sizeof(hostcache[n].cname));
+            Common::Q_strncpy(hostcache[n].cname, lan.AddrToString(&readaddr), sizeof(hostcache[n].cname));
 
             for (int i = 0; i < hostCacheCount; i++) {
                 if (i == n) continue;
-                if (Q_strcasecmp(hostcache[n].name, hostcache[i].name) == 0) {
-                    int len = Q_strlen(hostcache[n].name);
+                if (Common::Q_strcasecmp(hostcache[n].name, hostcache[i].name) == 0) {
+                    int len = Common::Q_strlen(hostcache[n].name);
                     if (len < 15 && hostcache[n].name[len - 1] > '8') { hostcache[n].name[len] = '0'; hostcache[n].name[len + 1] = 0; }
                     else { hostcache[n].name[len - 1]++; }
                     i = -1;
@@ -444,7 +436,7 @@ qsocket_t* DatagramDriver::Connect(const char* host) {
         if (!LANFunc(net_landriverlevel).IsInitialized()) continue;
         NetLanDriver& lan = LANFunc(net_landriverlevel);
 
-        struct qsockaddr sendaddr, readaddr; Sys_Printf("_Datagram_Connect: connecting to '%s'...\n", host);
+        struct qsockaddr sendaddr, readaddr; Common::Sys_Printf("_Datagram_Connect: connecting to '%s'...\n", host);
         if (lan.GetAddrFromName(host, &sendaddr) == -1) continue;
 
         int newsock = lan.OpenSocket(0); if (newsock == -1) continue;
@@ -453,15 +445,15 @@ qsocket_t* DatagramDriver::Connect(const char* host) {
         sock->socket = newsock; sock->landriver = net_landriverlevel;
         if (lan.Connect(newsock, &sendaddr) == -1) { NET_FreeQSocket(sock); lan.CloseSocket(newsock); continue; }
 
-        Con_Printf("trying...\n"); Screen::GetScreenSystem().UpdateScreen();
+        Console::Con_Printf("trying...\n"); Screen::GetScreenSystem().UpdateScreen();
         int ret = 0; const char* reason = nullptr;
 
         for (int reps = 0; reps < 3; reps++) {
             double start_time = SetNetTime();
-            SZ_Clear(&net_message); MSG_WriteLong(&net_message, 0); MSG_WriteByte(&net_message, CCREQ_CONNECT);
-            MSG_WriteString(&net_message, "QUAKE"); MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
+            Common::SZ_Clear(&net_message); Common::MSG_WriteLong(&net_message, 0); Common::MSG_WriteByte(&net_message, CCREQ_CONNECT);
+            Common::MSG_WriteString(&net_message, "QUAKE"); Common::MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
             WriteControlHeader(&net_message); lan.Write(newsock, net_message.data, net_message.cursize, &sendaddr);
-            SZ_Clear(&net_message);
+            Common::SZ_Clear(&net_message);
 
             do {
                 ret = lan.Read(newsock, net_message.data, net_message.maxsize, &readaddr);
@@ -477,25 +469,25 @@ qsocket_t* DatagramDriver::Connect(const char* host) {
             } while (ret == 0 && (SetNetTime() - start_time) < 2.5);
 
             if (ret) break;
-            Con_Printf("still trying...\n"); Screen::GetScreenSystem().UpdateScreen();
+            Console::Con_Printf("still trying...\n"); Screen::GetScreenSystem().UpdateScreen();
         }
 
         if (ret <= 0) {
-            reason = (ret == 0) ? "No Response" : "Network Error"; Con_Printf("%s\n", reason); m_return_reason = reason;
+            reason = (ret == 0) ? "No Response" : "Network Error"; Console::Con_Printf("%s\n", reason); Menu::m_return_reason = reason;
         } else {
-            ret = MSG_ReadByte();
-            if (ret == CCREP_REJECT) { reason = MSG_ReadString(); Con_Printf(reason); m_return_reason = reason; }
+            ret = Common::MSG_ReadByte();
+            if (ret == CCREP_REJECT) { reason = Common::MSG_ReadString(); Console::Con_Printf(reason); Menu::m_return_reason = reason; }
             else if (ret == CCREP_ACCEPT) {
-                Q_memcpy(&sock->addr, &sendaddr, sizeof(struct qsockaddr)); lan.SetSocketPort(&sock->addr, MSG_ReadLong());
-                lan.GetNameFromAddr(&sendaddr, sock->address); Con_Printf("Connection accepted\n");
+                Common::Q_memcpy(&sock->addr, &sendaddr, sizeof(struct qsockaddr)); lan.SetSocketPort(&sock->addr, Common::MSG_ReadLong());
+                lan.GetNameFromAddr(&sendaddr, sock->address); Console::Con_Printf("Connection accepted\n");
                 sock->lastMessageTime = SetNetTime();
-                if (lan.Connect(newsock, &sock->addr) != -1) { m_return_onerror = false; return sock; }
-                reason = "Connect to Game failed"; Con_Printf("%s\n", reason); m_return_reason = reason;
-            } else { reason = "Bad Response"; Con_Printf("%s\n", reason); m_return_reason = reason; }
+                if (lan.Connect(newsock, &sock->addr) != -1) { Menu::m_return_onerror = false; return sock; }
+                reason = "Connect to Game failed"; Console::Con_Printf("%s\n", reason); Menu::m_return_reason = reason;
+            } else { reason = "Bad Response"; Console::Con_Printf("%s\n", reason); Menu::m_return_reason = reason; }
         }
 
         NET_FreeQSocket(sock); lan.CloseSocket(newsock);
-        if (m_return_onerror) { key_dest = key_menu; m_state = m_return_state; m_return_onerror = false; }
+        if (Menu::m_return_onerror) { Keys::key_dest = Keys::key_menu; Menu::m_state = Menu::m_return_state; Menu::m_return_onerror = false; }
         return nullptr;
     }
     return nullptr;

@@ -6,9 +6,6 @@
 
 #include <climits>
 
-using namespace Math;
-using namespace Audio;
-
 namespace Render {
 
 void R_DrawCulledPolys();

@@ -10,15 +10,6 @@
 #include <algorithm>
 #include <limits>
 
-using namespace Common;
-using namespace Console;
-using namespace Cvar;
-using namespace Cmd;
-using namespace Client;
-using namespace Model;
-using namespace Host;
-using namespace Math;
-
 namespace Audio {
 
 SPSCQueue<AudioCommand, 256> command_queue;
@@ -50,30 +41,30 @@ cvar_t loadas8bit = {"loadas8bit", "0", {}, {}, {}, {}};
 
 void PushAudioCommand(const AudioCommand& cmd) {
     if (!command_queue.Push(cmd)) {
-        Con_Printf("WARNING: Audio command queue overflow!\n");
+        Console::Con_Printf("WARNING: Audio command queue overflow!\n");
     }
 }
 
 void S_SoundInfo_f() {
     if (!sound_started || !shm) {
-        Con_Printf("sound system not started\n");
+        Console::Con_Printf("sound system not started\n");
         return;
     }
-    Con_Printf("%5d stereo\n%5d samples\n%5d samplepos\n%5d samplebits\n%5d submission_chunk\n%5d speed\n0x%x dma buffer\n%5d total_channels\n",
+    Console::Con_Printf("%5d stereo\n%5d samples\n%5d samplepos\n%5d samplebits\n%5d submission_chunk\n%5d speed\n0x%x dma buffer\n%5d total_channels\n",
                shm->channels.load() - 1, shm->samples.load(), shm->samplepos.load(), shm->samplebits.load(),
                shm->submission_chunk.load(), shm->speed.load(), shm->buffer.load(), total_channels.load(std::memory_order_relaxed));
 }
 
 void S_Startup() {
     if (snd_initialized && !(sound_started = fakedma || SNDDMA_Init())) {
-        Con_Printf("S_Startup: SNDDMA_Init failed.\n");
+        Console::Con_Printf("S_Startup: SNDDMA_Init failed.\n");
     }
 }
 
 void S_Init() {
-    Con_Printf("\nSound Initialization\n");
-    if (COM_CheckParm("-nosound")) return;
-    if (COM_CheckParm("-simsound")) fakedma = true;
+    Console::Con_Printf("\nSound Initialization\n");
+    if (Common::COM_CheckParm("-nosound")) return;
+    if (Common::COM_CheckParm("-simsound")) fakedma = true;
 
     Cmd::AddCommand("play", S_Play);
     Cmd::AddCommand("playvol", S_PlayVol);
@@ -97,7 +88,7 @@ void S_Init() {
         static std::vector<unsigned char> fakedma_buffer(1 << 16);
         shm->Reset(16, 22050, 2, 32768, fakedma_buffer.data());
     }
-    if (shm) Con_Printf("Sound sampling rate: %i\n", shm->speed.load());
+    if (shm) Console::Con_Printf("Sound sampling rate: %i\n", shm->speed.load());
     ambient_sfx[AMBIENT_WATER] = S_PrecacheSound("ambience/water1.wav");
     ambient_sfx[AMBIENT_SKY]   = S_PrecacheSound("ambience/wind2.wav");
     S_StopAllSounds(true);
@@ -112,15 +103,15 @@ void S_Shutdown() {
 }
 
 sfx_t* S_FindName(std::string_view name) {
-    if (name.empty()) Sys_Error("S_FindName: NULL\n");
+    if (name.empty()) Common::Sys_Error("S_FindName: NULL\n");
     if (name.length() >= MAX_QPATH) {
-        Sys_Error("Sound name too long: %.*s", static_cast<int>(name.length()), name.data());
+        Common::Sys_Error("Sound name too long: %.*s", static_cast<int>(name.length()), name.data());
     }
     auto it = std::find_if(known_sfx.begin(), known_sfx.end(), [name](const sfx_t& s) {
         return std::string_view(s.name) == name;
     });
     if (it != known_sfx.end()) return &*it;
-    if (known_sfx.size() >= MAX_SFX) Sys_Error("S_FindName: out of sfx_t");
+    if (known_sfx.size() >= MAX_SFX) Common::Sys_Error("S_FindName: out of sfx_t");
     sfx_t& new_sfx = known_sfx.emplace_back();
     name.copy(new_sfx.name, name.length());
     return &new_sfx;
@@ -141,7 +132,7 @@ channel_t* SND_PickChannel(int entnum, int entchannel) {
             chan.sfx = nullptr;
             return &chan;
         }
-        if (chan.entnum == cl.viewentity && entnum != cl.viewentity && chan.sfx) continue;
+        if (chan.entnum == Client::cl.viewentity && entnum != Client::cl.viewentity && chan.sfx) continue;
         if (int remaining = chan.end - paintedtime; remaining < life_left) {
             life_left = remaining;
             first_to_die = &chan;
@@ -152,7 +143,7 @@ channel_t* SND_PickChannel(int entnum, int entchannel) {
 }
 
 void SND_Spatialize(channel_t* ch) {
-    if (ch->entnum == cl.viewentity) {
+    if (ch->entnum == Client::cl.viewentity) {
         ch->leftvol = ch->rightvol = ch->master_vol;
         return;
     }
@@ -298,7 +289,7 @@ void S_UpdateInternal(const Vector3& origin, const Vector3& forward, const Vecto
         }
     }
     if (fakedma && snd_show.value) {
-        Con_Printf("----(%i)----\n", static_cast<int>(std::count_if(channels.begin(), channels.begin() + total_channels, [](const channel_t& c) {
+        Console::Con_Printf("----(%i)----\n", static_cast<int>(std::count_if(channels.begin(), channels.begin() + total_channels, [](const channel_t& c) {
             return c.sfx && (c.leftvol || c.rightvol);
         })));
     }
@@ -308,10 +299,10 @@ void S_Update(const Vector3& origin, const Vector3& forward, const Vector3& righ
     if (!sound_started || (snd_blocked > 0)) return;
     AudioCommand cmd{ .type = AudioCommandType::ListenerUpdate, .origin = origin, .vol = volume.value,
                       .v_forward = forward, .v_right = right, .v_up = up,
-                      .host_frametime = static_cast<float>(host_frametime), .ambient_fade = ambient_fade.value,
+                      .host_frametime = static_cast<float>(Host::host_frametime), .ambient_fade = ambient_fade.value,
                       .snd_ambient = snd_ambient };
-    if (snd_ambient && cl.worldmodel && ambient_level.value) {
-        if (mleaf_t* l = Mod_PointInLeaf(origin, cl.worldmodel)) {
+    if (snd_ambient && Client::cl.worldmodel && ambient_level.value) {
+        if (mleaf_t* l = Model::Mod_PointInLeaf(origin, Client::cl.worldmodel)) {
             for (int i = 0; i < NUM_AMBIENTS; i++) {
                 float vol = ambient_level.value * l->ambient_sound_level[i];
                 cmd.ambient_vols[i] = (vol < 8) ? 0 : static_cast<int>(vol);
@@ -324,7 +315,6 @@ void S_Update(const Vector3& origin, const Vector3& forward, const Vector3& righ
         while (command_queue.Pop(c)) ExecuteAudioCommand(c);
     }
 }
-
 
 void S_PlayHelper(bool has_volume) {
     thread_local std::mt19937 rng(std::random_device{}());
@@ -340,7 +330,7 @@ void S_PlayHelper(bool has_volume) {
             auto arg_vol = Cmd::Argv(i + 1);
             std::from_chars(arg_vol.data(), arg_vol.data() + arg_vol.size(), vol);
         }
-        S_StartSound(hash++, 0, sfx, cl_entities[cl.viewentity].origin, vol, 1.0f);
+        S_StartSound(hash++, 0, sfx, Client::cl_entities[Client::cl.viewentity].origin, vol, 1.0f);
     }
 }
 
@@ -352,20 +342,20 @@ void S_SoundList() {
     for (auto& sfx : known_sfx) {
         if (sfxcache_t* sc = S_SfxCache(&sfx)) {
             total += sc->length * sc->width * (sc->stereo + 1);
-            Con_Printf("%s%s\n", (sc->loopstart >= 0) ? "L" : " ", sfx.name);
+            Console::Con_Printf("%s%s\n", (sc->loopstart >= 0) ? "L" : " ", sfx.name);
         }
     }
-    Con_Printf("Total sound memory: %i\n", total);
+    Console::Con_Printf("Total sound memory: %i\n", total);
 }
 
 void S_LocalSound(std::string_view sound) {
     if (nosound.value || !sound_started) return;
     sfx_t* sfx = S_FindName(sound);
     if (!sfx || !S_LoadSound(sfx)) {
-        if (sfx) Con_Printf("WARNING: S_LocalSound: can't load %.*s\n", static_cast<int>(sound.length()), sound.data());
+        if (sfx) Console::Con_Printf("WARNING: S_LocalSound: can't load %.*s\n", static_cast<int>(sound.length()), sound.data());
         return;
     }
-    S_StartSound(cl.viewentity, -1, sfx, vec3_origin, 1.0f, 1.0f);
+    S_StartSound(Client::cl.viewentity, -1, sfx, Math::vec3_origin, 1.0f, 1.0f);
 }
 
 } // namespace Audio

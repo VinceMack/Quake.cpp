@@ -6,8 +6,6 @@
 #include <cmath>
 #include <tuple>
 
-using namespace Math;
-
 namespace Render {
 
 constexpr int DPS_MAXSPANS = MAXHEIGHT + 1;
@@ -326,7 +324,7 @@ static void D_PolysetSetUpForLineScan(fixed8_t startvertu,
     int tn = endvertv - startvertv;
     double dm = static_cast<double>(tm);
     double dn = static_cast<double>(tn);
-    std::tie(ubasestep, erroradjustup) = FloorDivMod(dm, dn);
+    std::tie(ubasestep, erroradjustup) = Math::FloorDivMod(dm, dn);
     erroradjustdown = tn;
 }
 

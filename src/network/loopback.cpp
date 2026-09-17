@@ -2,42 +2,35 @@
 #include "quakedef.hpp"
 #include "network/loopback.hpp"
 
-using namespace Common;
-using namespace Console;
-using namespace Cvar;
-using namespace Cmd;
-using namespace Server;
-using namespace Client;
-
 namespace Net {
 
 int LoopbackDriver::Init() {
-    return (cls.state == ca_dedicated) ? -1 : 0;
+    return (Client::cls.state == ca_dedicated) ? -1 : 0;
 }
 
 void LoopbackDriver::SearchForHosts(qboolean) {
-    if (!sv.active) return;
+    if (!Server::sv.active) return;
     hostCacheCount = 1;
-    const char* name = (Q_strcmp(hostname.string.c_str(), "UNNAMED") == 0) ? "local" : hostname.string.c_str();
-    Q_strncpy(hostcache[0].name, name, sizeof(hostcache[0].name));
-    Q_strncpy(hostcache[0].map, sv.name.data(), sizeof(hostcache[0].map));
+    const char* name = (Common::Q_strcmp(hostname.string.c_str(), "UNNAMED") == 0) ? "local" : hostname.string.c_str();
+    Common::Q_strncpy(hostcache[0].name, name, sizeof(hostcache[0].name));
+    Common::Q_strncpy(hostcache[0].map, Server::sv.name.data(), sizeof(hostcache[0].map));
     hostcache[0].users = net_activeconnections;
-    hostcache[0].maxusers = svs.maxclients;
+    hostcache[0].maxusers = Server::svs.maxclients;
     hostcache[0].driver = net_driverlevel;
-    Q_strcpy(hostcache[0].cname, "local");
+    Common::Q_strcpy(hostcache[0].cname, "local");
 }
 
 qsocket_t* LoopbackDriver::Connect(const char* host) {
-    if (Q_strcmp(host, "local") != 0) return nullptr;
+    if (Common::Q_strcmp(host, "local") != 0) return nullptr;
     localconnectpending = true;
 
     if (!loop_client && !(loop_client = NET_NewQSocket())) return nullptr;
-    Q_strcpy(loop_client->address, "localhost");
+    Common::Q_strcpy(loop_client->address, "localhost");
     loop_client->receiveMessageLength = loop_client->sendMessageLength = 0;
     loop_client->canSend = true;
 
     if (!loop_server && !(loop_server = NET_NewQSocket())) return nullptr;
-    Q_strcpy(loop_server->address, "LOCAL");
+    Common::Q_strcpy(loop_server->address, "LOCAL");
     loop_server->receiveMessageLength = loop_server->sendMessageLength = 0;
     loop_server->canSend = true;
 
@@ -60,12 +53,12 @@ int LoopbackDriver::GetMessage(qsocket_t* sock) {
     int ret = sock->receiveMessage[0];
     int length = sock->receiveMessage[1] + (sock->receiveMessage[2] << 8);
 
-    SZ_Clear(&net_message);
-    SZ_Write(&net_message, &sock->receiveMessage[4], length);
+    Common::SZ_Clear(&net_message);
+    Common::SZ_Write(&net_message, &sock->receiveMessage[4], length);
     length = IntAlign(length + 4);
     sock->receiveMessageLength -= length;
     if (sock->receiveMessageLength) {
-        Q_memcpy(sock->receiveMessage.data(), &sock->receiveMessage[length], sock->receiveMessageLength);
+        Common::Q_memcpy(sock->receiveMessage.data(), &sock->receiveMessage[length], sock->receiveMessageLength);
     }
     if (sock->driverdata && ret == 1) {
         ((qsocket_t*)sock->driverdata)->canSend = true;
@@ -77,7 +70,7 @@ int LoopbackDriver::SendMessage(qsocket_t* sock, sizebuf_t* data) {
     if (!sock->driverdata) return -1;
     qsocket_t* peer = (qsocket_t*)sock->driverdata;
     if ((peer->receiveMessageLength + data->cursize + 4) > NET_MAXMESSAGE) {
-        Sys_Error("Loop_SendMessage: overflow\n");
+        Common::Sys_Error("Loop_SendMessage: overflow\n");
     }
 
     byte* buffer = peer->receiveMessage.data() + peer->receiveMessageLength;
@@ -85,7 +78,7 @@ int LoopbackDriver::SendMessage(qsocket_t* sock, sizebuf_t* data) {
     *buffer++ = static_cast<byte>(data->cursize & 0xff);
     *buffer++ = static_cast<byte>(data->cursize >> 8);
     buffer++;
-    Q_memcpy(buffer, data->data, data->cursize);
+    Common::Q_memcpy(buffer, data->data, data->cursize);
     peer->receiveMessageLength = IntAlign(peer->receiveMessageLength + data->cursize + 4);
     sock->canSend = false;
     return 1;
@@ -101,7 +94,7 @@ int LoopbackDriver::SendUnreliableMessage(qsocket_t* sock, sizebuf_t* data) {
     *buffer++ = static_cast<byte>(data->cursize & 0xff);
     *buffer++ = static_cast<byte>(data->cursize >> 8);
     buffer++;
-    Q_memcpy(buffer, data->data, data->cursize);
+    Common::Q_memcpy(buffer, data->data, data->cursize);
     peer->receiveMessageLength = IntAlign(peer->receiveMessageLength + data->cursize + 4);
     return 1;
 }

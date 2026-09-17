@@ -6,11 +6,6 @@
 #include <cmath>
 #include <cstring>
 
-using namespace Math;
-using namespace Common;
-using namespace Console;
-using namespace Client;
-
 namespace Render {
 
 void D_DrawSprite();
@@ -127,7 +122,7 @@ void R_SetupAndDrawSprite()
             return;
         }
         if (nump >= MAXWORKINGVERTS) {
-            Sys_Error("R_SetupAndDrawSprite: too many points");
+            Common::Sys_Error("R_SetupAndDrawSprite: too many points");
         }
     }
 
@@ -164,7 +159,7 @@ mspriteframe_t* R_GetSpriteframe(msprite_t* psprite)
 {
     int frame = currententity->frame;
     if ((frame >= psprite->numframes) || (frame < 0)) {
-        Con_Printf("R_DrawSprite: no such frame %d\n", frame);
+        Console::Con_Printf("R_DrawSprite: no such frame %d\n", frame);
         frame = 0;
     }
     if (psprite->frames[frame].type == spriteframetype_t::SPR_SINGLE) {
@@ -175,7 +170,7 @@ mspriteframe_t* R_GetSpriteframe(msprite_t* psprite)
     float* pintervals = pspritegroup->intervals;
     int numframes = pspritegroup->numframes;
     float fullinterval = pintervals[numframes - 1];
-    float time = static_cast<float>(cl.time + currententity->syncbase);
+    float time = static_cast<float>(Client::cl.time + currententity->syncbase);
     float targettime = time - ((int)(time / fullinterval)) * fullinterval;
     int i = 0;
     for (; i < (numframes - 1); i++) {
@@ -218,7 +213,7 @@ void R_DrawSprite()
         r_spritedesc.vright.normalize();
         r_spritedesc.vpn = Vector3(-r_spritedesc.vright.y, r_spritedesc.vright.x, 0);
     } else if (psprite->type == SPR_ORIENTED) {
-        AngleVectors(currententity->angles, r_spritedesc.vpn, r_spritedesc.vright,
+        Math::AngleVectors(currententity->angles, r_spritedesc.vpn, r_spritedesc.vright,
             r_spritedesc.vup);
     } else if (psprite->type == SPR_VP_PARALLEL_ORIENTED) {
         float angle = static_cast<float>(currententity->angles[ROLL] * (M_PI * 2 / 360));
@@ -228,7 +223,7 @@ void R_DrawSprite()
         r_spritedesc.vright = vright * cr + vup * sr;
         r_spritedesc.vup = vright * -sr + vup * cr;
     } else {
-        Sys_Error("R_DrawSprite: Bad sprite type %d", psprite->type);
+        Common::Sys_Error("R_DrawSprite: Bad sprite type %d", psprite->type);
     }
     R_RotateSprite(psprite->beamlength);
     R_SetupAndDrawSprite();

@@ -2,8 +2,6 @@
 #include "quakedef.hpp"
 #include "world/collision.hpp"
 
-using namespace Common;
-
 namespace Collision {
 
 static hull_t box_hull;
@@ -52,7 +50,7 @@ int HullPointContents(hull_t* hull, int num, const Vector3& p)
 
     while (num >= 0) {
         if (num < hull->firstclipnode || num > hull->lastclipnode) {
-            Sys_Error("HullPointContents: bad node number");
+            Common::Sys_Error("HullPointContents: bad node number");
         }
         node = hull->clipnodes + num;
         plane = hull->planes + node->planenum;
@@ -94,7 +92,7 @@ qboolean RecursiveHullCheck(hull_t* hull, int num, float p1f, float p2f, const V
     }
 
     if (num < hull->firstclipnode || num > hull->lastclipnode) {
-        Sys_Error("RecursiveHullCheck: bad node number");
+        Common::Sys_Error("RecursiveHullCheck: bad node number");
     }
 
     node = hull->clipnodes + num;

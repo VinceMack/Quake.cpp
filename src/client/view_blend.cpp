@@ -8,28 +8,6 @@
 
 #include <cmath>
 
-using namespace Common;
-using namespace Console;
-using namespace Render;
-using namespace Draw;
-using namespace Host;
-using namespace Input;
-using namespace Keys;
-using namespace Math;
-using namespace Menu;
-using namespace Model;
-using namespace Net;
-using namespace VM;
-using namespace Sbar;
-using namespace Screen;
-using namespace Server;
-using namespace Audio;
-using namespace Vid;
-using namespace Wad;
-using namespace Cvar;
-using namespace Cmd;
-using namespace Client;
-
 namespace View {
 
 static cshift_t cshift_empty = { { 130, 80, 50 }, 0 };
@@ -71,7 +49,7 @@ static qboolean V_CheckGamma(void)
     }
     oldgammavalue = v_gamma.value;
     BuildGammaTable(v_gamma.value);
-    vid.recalc_refdef = 1;
+    Vid::vid.recalc_refdef = 1;
     return true;
 }
 
@@ -83,41 +61,41 @@ void V_ParseDamage(void)
     entity_t* ent;
     float side;
     float count;
-    armor = MSG_ReadByte();
-    blood = MSG_ReadByte();
-    from.x = MSG_ReadCoord();
-    from.y = MSG_ReadCoord();
-    from.z = MSG_ReadCoord();
+    armor = Common::MSG_ReadByte();
+    blood = Common::MSG_ReadByte();
+    from.x = Common::MSG_ReadCoord();
+    from.y = Common::MSG_ReadCoord();
+    from.z = Common::MSG_ReadCoord();
     count = static_cast<float>(blood * 0.5 + armor * 0.5);
     if (count < 10) {
         count = 10;
     }
-    cl.faceanimtime = static_cast<float>(cl.time + 0.2);
-    cl.cshifts[CSHIFT_DAMAGE].percent += static_cast<int>(3 * count);
-    if (cl.cshifts[CSHIFT_DAMAGE].percent < 0) {
-        cl.cshifts[CSHIFT_DAMAGE].percent = 0;
+    Client::cl.faceanimtime = static_cast<float>(Client::cl.time + 0.2);
+    Client::cl.cshifts[CSHIFT_DAMAGE].percent += static_cast<int>(3 * count);
+    if (Client::cl.cshifts[CSHIFT_DAMAGE].percent < 0) {
+        Client::cl.cshifts[CSHIFT_DAMAGE].percent = 0;
     }
-    if (cl.cshifts[CSHIFT_DAMAGE].percent > 150) {
-        cl.cshifts[CSHIFT_DAMAGE].percent = 150;
+    if (Client::cl.cshifts[CSHIFT_DAMAGE].percent > 150) {
+        Client::cl.cshifts[CSHIFT_DAMAGE].percent = 150;
     }
     if (armor > blood) {
-        cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 200;
-        cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 100;
-        cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 100;
+        Client::cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 200;
+        Client::cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 100;
+        Client::cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 100;
     } else if (armor) {
-        cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 220;
-        cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 50;
-        cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 50;
+        Client::cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 220;
+        Client::cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 50;
+        Client::cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 50;
     } else {
-        cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 255;
-        cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 0;
-        cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 0;
+        Client::cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 255;
+        Client::cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 0;
+        Client::cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 0;
     }
 
-    ent = &cl_entities[cl.viewentity];
+    ent = &Client::cl_entities[Client::cl.viewentity];
     from = from - ent->origin;
     from.normalize();
-    AngleVectors(ent->angles, v_forward, v_right, v_up);
+    Math::AngleVectors(ent->angles, v_forward, v_right, v_up);
     side = from.dot(v_right);
     v_dmg_roll = count * side * v_kickroll.value;
     side = from.dot(v_forward);
@@ -127,18 +105,18 @@ void V_ParseDamage(void)
 
 static void V_cshift_f(void)
 {
-    cshift_empty.destcolor[0] = Q_atoi(Cmd::Argv(1));
-    cshift_empty.destcolor[1] = Q_atoi(Cmd::Argv(2));
-    cshift_empty.destcolor[2] = Q_atoi(Cmd::Argv(3));
-    cshift_empty.percent = Q_atoi(Cmd::Argv(4));
+    cshift_empty.destcolor[0] = Common::Q_atoi(Cmd::Argv(1));
+    cshift_empty.destcolor[1] = Common::Q_atoi(Cmd::Argv(2));
+    cshift_empty.destcolor[2] = Common::Q_atoi(Cmd::Argv(3));
+    cshift_empty.percent = Common::Q_atoi(Cmd::Argv(4));
 }
 
 static void V_BonusFlash_f(void)
 {
-    cl.cshifts[CSHIFT_BONUS].destcolor[0] = 215;
-    cl.cshifts[CSHIFT_BONUS].destcolor[1] = 186;
-    cl.cshifts[CSHIFT_BONUS].destcolor[2] = 69;
-    cl.cshifts[CSHIFT_BONUS].percent = 50;
+    Client::cl.cshifts[CSHIFT_BONUS].destcolor[0] = 215;
+    Client::cl.cshifts[CSHIFT_BONUS].destcolor[1] = 186;
+    Client::cl.cshifts[CSHIFT_BONUS].destcolor[2] = 69;
+    Client::cl.cshifts[CSHIFT_BONUS].percent = 50;
 }
 
 void V_BonusFlash()
@@ -151,43 +129,43 @@ void V_SetContentsColor(int contents)
     switch (contents) {
     case CONTENTS_EMPTY:
     case CONTENTS_SOLID:
-        cl.cshifts[CSHIFT_CONTENTS] = cshift_empty;
+        Client::cl.cshifts[CSHIFT_CONTENTS] = cshift_empty;
         break;
     case CONTENTS_LAVA:
-        cl.cshifts[CSHIFT_CONTENTS] = cshift_lava;
+        Client::cl.cshifts[CSHIFT_CONTENTS] = cshift_lava;
         break;
     case CONTENTS_SLIME:
-        cl.cshifts[CSHIFT_CONTENTS] = cshift_slime;
+        Client::cl.cshifts[CSHIFT_CONTENTS] = cshift_slime;
         break;
     default:
-        cl.cshifts[CSHIFT_CONTENTS] = cshift_water;
+        Client::cl.cshifts[CSHIFT_CONTENTS] = cshift_water;
     }
 }
 
 static void V_CalcPowerupCshift(void)
 {
-    if (cl.items & IT_QUAD) {
-        cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
-        cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 0;
-        cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 255;
-        cl.cshifts[CSHIFT_POWERUP].percent = 30;
-    } else if (cl.items & IT_SUIT) {
-        cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
-        cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
-        cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
-        cl.cshifts[CSHIFT_POWERUP].percent = 20;
-    } else if (cl.items & IT_INVISIBILITY) {
-        cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 100;
-        cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 100;
-        cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 100;
-        cl.cshifts[CSHIFT_POWERUP].percent = 100;
-    } else if (cl.items & IT_INVULNERABILITY) {
-        cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 255;
-        cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
-        cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
-        cl.cshifts[CSHIFT_POWERUP].percent = 30;
+    if (Client::cl.items & IT_QUAD) {
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 0;
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 255;
+        Client::cl.cshifts[CSHIFT_POWERUP].percent = 30;
+    } else if (Client::cl.items & IT_SUIT) {
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
+        Client::cl.cshifts[CSHIFT_POWERUP].percent = 20;
+    } else if (Client::cl.items & IT_INVISIBILITY) {
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 100;
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 100;
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 100;
+        Client::cl.cshifts[CSHIFT_POWERUP].percent = 100;
+    } else if (Client::cl.items & IT_INVULNERABILITY) {
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 255;
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
+        Client::cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
+        Client::cl.cshifts[CSHIFT_POWERUP].percent = 30;
     } else {
-        cl.cshifts[CSHIFT_POWERUP].percent = 0;
+        Client::cl.cshifts[CSHIFT_POWERUP].percent = 0;
     }
 }
 
@@ -202,30 +180,30 @@ void V_UpdatePalette(void)
     V_CalcPowerupCshift();
     new_shift = false;
     for (i = 0; i < NUM_CSHIFTS; i++) {
-        if (cl.cshifts[i].percent != cl.prev_cshifts[i].percent) {
+        if (Client::cl.cshifts[i].percent != Client::cl.prev_cshifts[i].percent) {
             new_shift = true;
-            cl.prev_cshifts[i].percent = cl.cshifts[i].percent;
+            Client::cl.prev_cshifts[i].percent = Client::cl.cshifts[i].percent;
         }
         for (j = 0; j < 3; j++) {
-            if (cl.cshifts[i].destcolor[j] != cl.prev_cshifts[i].destcolor[j]) {
+            if (Client::cl.cshifts[i].destcolor[j] != Client::cl.prev_cshifts[i].destcolor[j]) {
                 new_shift = true;
-                cl.prev_cshifts[i].destcolor[j] = cl.cshifts[i].destcolor[j];
+                Client::cl.prev_cshifts[i].destcolor[j] = Client::cl.cshifts[i].destcolor[j];
             }
         }
     }
-    cl.cshifts[CSHIFT_DAMAGE].percent -= static_cast<int>(host_frametime * 150);
-    if (cl.cshifts[CSHIFT_DAMAGE].percent <= 0) {
-        cl.cshifts[CSHIFT_DAMAGE].percent = 0;
+    Client::cl.cshifts[CSHIFT_DAMAGE].percent -= static_cast<int>(Host::host_frametime * 150);
+    if (Client::cl.cshifts[CSHIFT_DAMAGE].percent <= 0) {
+        Client::cl.cshifts[CSHIFT_DAMAGE].percent = 0;
     }
-    cl.cshifts[CSHIFT_BONUS].percent -= static_cast<int>(host_frametime * 100);
-    if (cl.cshifts[CSHIFT_BONUS].percent <= 0) {
-        cl.cshifts[CSHIFT_BONUS].percent = 0;
+    Client::cl.cshifts[CSHIFT_BONUS].percent -= static_cast<int>(Host::host_frametime * 100);
+    if (Client::cl.cshifts[CSHIFT_BONUS].percent <= 0) {
+        Client::cl.cshifts[CSHIFT_BONUS].percent = 0;
     }
     force = V_CheckGamma();
     if (!new_shift && !force) {
         return;
     }
-    basepal = host_basepal;
+    basepal = Host::host_basepal;
     newpal = pal;
     for (i = 0; i < 256; i++) {
         r = basepal[0];
@@ -233,9 +211,9 @@ void V_UpdatePalette(void)
         b = basepal[2];
         basepal += 3;
         for (j = 0; j < NUM_CSHIFTS; j++) {
-            r += (cl.cshifts[j].percent * (cl.cshifts[j].destcolor[0] - r)) >> 8;
-            g += (cl.cshifts[j].percent * (cl.cshifts[j].destcolor[1] - g)) >> 8;
-            b += (cl.cshifts[j].percent * (cl.cshifts[j].destcolor[2] - b)) >> 8;
+            r += (Client::cl.cshifts[j].percent * (Client::cl.cshifts[j].destcolor[0] - r)) >> 8;
+            g += (Client::cl.cshifts[j].percent * (Client::cl.cshifts[j].destcolor[1] - g)) >> 8;
+            b += (Client::cl.cshifts[j].percent * (Client::cl.cshifts[j].destcolor[2] - b)) >> 8;
         }
         newpal[0] = gammatable[r];
         newpal[1] = gammatable[g];

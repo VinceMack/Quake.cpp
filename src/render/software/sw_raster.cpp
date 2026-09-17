@@ -7,9 +7,6 @@
 #include "client/client_types.hpp"
 #include "core/cvar.hpp"
 
-using namespace Vid;
-using namespace Client;
-
 namespace Render {
 
 short* d_pzbuffer = nullptr;
@@ -66,12 +63,12 @@ void D_SetupFrame()
     if (r_dowarp) {
         d_viewbuffer = r_warpbuffer;
     } else {
-        d_viewbuffer = vid.buffer;
+        d_viewbuffer = Vid::vid.buffer;
     }
     if (r_dowarp) {
         screenwidth = WARP_WIDTH;
     } else {
-        screenwidth = vid.rowbytes;
+        screenwidth = Vid::vid.rowbytes;
     }
     d_roverwrapped = false;
     d_initial_rover = sc_rover;
@@ -99,14 +96,14 @@ void D_ViewChanged()
     if (r_dowarp) {
         rowbytes = WARP_WIDTH;
     } else {
-        rowbytes = vid.rowbytes;
+        rowbytes = Vid::vid.rowbytes;
     }
     scale_for_mip = xscale;
     if (yscale > xscale) {
         scale_for_mip = yscale;
     }
-    d_zrowbytes = vid.width * 2;
-    d_zwidth = vid.width;
+    d_zrowbytes = Vid::vid.width * 2;
+    d_zwidth = Vid::vid.width;
     d_pix_min = r_refdef.vrect.width / 320;
     if (d_pix_min < 1) {
         d_pix_min = 1;
@@ -125,7 +122,7 @@ void D_ViewChanged()
     d_vrecty = r_refdef.vrect.y;
     d_vrectright_particle = r_refdef.vrectright - d_pix_max;
     d_vrectbottom_particle = r_refdef.vrectbottom - (d_pix_max << d_y_aspect_shift);
-    for (unsigned i = 0; i < vid.height; ++i) {
+    for (unsigned i = 0; i < Vid::vid.height; ++i) {
         d_scantable[i] = i * rowbytes;
         zspantable[i] = d_pzbuffer + i * d_zwidth;
     }
@@ -216,7 +213,7 @@ void D_DrawSurfaces()
     surfcache_t* pcurrentcache;
     Vector3 world_transformed_modelorg;
     Vector3 local_modelorg;
-    currententity = &cl_entities[0];
+    currententity = &Client::cl_entities[0];
     TransformVector(modelorg, transformed_modelorg);
     world_transformed_modelorg = transformed_modelorg;
     if (r_drawflat.value) {
@@ -266,7 +263,7 @@ void D_DrawSurfaces()
                 Turbulent8(s->spans);
                 D_DrawZSpans(s->spans);
                 if (s->insubmodel) {
-                    currententity = &cl_entities[0];
+                    currententity = &Client::cl_entities[0];
                     transformed_modelorg = world_transformed_modelorg;
                     vpn = base_vpn;
                     vup = base_vup;
@@ -290,7 +287,7 @@ void D_DrawSurfaces()
                 (*d_drawspans)(s->spans);
                 D_DrawZSpans(s->spans);
                 if (s->insubmodel) {
-                    currententity = &cl_entities[0];
+                    currententity = &Client::cl_entities[0];
                     transformed_modelorg = world_transformed_modelorg;
                     vpn = base_vpn;
                     vup = base_vup;

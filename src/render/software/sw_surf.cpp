@@ -9,11 +9,6 @@
 #include <cmath>
 #include <cstddef>
 
-using namespace Math;
-using namespace Common;
-using namespace Console;
-using namespace Client;
-
 namespace Render {
 
 drawsurf_t r_drawsurf;
@@ -55,15 +50,15 @@ void R_AddDynamicLights()
         if (!(surf->dlightbits & (1 << lnum))) {
             continue; // not lit by this light
         }
-        float rad = cl_dlights[lnum].radius;
-        float dist = cl_dlights[lnum].origin.dot(surf->plane->normal) - surf->plane->dist;
+        float rad = Client::cl_dlights[lnum].radius;
+        float dist = Client::cl_dlights[lnum].origin.dot(surf->plane->normal) - surf->plane->dist;
         rad -= std::fabs(dist);
-        float minlight = cl_dlights[lnum].minlight;
+        float minlight = Client::cl_dlights[lnum].minlight;
         if (rad < minlight) {
             continue;
         }
         minlight = rad - minlight;
-        Vector3 impact = cl_dlights[lnum].origin - surf->plane->normal * dist;
+        Vector3 impact = Client::cl_dlights[lnum].origin - surf->plane->normal * dist;
         Vector3 local;
         local.x = impact.dot(tex->vecs[0]) + tex->vecs[0][3];
         local.y = impact.dot(tex->vecs[1]) + tex->vecs[1][3];
@@ -99,7 +94,7 @@ void R_BuildLightMap()
     int tmax = (surf->extents[1] >> 4) + 1;
     int size = smax * tmax;
     byte* lightmap = surf->samples;
-    if (r_fullbright.value || !cl.worldmodel->lightdata) {
+    if (r_fullbright.value || !Client::cl.worldmodel->lightdata) {
         for (int i = 0; i < size; i++) {
             blocklights[i] = 0;
         }
@@ -143,15 +138,15 @@ texture_t* R_TextureAnimation(texture_t* base)
     if (!base->anim_total) {
         return base;
     }
-    int reletive = (int)(cl.time * 10) % base->anim_total;
+    int reletive = (int)(Client::cl.time * 10) % base->anim_total;
     int count = 0;
     while (base->anim_min > reletive || base->anim_max <= reletive) {
         base = base->anim_next;
         if (!base) {
-            Sys_Error("R_TextureAnimation: broken cycle");
+            Common::Sys_Error("R_TextureAnimation: broken cycle");
         }
         if (++count > 100) {
-            Sys_Error("R_TextureAnimation: infinite cycle");
+            Common::Sys_Error("R_TextureAnimation: infinite cycle");
         }
     }
     return base;
@@ -235,8 +230,8 @@ void R_DrawSurface()
 
 int D_SurfaceCacheForRes(int width, int height)
 {
-    if (int pnum = COM_CheckParm("-surfcachesize")) {
-        return Q_atoi(com_argv[pnum + 1]) * 1024;
+    if (int pnum = Common::COM_CheckParm("-surfcachesize")) {
+        return Common::Q_atoi(Common::com_argv[pnum + 1]) * 1024;
     }
     int size = SURFCACHE_SIZE_AT_320X200;
     int pix = width * height;
@@ -251,7 +246,7 @@ void D_CheckCacheGuard()
     byte* s = reinterpret_cast<byte*>(sc_base) + sc_size;
     for (int i = 0; i < GUARDSIZE; i++) {
         if (s[i] != static_cast<byte>(i)) {
-            Sys_Error("D_CheckCacheGuard: failed");
+            Common::Sys_Error("D_CheckCacheGuard: failed");
         }
     }
 }
@@ -266,8 +261,8 @@ void D_ClearCacheGuard()
 
 void D_InitCaches(void* buffer, int size)
 {
-    if (!msg_suppress_1) {
-        Con_Printf("%ik surface cache\n", size / 1024);
+    if (!Common::msg_suppress_1) {
+        Console::Con_Printf("%ik surface cache\n", size / 1024);
     }
     sc_size = size - GUARDSIZE;
     sc_base = reinterpret_cast<surfcache_t*>(buffer);
@@ -297,15 +292,15 @@ void D_FlushCaches()
 surfcache_t* D_SCAlloc(int width, int size)
 {
     if ((width < 0) || (width > 256)) {
-        Sys_Error("D_SCAlloc: bad cache width %d\n", width);
+        Common::Sys_Error("D_SCAlloc: bad cache width %d\n", width);
     }
     if ((size <= 0) || (size > 0x10000)) {
-        Sys_Error("D_SCAlloc: bad cache size %d\n", size);
+        Common::Sys_Error("D_SCAlloc: bad cache size %d\n", size);
     }
     size = static_cast<int>(offsetof(surfcache_t, data) + size);
     size = (size + 3) & ~3;
     if (size > sc_size) {
-        Sys_Error("D_SCAlloc: %i > cache size", size);
+        Common::Sys_Error("D_SCAlloc: %i > cache size", size);
     }
     qboolean wrapped_this_time = false;
     if (!sc_rover || reinterpret_cast<byte*>(sc_rover) - reinterpret_cast<byte*>(sc_base) > sc_size - size) {
@@ -321,7 +316,7 @@ surfcache_t* D_SCAlloc(int width, int size)
     while (new_surf->size < size) {
         sc_rover = sc_rover->next;
         if (!sc_rover) {
-            Sys_Error("D_SCAlloc: hit the end of memory");
+            Common::Sys_Error("D_SCAlloc: hit the end of memory");
         }
         if (sc_rover->owner) {
             *sc_rover->owner = nullptr;

@@ -9,9 +9,6 @@
 #include <bit>
 #include <vector>
 
-using namespace Common;
-using namespace Console;
-
 namespace Audio {
 
 namespace {
@@ -73,17 +70,17 @@ wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data) {
     WavParser parser{wav_data};
     if (!parser.FindChunk("RIFF") || parser.chunk_offset + 12 > wav_data.size() ||
         std::string_view(reinterpret_cast<const char*>(&wav_data[parser.chunk_offset + 8]), 4) != "WAVE") {
-        Con_Printf("Missing or malformed RIFF/WAVE chunk\n");
+        Console::Con_Printf("Missing or malformed RIFF/WAVE chunk\n");
         return info;
     }
     parser.iff_offset = parser.chunk_offset + 12;
     if (!parser.FindChunk("fmt ")) {
-        Con_Printf("Missing fmt chunk\n");
+        Console::Con_Printf("Missing fmt chunk\n");
         return info;
     }
     size_t fmt_off = parser.chunk_offset + 8;
     if (parser.ReadU16(fmt_off) != 1) {
-        Con_Printf("Microsoft PCM format only\n");
+        Console::Con_Printf("Microsoft PCM format only\n");
         return info;
     }
     info.channels = parser.ReadU16(fmt_off);
@@ -104,13 +101,13 @@ wavinfo_t GetWavinfo(std::string_view name, std::span<const byte> wav_data) {
     }
 
     if (!parser.FindChunk("data")) {
-        Con_Printf("Missing data chunk\n");
+        Console::Con_Printf("Missing data chunk\n");
         return info;
     }
     int samples = static_cast<int>(parser.chunk_len) / info.width;
     if (info.samples) {
         if (samples < info.samples) {
-            Sys_Error("Sound %.*s has a bad loop length", static_cast<int>(name.length()), name.data());
+            Common::Sys_Error("Sound %.*s has a bad loop length", static_cast<int>(name.length()), name.data());
         }
     } else {
         info.samples = samples;
@@ -162,14 +159,14 @@ sfxcache_t* S_LoadSound(sfx_t* s) {
     if (sfxcache_t* sc = S_SfxCache(s)) return sc;
     std::array<char, MAX_QPATH + 16> namebuffer;
     std::snprintf(namebuffer.data(), namebuffer.size(), "sound/%s", s->name);
-    std::vector<byte> file = COM_LoadFile(namebuffer.data());
+    std::vector<byte> file = Common::COM_LoadFile(namebuffer.data());
     if (file.empty()) {
-        Con_Printf("Couldn't load %s\n", namebuffer.data());
+        Console::Con_Printf("Couldn't load %s\n", namebuffer.data());
         return nullptr;
     }
-    wavinfo_t info = GetWavinfo(s->name, std::span<const byte>(file.data(), static_cast<size_t>(com_filesize)));
+    wavinfo_t info = GetWavinfo(s->name, std::span<const byte>(file.data(), static_cast<size_t>(Common::com_filesize)));
     if (info.channels != 1) {
-        Con_Printf("%s is a stereo sample\n", s->name);
+        Console::Con_Printf("%s is a stereo sample\n", s->name);
         return nullptr;
     }
     float stepscale = static_cast<float>(info.rate) / shm->speed.load(std::memory_order_relaxed);

@@ -7,10 +7,6 @@
 
 #include <cmath>
 
-using namespace Math;
-using namespace Client;
-using namespace Common;
-
 namespace Render {
 
 bool insubmodel = false;
@@ -33,7 +29,7 @@ static bool makeclippededge = false;
 
 void R_DrawCulledPolys()
 {
-    currententity = &cl_entities[0];
+    currententity = &Client::cl_entities[0];
     if (r_worldpolysbacktofront) {
         for (surf_t* s = surface_p - 1; s > &surfaces[1]; s--) {
             if (!s->spans) {
@@ -110,7 +106,7 @@ void R_RotateBmodel()
     temp2[2][0] = s;
     temp2[2][1] = 0;
     temp2[2][2] = c;
-    R_ConcatRotations(temp2, temp1, temp3);
+    Math::R_ConcatRotations(temp2, temp1, temp3);
     // roll
     angle = currententity->angles[ROLL];
     angle = static_cast<float>(angle * M_PI * 2 / 360);
@@ -125,7 +121,7 @@ void R_RotateBmodel()
     temp1[2][0] = 0;
     temp1[2][1] = -s;
     temp1[2][2] = c;
-    R_ConcatRotations(temp1, temp3, entity_rotation);
+    Math::R_ConcatRotations(temp1, temp3, entity_rotation);
 
     R_EntityRotate(modelorg);
     R_EntityRotate(vpn);
@@ -252,7 +248,7 @@ void R_DrawSolidClippedSubmodelPolygons(model_t* pmodel)
                 pbedge[j - 1].pnext = nullptr;
                 R_RecursiveClipBPoly(pbedge, currententity->topnode, psurf);
             } else {
-                Sys_Error("no edges in bmodel");
+                Common::Sys_Error("no edges in bmodel");
             }
         }
     }
@@ -337,7 +333,7 @@ void R_RecursiveWorldNode(mnode_t* node, int clipflags)
 
         int c = node->numsurfaces;
         if (c) {
-            msurface_t* surf = cl.worldmodel->surfaces + node->firstsurface;
+            msurface_t* surf = Client::cl.worldmodel->surfaces + node->firstsurface;
             if (dot < -BACKFACE_EPSILON) {
                 do {
                     if ((surf->flags & SURF_PLANEBACK) && (surf->visframe == r_framecount)) {
@@ -387,7 +383,7 @@ void R_RenderWorld()
 {
     std::array<btofpoly_t, MAX_BTOFPOLYS> btofpolys{};
     pbtofpolys = btofpolys.data();
-    currententity = &cl_entities[0];
+    currententity = &Client::cl_entities[0];
     VectorCopy(r_origin, modelorg);
     model_t* clmodel = currententity->model;
     r_pcurrentvertbase = clmodel->vertexes;

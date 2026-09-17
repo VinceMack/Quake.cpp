@@ -4,10 +4,6 @@
 #include "ui/console.hpp"
 #include "platform/system.hpp"
 
-using namespace Common;
-using namespace Console;
-using namespace Client;
-
 namespace Render {
 
 efrag_t** lastlink = nullptr;
@@ -37,8 +33,8 @@ void R_RemoveEfrags(entity_t* ent)
         old = ef;
         ef = ef->entnext;
         // put it on the free list
-        old->entnext = cl.free_efrags;
-        cl.free_efrags = old;
+        old->entnext = Client::cl.free_efrags;
+        Client::cl.free_efrags = old;
     }
     ent->efrag = nullptr;
 }
@@ -59,12 +55,12 @@ void R_SplitEntityOnNode(mnode_t* node)
         }
         leaf = (mleaf_t*)node;
         // grab an efrag off the free list
-        ef = cl.free_efrags;
+        ef = Client::cl.free_efrags;
         if (!ef) {
-            Con_Printf("Too many efrags!\n");
+            Console::Con_Printf("Too many efrags!\n");
             return; // no free fragments...
         }
-        cl.free_efrags = cl.free_efrags->entnext;
+        Client::cl.free_efrags = Client::cl.free_efrags->entnext;
         ef->entity = r_addent;
         // add the entity link
         *lastlink = ef;
@@ -131,7 +127,7 @@ void R_AddEfrags(entity_t* ent)
     if (!ent->model) {
         return;
     }
-    if (ent == cl_entities) {
+    if (ent == Client::cl_entities) {
         return; // never add the world
     }
     r_addent = ent;
@@ -142,7 +138,7 @@ void R_AddEfrags(entity_t* ent)
         r_emins[i] = ent->origin[i] + entmodel->mins[i];
         r_emaxs[i] = ent->origin[i] + entmodel->maxs[i];
     }
-    R_SplitEntityOnNode(cl.worldmodel->nodes);
+    R_SplitEntityOnNode(Client::cl.worldmodel->nodes);
     ent->topnode = r_pefragtopnode;
 }
 
@@ -159,15 +155,15 @@ void R_StoreEfrags(efrag_t** ppefrag)
         case mod_brush:
         case mod_sprite:
             pent = pefrag->entity;
-            if ((pent->visframe != r_framecount) && (cl_numvisedicts < MAX_VISEDICTS)) {
-                cl_visedicts[cl_numvisedicts++] = pent;
+            if ((pent->visframe != r_framecount) && (Client::cl_numvisedicts < MAX_VISEDICTS)) {
+                Client::cl_visedicts[Client::cl_numvisedicts++] = pent;
                 // mark that we've recorded this entity for this frame
                 pent->visframe = r_framecount;
             }
             ppefrag = &pefrag->leafnext;
             break;
         default:
-            Sys_Error("R_StoreEfrags: Bad entity type %d\n", clmodel->type);
+            Common::Sys_Error("R_StoreEfrags: Bad entity type %d\n", clmodel->type);
         }
     }
 }

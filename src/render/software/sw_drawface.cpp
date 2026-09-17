@@ -5,9 +5,6 @@
 
 #include <cmath>
 
-using namespace Math;
-using namespace Client;
-
 namespace Render {
 
 polydesc_t r_polydesc{};

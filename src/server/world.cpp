@@ -2,11 +2,6 @@
 #include "quakedef.hpp"
 #include "server/world.hpp"
 
-using namespace Common;
-using namespace Console;
-using namespace VM;
-using namespace Collision;
-
 namespace Server {
 
 hull_t* SV_HullForEntity(edict_t* ent, const Vector3& mins, const Vector3& maxs, Vector3& offset)
@@ -16,10 +11,10 @@ hull_t* SV_HullForEntity(edict_t* ent, const Vector3& mins, const Vector3& maxs,
     hull_t* hull;
 
     if (ent->v.solid == SOLID_BSP) {
-        if (ent->v.movetype != MOVETYPE_PUSH) Sys_Error("SOLID_BSP without MOVETYPE_PUSH");
+        if (ent->v.movetype != MOVETYPE_PUSH) Common::Sys_Error("SOLID_BSP without MOVETYPE_PUSH");
 
         model = sv.models[(int)ent->v.modelindex];
-        if (!model || model->type != mod_brush) Sys_Error("MOVETYPE_PUSH with a non bsp model");
+        if (!model || model->type != mod_brush) Common::Sys_Error("MOVETYPE_PUSH with a non bsp model");
 
         size = maxs - mins;
         if (size.x < 3) hull = &model->hulls[0];
@@ -59,8 +54,8 @@ static areanode_t* SV_CreateAreaNode(int depth, const Vector3& mins, const Vecto
     Vector3 size, mins1, maxs1, mins2, maxs2;
 
     anode = &sv_areanodes[sv_numareanodes++];
-    ClearLink(&anode->trigger_edicts);
-    ClearLink(&anode->solid_edicts);
+    Common::ClearLink(&anode->trigger_edicts);
+    Common::ClearLink(&anode->solid_edicts);
 
     if (depth == AREA_DEPTH) {
         anode->axis = -1;
@@ -95,7 +90,7 @@ void SV_ClearWorld(void)
 void SV_UnlinkEdict(edict_t* ent)
 {
     if (!ent->area.prev) return;
-    RemoveLink(&ent->area);
+    Common::RemoveLink(&ent->area);
     ent->area.prev = ent->area.next = nullptr;
 }
 
@@ -116,16 +111,16 @@ static void SV_TouchLinks(edict_t* ent, areanode_t* node)
             continue;
         }
 
-        old_self = pr_global_struct->self;
-        old_other = pr_global_struct->other;
+        old_self = VM::pr_global_struct->self;
+        old_other = VM::pr_global_struct->other;
 
-        pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(touch));
-        pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(ent));
-        pr_global_struct->time = static_cast<float>(sv.time);
-        PR_ExecuteProgram(touch->v.touch);
+        VM::pr_global_struct->self = static_cast<int>(EDICT_TO_PROG(touch));
+        VM::pr_global_struct->other = static_cast<int>(EDICT_TO_PROG(ent));
+        VM::pr_global_struct->time = static_cast<float>(sv.time);
+        VM::PR_ExecuteProgram(touch->v.touch);
 
-        pr_global_struct->self = old_self;
-        pr_global_struct->other = old_other;
+        VM::pr_global_struct->self = old_self;
+        VM::pr_global_struct->other = old_other;
     }
 
     if (node->axis == -1) return;
@@ -188,8 +183,8 @@ void SV_LinkEdict(edict_t* ent, qboolean touch_triggers)
         else break;
     }
 
-    if (ent->v.solid == SOLID_TRIGGER) InsertLinkBefore(&ent->area, &node->trigger_edicts);
-    else InsertLinkBefore(&ent->area, &node->solid_edicts);
+    if (ent->v.solid == SOLID_TRIGGER) Common::InsertLinkBefore(&ent->area, &node->trigger_edicts);
+    else Common::InsertLinkBefore(&ent->area, &node->solid_edicts);
 
     if (touch_triggers) SV_TouchLinks(ent, sv_areanodes);
 }
@@ -249,7 +244,7 @@ static void SV_ClipToLinks(areanode_t* node, moveclip_t* clip)
         next = l->next;
         touch = EDICT_FROM_AREA(l);
         if (touch->v.solid == SOLID_NOT || touch == clip->passedict) continue;
-        if (touch->v.solid == SOLID_TRIGGER) Sys_Error("Trigger in clipping list");
+        if (touch->v.solid == SOLID_TRIGGER) Common::Sys_Error("Trigger in clipping list");
         if (clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP) continue;
 
         if (clip->boxmins.x > touch->v.absmax.x || clip->boxmins.y > touch->v.absmax.y || clip->boxmins.z > touch->v.absmax.z ||

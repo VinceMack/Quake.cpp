@@ -26,14 +26,6 @@
 #include <new>
 #include <vector>
 
-using namespace Common;
-using namespace Console;
-using namespace Client;
-using namespace Model;
-using namespace Audio;
-using namespace Vid;
-using namespace Math;
-
 namespace Render {
 
 // Core global rendering state
@@ -163,8 +155,8 @@ void R_Init()
 
 void R_NewMap()
 {
-    for (int i = 0; i < cl.worldmodel->numleafs; i++) {
-        cl.worldmodel->leafs[i].efrags = nullptr;
+    for (int i = 0; i < Client::cl.worldmodel->numleafs; i++) {
+        Client::cl.worldmodel->leafs[i].efrags = nullptr;
     }
     r_viewleaf = nullptr;
     R_ClearParticles();
@@ -207,10 +199,10 @@ void R_MarkLeaves()
     }
     r_visframecount++;
     r_oldviewleaf = r_viewleaf;
-    byte* vis = Mod_LeafPVS(r_viewleaf, cl.worldmodel);
-    for (int i = 0; i < cl.worldmodel->numleafs; i++) {
+    byte* vis = Model::Mod_LeafPVS(r_viewleaf, Client::cl.worldmodel);
+    for (int i = 0; i < Client::cl.worldmodel->numleafs; i++) {
         if (vis[i >> 3] & (1 << (i & 7))) {
-            mnode_t* node = reinterpret_cast<mnode_t*>(&cl.worldmodel->leafs[i + 1]);
+            mnode_t* node = reinterpret_cast<mnode_t*>(&Client::cl.worldmodel->leafs[i + 1]);
             do {
                 if (node->visframe == r_visframecount) {
                     break;
@@ -228,9 +220,9 @@ void R_DrawEntitiesOnList()
     if (!r_drawentities.value) {
         return;
     }
-    for (int i = 0; i < cl_numvisedicts; i++) {
-        currententity = cl_visedicts[i];
-        if (currententity == &cl_entities[cl.viewentity]) {
+    for (int i = 0; i < Client::cl_numvisedicts; i++) {
+        currententity = Client::cl_visedicts[i];
+        if (currententity == &Client::cl_entities[Client::cl.viewentity]) {
             continue;
         }
         switch (currententity->model->type) {
@@ -249,9 +241,9 @@ void R_DrawEntitiesOnList()
                 lighting.shadelight = j;
                 lighting.plightvec = lightvec;
                 for (int lnum = 0; lnum < MAX_DLIGHTS; lnum++) {
-                    if (cl_dlights[lnum].die >= cl.time) {
-                        Vector3 dist = currententity->origin - cl_dlights[lnum].origin;
-                        float add = cl_dlights[lnum].radius - dist.length();
+                    if (Client::cl_dlights[lnum].die >= Client::cl.time) {
+                        Vector3 dist = currententity->origin - Client::cl_dlights[lnum].origin;
+                        float add = Client::cl_dlights[lnum].radius - dist.length();
                         if (add > 0) {
                             lighting.ambientlight += static_cast<int>(add);
                         }
@@ -278,13 +270,13 @@ void R_DrawViewModel()
     if (!r_drawviewmodel.value || r_fov_greater_than_90) {
         return;
     }
-    if (cl.items & IT_INVISIBILITY) {
+    if (Client::cl.items & IT_INVISIBILITY) {
         return;
     }
-    if (cl.stats[STAT_HEALTH] <= 0) {
+    if (Client::cl.stats[STAT_HEALTH] <= 0) {
         return;
     }
-    currententity = &cl.viewent;
+    currententity = &Client::cl.viewent;
     if (!currententity->model) {
         return;
     }
@@ -299,8 +291,8 @@ void R_DrawViewModel()
     r_viewlighting.ambientlight = j;
     r_viewlighting.shadelight = j;
     for (int lnum = 0; lnum < MAX_DLIGHTS; lnum++) {
-        dlight_t* dl = &cl_dlights[lnum];
-        if (!dl->radius || dl->die < cl.time) {
+        dlight_t* dl = &Client::cl_dlights[lnum];
+        if (!dl->radius || dl->die < Client::cl.time) {
             continue;
         }
         Vector3 dist = currententity->origin - dl->origin;
@@ -359,8 +351,8 @@ void R_DrawBEntitiesOnList()
     Vector3 oldorigin = modelorg;
     insubmodel = true;
     r_dlightframecount = r_framecount;
-    for (int i = 0; i < cl_numvisedicts; i++) {
-        currententity = cl_visedicts[i];
+    for (int i = 0; i < Client::cl_numvisedicts; i++) {
+        currententity = Client::cl_visedicts[i];
         if (currententity->model->type == mod_brush) {
             model_t* clmodel = currententity->model;
             minmaxs[0] = currententity->origin.x + clmodel->mins[0];
@@ -378,10 +370,10 @@ void R_DrawBEntitiesOnList()
                 R_RotateBmodel();
                 if (clmodel->firstmodelsurface != 0) {
                     for (int k = 0; k < MAX_DLIGHTS; k++) {
-                        if ((cl_dlights[k].die < cl.time) || (!cl_dlights[k].radius)) {
+                        if ((Client::cl_dlights[k].die < Client::cl.time) || (!Client::cl_dlights[k].radius)) {
                             continue;
                         }
-                        R_MarkLights(&cl_dlights[k], 1 << k,
+                        R_MarkLights(&Client::cl_dlights[k], 1 << k,
                             clmodel->nodes + clmodel->hulls[0].firstclipnode);
                     }
                 }
@@ -391,7 +383,7 @@ void R_DrawBEntitiesOnList()
                     r_pefragtopnode = nullptr;
                     r_emins = Vector3(minmaxs[0], minmaxs[1], minmaxs[2]);
                     r_emaxs = Vector3(minmaxs[3], minmaxs[4], minmaxs[5]);
-                    R_SplitEntityOnNode2(cl.worldmodel->nodes);
+                    R_SplitEntityOnNode2(Client::cl.worldmodel->nodes);
                     if (r_pefragtopnode) {
                         currententity->topnode = r_pefragtopnode;
                         if (r_pefragtopnode->contents >= 0) {
@@ -431,7 +423,7 @@ void R_EdgeDrawing()
     }
     R_BeginEdgeFrame();
     if (r_dspeeds.value) {
-        rw_time1 = static_cast<float>(Sys_FloatTime());
+        rw_time1 = static_cast<float>(Common::Sys_FloatTime());
     }
     R_RenderWorld();
     if (r_drawculledpolys) {
@@ -439,12 +431,12 @@ void R_EdgeDrawing()
     }
     D_TurnZOn();
     if (r_dspeeds.value) {
-        rw_time2 = static_cast<float>(Sys_FloatTime());
+        rw_time2 = static_cast<float>(Common::Sys_FloatTime());
         db_time1 = rw_time2;
     }
     R_DrawBEntitiesOnList();
     if (r_dspeeds.value) {
-        db_time2 = static_cast<float>(Sys_FloatTime());
+        db_time2 = static_cast<float>(Common::Sys_FloatTime());
         se_time1 = db_time2;
     }
     if (!(r_drawpolys | r_drawculledpolys)) {
@@ -457,31 +449,31 @@ void R_RenderView_()
     std::array<byte, WARP_WIDTH * WARP_HEIGHT> warpbuffer{};
     r_warpbuffer = warpbuffer.data();
     if (r_timegraph.value || r_speeds.value || r_dspeeds.value) {
-        r_time1 = static_cast<float>(Sys_FloatTime());
+        r_time1 = static_cast<float>(Common::Sys_FloatTime());
     }
     R_SetupFrame();
     R_MarkLeaves();
-    if (!cl_entities[0].model || !cl.worldmodel) {
-        Sys_Error("R_RenderView: nullptr worldmodel");
+    if (!Client::cl_entities[0].model || !Client::cl.worldmodel) {
+        Common::Sys_Error("R_RenderView: nullptr worldmodel");
     }
     R_EdgeDrawing();
     if (r_dspeeds.value) {
-        se_time2 = static_cast<float>(Sys_FloatTime());
+        se_time2 = static_cast<float>(Common::Sys_FloatTime());
         de_time1 = se_time2;
     }
     R_DrawEntitiesOnList();
     if (r_dspeeds.value) {
-        de_time2 = static_cast<float>(Sys_FloatTime());
+        de_time2 = static_cast<float>(Common::Sys_FloatTime());
         dv_time1 = de_time2;
     }
     R_DrawViewModel();
     if (r_dspeeds.value) {
-        dv_time2 = static_cast<float>(Sys_FloatTime());
-        dp_time1 = static_cast<float>(Sys_FloatTime());
+        dv_time2 = static_cast<float>(Common::Sys_FloatTime());
+        dp_time1 = static_cast<float>(Common::Sys_FloatTime());
     }
     R_DrawParticles();
     if (r_dspeeds.value) {
-        dp_time2 = static_cast<float>(Sys_FloatTime());
+        dp_time2 = static_cast<float>(Common::Sys_FloatTime());
     }
     if (r_dowarp) {
         D_WarpScreen();
@@ -500,10 +492,10 @@ void R_RenderView_()
         R_PrintDSpeeds();
     }
     if (r_reportsurfout.value && r_outofsurfaces) {
-        Con_Printf("Short %d surfaces\n", r_outofsurfaces);
+        Console::Con_Printf("Short %d surfaces\n", r_outofsurfaces);
     }
     if (r_reportedgeout.value && r_outofedges) {
-        Con_Printf("Short roughly %d edges\n", r_outofedges * 2 / 3);
+        Console::Con_Printf("Short roughly %d edges\n", r_outofedges * 2 / 3);
     }
 }
 
@@ -512,13 +504,13 @@ void R_RenderView()
     int dummy;
     int delta = static_cast<int>(reinterpret_cast<byte*>(&dummy) - r_stack_start);
     if (delta < -10000 || delta > 10000) {
-        Sys_Error("R_RenderView: called without enough stack");
+        Common::Sys_Error("R_RenderView: called without enough stack");
     }
     if (reinterpret_cast<size_t>(&dummy) & 3) {
-        Sys_Error("Stack is missaligned");
+        Common::Sys_Error("Stack is missaligned");
     }
     if (reinterpret_cast<size_t>(&r_warpbuffer) & 3) {
-        Sys_Error("Globals are missaligned");
+        Common::Sys_Error("Globals are missaligned");
     }
     R_RenderView_();
 }
